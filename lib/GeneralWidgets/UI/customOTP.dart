@@ -9,7 +9,7 @@ class CustomOTP extends StatefulWidget {
   final void Function(String)? onCompleted;
   final VoidCallback? onResend;
   final bool showFromMessages;
-  final String? fromMessageCode; // e.g. "523432"
+  final String? fromMessageCode; 
   final Duration resendDuration;
 
   const CustomOTP({
@@ -70,20 +70,24 @@ class _CustomOTPState extends State<CustomOTP> {
     });
   }
 
-  void _onBoxChanged(String value, int i) {
-    if (value.isNotEmpty) {
-      // keep only first char
-      if (value.length > 1) {
-        _controllers[i].text = value.substring(value.length - 1);
-      }
-      if (i + 1 < widget.length) _nodes[i + 1].requestFocus();
-    } else {
-      if (i - 1 >= 0) _nodes[i - 1].requestFocus();
+void _onBoxChanged(String value, int i) {
+  if (value.isNotEmpty) {
+    if (value.length > 1) {
+      _controllers[i].text = value.substring(value.length - 1);
     }
+    if (i + 1 < widget.length) _nodes[i + 1].requestFocus();
+  } else {
+    if (i - 1 >= 0) _nodes[i - 1].requestFocus();
+  }
 
-    final otp = _controllers.map((c) => c.text).join();
+  final otp = _controllers.map((c) => c.text).join();
+
+  // ✅ Only call onCompleted when all boxes are filled
+  if (otp.length == widget.length && !otp.contains('')) {
     widget.onCompleted?.call(otp);
   }
+}
+
 
   void _clearAll() {
     for (final c in _controllers) {

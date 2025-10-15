@@ -7,6 +7,7 @@ final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
+
 final signupProvider = StateNotifierProvider<SignupNotifier, AsyncValue<Map<String, dynamic>>>(
   (ref) => SignupNotifier(ref),
 );
@@ -64,3 +65,16 @@ class SigninNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
     }
   }
 }
+
+
+// Forgot Password Provider
+final forgotPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, method) async {
+  final authService = ref.watch(authServiceProvider);
+  return await authService.forgotPassword(method: method);
+});
+
+// Reset Password Provider
+final resetPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, password) async {
+  final authService = ref.watch(authServiceProvider);
+  return await authService.resetPassword(password: password);
+});
