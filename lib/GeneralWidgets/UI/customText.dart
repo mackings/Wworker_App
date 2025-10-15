@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
 
 
-class CustomTextWidget extends StatelessWidget {
+class CustomText extends StatelessWidget {
   final String? title;
   final String? subtitle;
   final TextAlign textAlign;
@@ -17,7 +17,7 @@ class CustomTextWidget extends StatelessWidget {
   final String titleFont;
   final String subtitleFont;
 
-  const CustomTextWidget({
+  const CustomText({
     super.key,
     this.title,
     this.subtitle,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+
 
 
 class CustomTextField extends StatefulWidget {
@@ -56,13 +56,14 @@ class _CustomTextFieldState extends State<CustomTextField> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
       
-        CustomTextWidget(
+        CustomText(
           title: widget.label,
           titleFontSize: 16,
           titleFontWeight: FontWeight.w400,
           titleColor: const Color(0xFF7B7B7B),
           textAlign: TextAlign.left,
         ),
+        
         const SizedBox(height: 8),
 
        

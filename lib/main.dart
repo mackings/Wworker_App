@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wworker/App/Auth/View/Onboarding.dart';
+import 'package:wworker/App/Auth/Widgets/customRecovery.dart';
 import 'package:wworker/Constant/colors.dart';
-import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-import 'package:wworker/GeneralWidgets/UI/customOTP.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
-import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
+
 
 void main() {
   runApp( ProviderScope(child: const MyApp()));
@@ -19,7 +18,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const FirstOnboard()
     );
   }
 }
@@ -45,6 +44,8 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
 
+      String selectedOption = "";
+
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
@@ -56,9 +57,23 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
 
-CustomOTP(
-  
-)
+        CustomRecoveryOption(
+          title: "Reset via Email",
+          subtitle: "Code will be sent to your email address",
+          leadingIcon:
+              const Icon(Icons.email_outlined, color: Color(0xFF302E2E)),
+          isSelected: selectedOption == "email",
+          onTap: () => setState(() => selectedOption = "email"),
+        ),
+        const SizedBox(height: 12),
+        CustomRecoveryOption(
+          title: "Reset via Phone",
+          subtitle: "Code will be sent to your phone number",
+          leadingIcon:
+              const Icon(Icons.phone_outlined, color: Color(0xFF302E2E)),
+          isSelected: selectedOption == "phone",
+          onTap: () => setState(() => selectedOption = "phone"),
+        ),
 
 
     
