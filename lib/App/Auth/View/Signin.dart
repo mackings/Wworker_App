@@ -5,6 +5,7 @@ import 'package:wworker/App/Auth/View/resetHome.dart';
 import 'package:wworker/App/Dashboad/View/Home.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/AltSignIn.dart';
+import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
@@ -55,7 +56,7 @@ class _SigninState extends ConsumerState<Signin> {
                 CustomButton(
                   text: "Sign In",
                   onPressed: () {
-                    Nav.push(Home());
+                    Nav.push(DashboardScreen());
                   },
                 ),
 

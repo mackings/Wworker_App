@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
+import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
@@ -38,7 +39,7 @@ class _HomeState extends ConsumerState<Home> {
                   dashboardIcons: [
                     DashboardIcon(
                       title: "Create Quotation",
-                      icon: Icons.note_add_outlined,
+                      icon: Icons.calculate,
                       onTap: () {
        
                       },
@@ -70,6 +71,29 @@ class _HomeState extends ConsumerState<Home> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 20),
+
+CustomEmptyQuotes(
+  title: "Recent Quotations",
+  buttonText: "View All",
+  emptyMessage: "No Quotations yet",
+  onButtonTap: () {
+
+  },
+),
+
+SizedBox(height: 30,),
+
+CustomEmptyQuotes(
+  title: "Recent Products",
+  buttonText: "View All",
+  emptyMessage: "No recent activity",
+  onButtonTap: () {
+
+  },
+)
+
               ],
             ),
           ),
