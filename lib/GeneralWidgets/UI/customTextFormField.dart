@@ -37,7 +37,7 @@ class CustomTextField extends StatefulWidget {
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _obscureText = true;
 
-  IconData? _getPrefixIcon() {
+  IconData? _getIcon() {
     final labelLower = widget.label.toLowerCase();
 
     if (widget.isPassword) return Icons.lock_outline;
@@ -47,7 +47,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     if (labelLower.contains('name')) return Icons.person_outline;
     if (labelLower.contains('address')) return Icons.home_outlined;
 
-    return Icons.text_fields; 
+    return Icons.text_fields;
   }
 
   @override
@@ -55,7 +55,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-      
         CustomText(
           title: widget.label,
           titleFontSize: 16,
@@ -63,11 +62,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
           titleColor: const Color(0xFF7B7B7B),
           textAlign: TextAlign.left,
         ),
-        
         const SizedBox(height: 8),
 
-       
         Container(
+          width: double.infinity,
+          height: 55,
           decoration: ShapeDecoration(
             color: const Color.fromARGB(255, 241, 238, 238),
             shape: RoundedRectangleBorder(
@@ -75,60 +74,65 @@ class _CustomTextFieldState extends State<CustomTextField> {
             ),
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12,),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             child: widget.isDropdown
                 ? _buildDropdownField()
                 : _buildTextField(),
           ),
-          width: MediaQuery.of(context).size.width-35
         ),
       ],
     );
   }
 
-
   Widget _buildTextField() {
-    return TextFormField(
-      controller: widget.controller,
-      keyboardType: widget.keyboardType,
-      obscureText: widget.isPassword ? _obscureText : false,
-      textAlign: widget.textAlign,
-      enabled: widget.enabled,
-      style: GoogleFonts.openSans(
-        fontSize: 16,
-        color: Colors.black87, // visible text color
-        fontWeight: FontWeight.w400,
-      ),
-decoration: InputDecoration(
-  prefixIcon: Icon(
-    _getPrefixIcon(),
-    color: const Color(0xFF7B7B7B),
-  ),
-  hintText: widget.hintText,
-  hintStyle: GoogleFonts.openSans(
-    fontSize: 16,
-    color: const Color(0xFF7B7B7B),
-  ),
-  border: InputBorder.none,
-  isDense: true,
-  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-  suffixIcon: widget.isPassword
-      ? IconButton(
-          icon: Icon(
-            _obscureText ? Icons.visibility_off : Icons.visibility,
+    return Center(
+      child: TextFormField(
+        controller: widget.controller,
+        keyboardType: widget.keyboardType,
+        obscureText: widget.isPassword ? _obscureText : false,
+        textAlign: widget.textAlign,
+        enabled: widget.enabled,
+        textAlignVertical: TextAlignVertical.center,
+        style: GoogleFonts.openSans(
+          fontSize: 16,
+          color: Colors.black87,
+          fontWeight: FontWeight.w400,
+        ),
+        decoration: InputDecoration(
+          hintText: widget.hintText,
+          hintStyle: GoogleFonts.openSans(
+            fontSize: 16,
             color: const Color(0xFF7B7B7B),
           ),
-          onPressed: () {
-            setState(() => _obscureText = !_obscureText);
-          },
-        )
-      : null,
-),
-
+          border: InputBorder.none,
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+      
+          /// 👇 Move icon to the right
+          suffixIcon: widget.isPassword
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        _obscureText ? Icons.visibility_off : Icons.visibility,
+                        color: const Color(0xFF7B7B7B),
+                      ),
+                      onPressed: () {
+                        setState(() => _obscureText = !_obscureText);
+                      },
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(_getIcon(), color: const Color(0xFF7B7B7B)),
+                  ],
+                )
+              : Icon(_getIcon(), color: const Color(0xFF7B7B7B)),
+        ),
+      ),
     );
   }
 
-  /// 🔹 Dropdown TextField
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
       value: widget.dropdownItems?.isNotEmpty == true
@@ -151,10 +155,6 @@ decoration: InputDecoration(
           .toList(),
       onChanged: widget.onChanged,
       decoration: InputDecoration(
-        prefixIcon: Icon(
-          _getPrefixIcon(),
-          color: const Color(0xFF7B7B7B),
-        ),
         hintText: widget.hintText,
         hintStyle: GoogleFonts.openSans(
           fontSize: 16,

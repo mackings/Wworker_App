@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:wworker/App/Auth/View/Signup.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
 
 class FirstOnboard extends ConsumerStatefulWidget {
   const FirstOnboard({super.key});
@@ -19,20 +20,18 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     {
       "image": "assets/svg/onboard1.svg",
       "title": "Simplify Your Quotation Process",
-      "subtitle":
-          "Create, manage and share quote with ease in one app."
+      "subtitle": "Create, manage and share quote with ease in one app.",
     },
     {
       "image": "assets/svg/onboard2.svg",
       "title": "Turn Ideas into Quotes",
       "subtitle":
-          "Use our guided steps to add products, materials, and labor cost with auto-calculations for accuracy."
+          "Use our guided steps to add products, materials, and labor cost with auto-calculations for accuracy.",
     },
     {
       "image": "assets/svg/onboard3.svg",
       "title": "Let’s Create Your First Quote",
-      "subtitle":
-          "Start by adding your material dimensions to begin."
+      "subtitle": "Start by adding your material dimensions to begin.",
     },
   ];
 
@@ -47,10 +46,12 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
   void _nextPage() {
     if (currentIndex < onboardingData.length - 1) {
       _pageController.nextPage(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut);
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
     } else {
-      // Navigate to next screen
+      Nav.push(Signup());
+      print("yooo");
     }
   }
 
@@ -60,8 +61,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -79,18 +79,14 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SvgPicture.asset(
-                          item["image"]!,
-                          height: 350,
-                        ),
+                        SvgPicture.asset(item["image"]!, height: 350),
                         const SizedBox(height: 40),
-CustomText(
-  title: item["title"],
-  subtitle: item["subtitle"],
-  titleColor: Colors.black,
-  subtitleColor: Colors.black,
-)
-
+                        CustomText(
+                          title: item["title"],
+                          subtitle: item["subtitle"],
+                          titleColor: Colors.black,
+                          subtitleColor: Colors.black,
+                        ),
                       ],
                     );
                   },

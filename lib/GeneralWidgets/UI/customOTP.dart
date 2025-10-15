@@ -280,7 +280,7 @@ Widget _buildBoxesRow() {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'From Messages',
+                      '',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.openSans(
                         fontSize: 16,
