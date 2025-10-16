@@ -97,11 +97,7 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
             children: [
               Row(
                 children: [
-                  if (widget.icon != null)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: Icon(widget.icon, color: widget.color ?? Colors.brown),
-                    ),
+                  
                   Text(widget.title,
                       style: GoogleFonts.openSans(
                         fontSize: 16,
@@ -110,7 +106,7 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
                       )),
                 ],
               ),
-              TextButton(onPressed: () {}, child: const Text("Add Cost")),
+      
             ],
           ),
 
