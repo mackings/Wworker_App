@@ -64,14 +64,14 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     // ✅ Create item map
     final item = {
-      "product": selectedProduct,
-      "materialName": materialNameController.text.trim(),
-      "width": width,
-      "length": length,
-      "thickness": thickness,
-      "unit": unit,
-      "sqm": sqmController.text.trim(),
-      "price": priceController.text.trim(),
+      "Product": selectedProduct,
+      "Materialname": materialNameController.text.trim(),
+      "Width": width,
+      "Length": length,
+      "Thickness": thickness,
+      "Unit": unit,
+      "Sqm": sqmController.text.trim(),
+      "Price": priceController.text.trim(),
     };
 
     // ✅ Call callback
@@ -118,15 +118,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             children: [
               Row(children: [
                 if (widget.icon != null)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(widget.icon, color: widget.color ?? Colors.brown),
-                  ),
+                  // Padding(
+                  //   padding: const EdgeInsets.only(right: 8),
+                  //   child: Icon(widget.icon, color: widget.color ?? Colors.brown),
+                  // ),
                 Text(widget.title,
                     style: GoogleFonts.openSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF302E2E))),
+                        color: const Color(0xFF302E2E)
+                        )
+                        ),
               ]),
               TextButton(
                   onPressed: () {},

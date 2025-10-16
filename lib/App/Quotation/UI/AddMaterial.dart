@@ -6,6 +6,7 @@ import 'package:wworker/App/Dashboad/Widget/MaterialCard.dart';
 import 'package:wworker/App/Dashboad/Widget/OthercostCard.dart';
 import 'package:wworker/App/Dashboad/Widget/itemCard.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 
 
@@ -20,7 +21,6 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
   String? userId;
   bool isLoading = true;
 
-  // 👇 Separate expand states for Material and Additional Cost
   bool isExpanded = false;
   bool isAdditionalExpanded = false;
 
@@ -70,7 +70,7 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ------------------ ADD MATERIAL CARD ------------------
+        
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
@@ -118,7 +118,8 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
                 const SizedBox(height: 25),
 
-                // ------------------ ADDITIONAL COST CARD ------------------
+
+
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
@@ -189,6 +190,10 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
             ),
           ),
         ),
+      ),
+      bottomSheet: Padding(
+        padding: const EdgeInsets.only(bottom: 40),
+        child: CustomButton(text: "Continue", outlined: true, onPressed: (){}),
       ),
     );
   }
