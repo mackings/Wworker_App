@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:wworker/App/Dashboad/View/Home.dart';
+import 'package:wworker/App/Dashboad/Home.dart';
 import 'package:wworker/GeneralWidgets/UI/NavBar.dart';
 
 

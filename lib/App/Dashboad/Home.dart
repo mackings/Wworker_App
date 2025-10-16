@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
+import 'package:wworker/App/Quotation/UI/Quotations.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -16,9 +17,7 @@ class _HomeState extends ConsumerState<Home> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-      ),
+      appBar: AppBar(automaticallyImplyLeading: false),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -26,7 +25,6 @@ class _HomeState extends ConsumerState<Home> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 CustomText(
                   title: "Good Morning, User",
                   subtitle: "Ready to create amazing woodwork quotation?",
@@ -41,7 +39,7 @@ class _HomeState extends ConsumerState<Home> {
                       title: "Create Quotation",
                       icon: Icons.calculate,
                       onTap: () {
-       
+                        Nav.push(AllQuotations());
                       },
                     ),
                     DashboardIcon(
@@ -74,26 +72,21 @@ class _HomeState extends ConsumerState<Home> {
 
                 const SizedBox(height: 20),
 
-CustomEmptyQuotes(
-  title: "Recent Quotations",
-  buttonText: "View All",
-  emptyMessage: "No Quotations yet",
-  onButtonTap: () {
+                CustomEmptyQuotes(
+                  title: "Recent Quotations",
+                  buttonText: "View All",
+                  emptyMessage: "No Quotations yet",
+                  onButtonTap: () {},
+                ),
 
-  },
-),
+                SizedBox(height: 30),
 
-SizedBox(height: 30,),
-
-CustomEmptyQuotes(
-  title: "Recent Products",
-  buttonText: "View All",
-  emptyMessage: "No recent activity",
-  onButtonTap: () {
-
-  },
-)
-
+                CustomEmptyQuotes(
+                  title: "Recent Products",
+                  buttonText: "View All",
+                  emptyMessage: "No recent activity",
+                  onButtonTap: () {},
+                ),
               ],
             ),
           ),
@@ -102,4 +95,3 @@ CustomEmptyQuotes(
     );
   }
 }
-
