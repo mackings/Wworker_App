@@ -27,15 +27,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          "BOM Summary",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
         elevation: 0,
       ),
       body: SafeArea(
@@ -82,7 +74,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
               const SizedBox(height: 40),
 
-  
               if (materials.isNotEmpty || additionalCosts.isNotEmpty)
                 _buildTotalSection(materials, additionalCosts),
             ],
@@ -92,14 +83,17 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-
+  // 🧩 TOTAL SUMMARY BUILDER
   Widget _buildTotalSection(
-      List<Map<String, dynamic>> materials, List<Map<String, dynamic>> additionalCosts) {
+    List<Map<String, dynamic>> materials,
+    List<Map<String, dynamic>> additionalCosts,
+  ) {
     double materialTotal = 0;
     double additionalTotal = 0;
 
+    // ✅ Use "Price" (AddMaterial naming convention)
     for (var m in materials) {
-      final price = double.tryParse(m["price"].toString()) ?? 0;
+      final price = double.tryParse(m["Price"].toString()) ?? 0;
       materialTotal += price;
     }
 
@@ -122,7 +116,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            "Total Summary",
+            "Total",
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
@@ -141,11 +135,14 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label,
-              style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.black,
-                  fontWeight: bold ? FontWeight.w600 : FontWeight.w400)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
+            ),
+          ),
           Text(
             "₦${value.toStringAsFixed(2)}",
             style: TextStyle(
@@ -159,3 +156,4 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 }
+

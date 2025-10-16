@@ -106,16 +106,7 @@ class BOMSummaryCard extends StatelessWidget {
                         height: 1.50,
                       ),
                     ),
-                    Text(
-                      'Last updated: ${item["lastUpdated"] ?? "-"}',
-                      style: const TextStyle(
-                        color: Color(0xFF302E2E),
-                        fontSize: 10,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.w400,
-                        height: 1.60,
-                      ),
-                    ),
+
                   ],
                 ),
               ],
