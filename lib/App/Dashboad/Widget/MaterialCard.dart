@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wworker/App/Product/Api/ProService.dart';
+import 'package:wworker/App/Product/Model/ProModel.dart';
+import 'package:wworker/App/Product/UI/addProduct.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-
-
 
 class AddMaterialCard extends StatefulWidget {
   final String title;
   final IconData? icon;
   final Color? color;
-  final List<String>? products;
   final void Function(Map<String, dynamic>)? onAddItem;
 
   const AddMaterialCard({
@@ -16,7 +17,6 @@ class AddMaterialCard extends StatefulWidget {
     this.title = "Add Materials",
     this.icon,
     this.color,
-    this.products,
     this.onAddItem,
   });
 
@@ -35,6 +35,29 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final TextEditingController sqmController = TextEditingController();
   final TextEditingController priceController = TextEditingController();
 
+  final ProductService _productService = ProductService();
+  List<ProductModel> products = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchProducts();
+  }
+
+  Future<void> _fetchProducts() async {
+    try {
+      final fetched = await _productService.getProducts();
+      setState(() {
+        products = fetched;
+        isLoading = false;
+      });
+    } catch (e) {
+      debugPrint("⚠️ Failed to fetch products: $e");
+      setState(() => isLoading = false);
+    }
+  }
+
   @override
   void dispose() {
     materialNameController.dispose();
@@ -44,7 +67,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   void _handleAddItem() {
-    // ✅ Basic input validation
     if (selectedProduct == null ||
         materialNameController.text.trim().isEmpty ||
         width == null ||
@@ -62,7 +84,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       return;
     }
 
-    // ✅ Create item map
     final item = {
       "Product": selectedProduct,
       "Materialname": materialNameController.text.trim(),
@@ -74,10 +95,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "Price": priceController.text.trim(),
     };
 
-    // ✅ Call callback
     widget.onAddItem?.call(item);
 
-    // ✅ Clear inputs and selections
     setState(() {
       selectedProduct = null;
       width = null;
@@ -89,7 +108,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     sqmController.clear();
     priceController.clear();
 
-    // ✅ Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Material added successfully!"),
@@ -100,8 +118,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   @override
   Widget build(BuildContext context) {
-    final products = widget.products ?? ["Wood", "Board", "Foam", "Others"];
-
     return Container(
       width: MediaQuery.of(context).size.width - 35,
       padding: const EdgeInsets.all(16),
@@ -116,64 +132,73 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(children: [
-                if (widget.icon != null)
-                  // Padding(
-                  //   padding: const EdgeInsets.only(right: 8),
-                  //   child: Icon(widget.icon, color: widget.color ?? Colors.brown),
-                  // ),
-                Text(widget.title,
-                    style: GoogleFonts.openSans(
+              Row(
+                children: [
+                  if (widget.icon != null)
+                    Text(
+                      widget.title,
+                      style: GoogleFonts.openSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF302E2E)
-                        )
-                        ),
-              ]),
+                        color: const Color(0xFF302E2E),
+                      ),
+                    ),
+                ],
+              ),
               TextButton(
-                  onPressed: () {},
-                  child: const Text("Add Product")),
+                onPressed: () {
+                  Nav.push(const AddProduct());
+                },
+                child: const Text("Add Product"),
+              ),
             ],
           ),
 
           const SizedBox(height: 16),
 
-          // Product selector row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: products.map((p) {
-                final selected = selectedProduct == p;
-                return GestureDetector(
-                  onTap: () => setState(() => selectedProduct = p),
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: selected
-                            ? const Color(0xFFA16438)
-                            : const Color(0xFFCCA183),
-                      ),
-                      color: selected
-                          ? const Color(0xFFFFF3E0)
-                          : Colors.transparent,
-                    ),
-                    child: Text(
-                      p,
-                      style: GoogleFonts.openSans(
-                        color: selected
-                            ? const Color(0xFFA16438)
-                            : const Color(0xFFCCA183),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
+// 🟢 Product list (no loading indicator shown)
+if (products.isEmpty)
+  const Text(
+    "No products found.",
+    style: TextStyle(color: Colors.grey),
+  )
+else
+  SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(
+      children: products.map((p) {
+        final selected = selectedProduct == p.name;
+        return GestureDetector(
+          onTap: () => setState(() => selectedProduct = p.name),
+          child: Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFFA16438)
+                    : const Color(0xFFCCA183),
+              ),
+              color: selected
+                  ? const Color(0xFFFFF3E0)
+                  : Colors.transparent,
+            ),
+            child: Text(
+              p.name,
+              style: GoogleFonts.openSans(
+                color: selected
+                    ? const Color(0xFFA16438)
+                    : const Color(0xFFCCA183),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
+        );
+      }).toList(),
+    ),
+  ),
+
 
           const SizedBox(height: 16),
           _buildInput("Material Name", controller: materialNameController),
@@ -183,8 +208,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown("Width", numbers, width, (v) => setState(() => width = v)),
-              _buildDropdown("Length", numbers, length, (v) => setState(() => length = v)),
+              _buildDropdown(
+                "Width",
+                numbers,
+                width,
+                (v) => setState(() => width = v),
+              ),
+              _buildDropdown(
+                "Length",
+                numbers,
+                length,
+                (v) => setState(() => length = v),
+              ),
             ],
           ),
 
@@ -194,9 +229,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown("Thickness", numbers, thickness,
-                  (v) => setState(() => thickness = v)),
-              _buildDropdown("Unit", units, unit, (v) => setState(() => unit = v)),
+              _buildDropdown(
+                "Thickness",
+                numbers,
+                thickness,
+                (v) => setState(() => thickness = v),
+              ),
+              _buildDropdown(
+                "Unit",
+                units,
+                unit,
+                (v) => setState(() => unit = v),
+              ),
             ],
           ),
 
@@ -206,21 +250,23 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           _buildInput("Price", controller: priceController),
 
           const SizedBox(height: 20),
-          CustomButton(
-            text: "Add Item",
-            onPressed: _handleAddItem,
-          ),
+          CustomButton(text: "Add Item", onPressed: _handleAddItem),
         ],
       ),
     );
   }
 
-  Widget _buildInput(String label, {TextEditingController? controller}) => Column(
+  Widget _buildInput(String label, {TextEditingController? controller}) =>
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style:
-                  GoogleFonts.openSans(fontSize: 16, color: const Color(0xFF7B7B7B))),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              color: const Color(0xFF7B7B7B),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: controller,
@@ -236,23 +282,32 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       );
 
   Widget _buildDropdown(
-      String label, List<String> items, String? value, ValueChanged<String?> onChanged) {
+    String label,
+    List<String> items,
+    String? value,
+    ValueChanged<String?> onChanged,
+  ) {
     return SizedBox(
       width: (MediaQuery.of(context).size.width - 95) / 2,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style:
-                  GoogleFonts.openSans(fontSize: 16, color: const Color(0xFF7B7B7B))),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              color: const Color(0xFF7B7B7B),
+            ),
+          ),
           const SizedBox(height: 8),
           DropdownButtonFormField<String>(
             value: value,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFFE0E0E0))),
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              ),
             ),
             items: items
                 .map((v) => DropdownMenuItem(value: v, child: Text(v)))
@@ -264,3 +319,4 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     );
   }
 }
+
