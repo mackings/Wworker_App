@@ -6,9 +6,9 @@ import 'package:wworker/App/Dashboad/Widget/MaterialCard.dart';
 import 'package:wworker/App/Dashboad/Widget/OthercostCard.dart';
 import 'package:wworker/App/Dashboad/Widget/itemCard.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+import 'package:wworker/App/Quotation/UI/BomSummary.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-
-
 
 class AddMaterial extends ConsumerStatefulWidget {
   const AddMaterial({super.key});
@@ -44,13 +44,12 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     final notifier = ref.read(materialProvider.notifier);
 
     final materials = List<Map<String, dynamic>>.from(data["materials"] ?? []);
-    final additionalCosts =
-        List<Map<String, dynamic>>.from(data["additionalCosts"] ?? []);
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      data["additionalCosts"] ?? [],
+    );
 
     if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (userId == null) {
@@ -65,19 +64,23 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     }
 
     return Scaffold(
-      appBar: AppBar( ),
+      appBar: AppBar(),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+            padding: const EdgeInsets.symmetric(
+              vertical: 20.0,
+              horizontal: 20.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 /// --- MATERIAL SECTION ---
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 19,
+                    vertical: 19,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(10),
@@ -126,15 +129,18 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
                 /// --- ADDITIONAL COST SECTION ---
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 19,
+                    vertical: 19,
+                  ),
                   decoration: BoxDecoration(
                     border: Border.all(color: Colors.grey.shade400),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: InkWell(
-                    onTap: () =>
-                        setState(() => isAdditionalExpanded = !isAdditionalExpanded),
+                    onTap: () => setState(
+                      () => isAdditionalExpanded = !isAdditionalExpanded,
+                    ),
                     child: Row(
                       children: [
                         Icon(
@@ -220,21 +226,17 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
         ),
       ),
 
-      /// --- CONTINUE BUTTON ---
+
       bottomSheet: Padding(
         padding: const EdgeInsets.only(bottom: 40),
         child: CustomButton(
           text: "Continue",
           outlined: true,
           onPressed: () {
-            // You can navigate or process next step here
+            Nav.push(BOMSummary());
           },
         ),
       ),
     );
   }
 }
-
-
-
-
