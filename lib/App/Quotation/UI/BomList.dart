@@ -63,7 +63,7 @@ class _BOMListState extends ConsumerState<BOMList> {
                     /// --- MATERIALS SECTION ---
                     if (materials.isNotEmpty) ...[
                       Text(
-                        "Materials (${materials.length})",
+                        "Items (${materials.length})",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -92,7 +92,7 @@ class _BOMListState extends ConsumerState<BOMList> {
 
                     if (additionalCosts.isNotEmpty) ...[
                       Text(
-                        "Additional Costs (${additionalCosts.length})",
+                        "Other Costs (${additionalCosts.length})",
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,

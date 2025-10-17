@@ -19,106 +19,94 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   final BOMService _bomService = BOMService();
   bool isLoading = false;
 
+  Future<void> _addBOMToServer(
+      List<Map<String, dynamic>> materials,
+      List<Map<String, dynamic>> additionalCosts,
+      ) async {
+    setState(() => isLoading = true);
 
+    try {
+      if (materials.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please add at least one material.")),
+        );
+        setState(() => isLoading = false);
+        return;
+      }
 
-Future<void> _addBOMToServer(
-  List<Map<String, dynamic>> materials,
-  List<Map<String, dynamic>> additionalCosts,
-) async {
-  setState(() => isLoading = true);
+      final firstMaterial = materials.first;
+      final productName = firstMaterial["Product"] ?? "BOM Item";
 
-  try {
-    if (materials.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please add at least one material.")),
+      final now = DateTime.now();
+      final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
+      final description = "$productName created on $formattedDate";
+
+      final formattedMaterials = materials.map((m) {
+        return {
+          "woodType": m["Product"] ?? "",
+          "foamType": null,
+          "type": m["Materialname"] ?? "",
+          "width": double.tryParse(m["Width"].toString()) ?? 0,
+          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+          "length": double.tryParse(m["Length"].toString()) ?? 0,
+          "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+          "unit": m["Unit"] ?? "cm",
+          "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+          "price": double.tryParse(m["Price"].toString()) ?? 0,
+          "quantity": m["quantity"] ?? 1, // 🔹 use current quantity
+          "description": m["Materialname"] ?? "",
+        };
+      }).toList();
+
+      final createResponse = await _bomService.createBOM(
+        name: productName,
+        description: description,
+        materials: formattedMaterials,
       );
+
+      if (createResponse["success"] == true) {
+        final bomId = createResponse["data"]["_id"];
+        debugPrint("✅ BOM created with ID: $bomId");
+
+        if (additionalCosts.isNotEmpty) {
+          final costResponse = await _bomService.addAdditionalCost(
+            bomId: bomId,
+            additionalCosts: additionalCosts,
+          );
+          debugPrint("💰 Additional costs added: $costResponse");
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("✅ BOM successfully created!")),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("❌ Failed: ${createResponse["message"] ?? "Error"}")),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("⚠️ Error creating BOM: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("⚠️ Unexpected error: $e")),
+        );
+      }
+    } finally {
       setState(() => isLoading = false);
-      return;
     }
-
-    // ✅ Pick the first material's product name for BOM naming
-    final firstMaterial = materials.first;
-    final productName = firstMaterial["Product"] ?? "BOM Item";
-
-    // 🕒 Create readable date description
-    final now = DateTime.now();
-    final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
-    final description = "$productName created on $formattedDate";
-
-  
-    final formattedMaterials = materials.map((m) {
-      return {
-        "woodType": m["Product"] ?? "",
-        "foamType": null,
-        "type": m["Materialname"] ?? "",
-        "width": double.tryParse(m["Width"].toString()) ?? 0,
-        "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-        "length": double.tryParse(m["Length"].toString()) ?? 0,
-        "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
-        "unit": m["Unit"] ?? "cm",
-        "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
-        "price": double.tryParse(m["Price"].toString()) ?? 0,
-        "quantity": 1,
-        "description": m["Materialname"] ?? "",
-      };
-    }).toList();
-
-    // 🟢 Step 1️⃣: Create BOM
-    final createResponse = await _bomService.createBOM(
-      name: productName,
-      description: description,
-      materials: formattedMaterials,
-    );
-
-    if (createResponse["success"] == true) {
-      final bomId = createResponse["data"]["_id"];
-      debugPrint("✅ BOM created with ID: $bomId");
-
-      // 🟢 Step 2️⃣: Add Additional Costs (if any)
-      if (additionalCosts.isNotEmpty) {
-        final costResponse = await _bomService.addAdditionalCost(
-          bomId: bomId,
-          additionalCosts: additionalCosts,
-        );
-        debugPrint("💰 Additional costs added: $costResponse");
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("✅ BOM successfully created!")),
-        );
-      }
-    } else {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed: ${createResponse["message"] ?? "Error"}")),
-        );
-      }
-    }
-  } catch (e) {
-    debugPrint("⚠️ Error creating BOM: $e");
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("⚠️ Unexpected error: $e")),
-      );
-    }
-  } finally {
-    setState(() => isLoading = false);
   }
-}
-
-
-
-
-
 
   @override
   Widget build(BuildContext context) {
     final materialData = ref.watch(materialProvider);
     final materials =
-        List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
+    List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
     final additionalCosts =
-        List<Map<String, dynamic>>.from(materialData["additionalCosts"] ?? []);
+    List<Map<String, dynamic>>.from(materialData["additionalCosts"] ?? []);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -142,7 +130,12 @@ Future<void> _addBOMToServer(
               if (materials.isEmpty)
                 const Text("No materials added yet.")
               else
-                ...materials.map((m) => BOMSummaryCard(item: m)),
+                ...materials.map((m) => BOMSummaryCard(
+                  item: m,
+                  onQuantityChanged: () {
+                    setState(() {}); // 🔹 Rebuild totals when quantity changes
+                  },
+                )),
 
               const SizedBox(height: 30),
 
@@ -152,7 +145,9 @@ Future<void> _addBOMToServer(
               if (additionalCosts.isEmpty)
                 const Text("No additional costs added yet.")
               else
-                ...additionalCosts.map((c) => BOMSummaryCard(item: c)),
+                ...additionalCosts.map((c) => BOMSummaryCard(item: c, onQuantityChanged: () { 
+                    setState(() {});
+                 },)),
 
               const SizedBox(height: 40),
               if (materials.isNotEmpty || additionalCosts.isNotEmpty)
@@ -181,8 +176,10 @@ Future<void> _addBOMToServer(
 
     for (var m in materials) {
       final price = double.tryParse(m["Price"].toString()) ?? 0;
-      materialTotal += price;
+      final qty = (m["quantity"] ?? 1).toInt();
+      materialTotal += price * qty; // 🔹 multiply by quantity
     }
+
     for (var c in additionalCosts) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;
       additionalTotal += amount;
@@ -229,5 +226,6 @@ Future<void> _addBOMToServer(
     );
   }
 }
+
 
 
