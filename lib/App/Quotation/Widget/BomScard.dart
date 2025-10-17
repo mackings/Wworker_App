@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 
-
 class BOMSummaryCard extends StatelessWidget {
   final Map<String, dynamic> item; // we pass one map for flexibility
 
@@ -69,7 +68,7 @@ class BOMSummaryCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // 🟩 Price / Amount
+    
           Container(
             padding: const EdgeInsets.all(8),
             decoration: ShapeDecoration(

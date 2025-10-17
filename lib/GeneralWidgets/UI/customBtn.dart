@@ -3,12 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
 
 
+
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final double width;
   final double borderRadius;
   final bool outlined;
+  final bool loading; // ✅ Added
   final IconData? icon;
   final Color? iconColor;
   final Color? textColor;
@@ -22,6 +24,7 @@ class CustomButton extends StatelessWidget {
     this.width = 327,
     this.borderRadius = 8,
     this.outlined = false,
+    this.loading = false, 
     this.icon,
     this.iconColor,
     this.textColor,
@@ -39,7 +42,7 @@ class CustomButton extends StatelessWidget {
         outlined ? (borderColor ?? ColorsApp.btnColor) : Colors.transparent;
 
     return GestureDetector(
-      onTap: onPressed,
+      onTap: loading ? null : onPressed, // ✅ Disable when loading
       child: Container(
         width: width == 327 ? MediaQuery.of(context).size.width - 35 : width,
         padding: const EdgeInsets.all(16),
@@ -50,24 +53,35 @@ class CustomButton extends StatelessWidget {
             side: BorderSide(color: btnBorderColor, width: 2),
           ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, color: iconColor ?? btnTextColor, size: 20),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              text,
-              style: GoogleFonts.openSans(
-                color: btnTextColor,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                height: 1.5,
-              ),
-            ),
-          ],
+        child: Center(
+          child: loading
+              ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: btnTextColor,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: iconColor ?? btnTextColor, size: 20),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      text,
+                      style: GoogleFonts.openSans(
+                        color: btnTextColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
         ),
       ),
     );

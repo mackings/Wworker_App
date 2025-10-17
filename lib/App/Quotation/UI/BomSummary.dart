@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Widget/BomScard.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
@@ -13,12 +16,105 @@ class BOMSummary extends ConsumerStatefulWidget {
 }
 
 class _BOMSummaryState extends ConsumerState<BOMSummary> {
+  final BOMService _bomService = BOMService();
+  bool isLoading = false;
+
+
+
+Future<void> _addBOMToServer(
+  List<Map<String, dynamic>> materials,
+  List<Map<String, dynamic>> additionalCosts,
+) async {
+  setState(() => isLoading = true);
+
+  try {
+    if (materials.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add at least one material.")),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    // ✅ Pick the first material's product name for BOM naming
+    final firstMaterial = materials.first;
+    final productName = firstMaterial["Product"] ?? "BOM Item";
+
+    // 🕒 Create readable date description
+    final now = DateTime.now();
+    final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
+    final description = "$productName created on $formattedDate";
+
+  
+    final formattedMaterials = materials.map((m) {
+      return {
+        "woodType": m["Product"] ?? "",
+        "foamType": null,
+        "type": m["Materialname"] ?? "",
+        "width": double.tryParse(m["Width"].toString()) ?? 0,
+        "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+        "length": double.tryParse(m["Length"].toString()) ?? 0,
+        "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+        "unit": m["Unit"] ?? "cm",
+        "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+        "price": double.tryParse(m["Price"].toString()) ?? 0,
+        "quantity": 1,
+        "description": m["Materialname"] ?? "",
+      };
+    }).toList();
+
+    // 🟢 Step 1️⃣: Create BOM
+    final createResponse = await _bomService.createBOM(
+      name: productName,
+      description: description,
+      materials: formattedMaterials,
+    );
+
+    if (createResponse["success"] == true) {
+      final bomId = createResponse["data"]["_id"];
+      debugPrint("✅ BOM created with ID: $bomId");
+
+      // 🟢 Step 2️⃣: Add Additional Costs (if any)
+      if (additionalCosts.isNotEmpty) {
+        final costResponse = await _bomService.addAdditionalCost(
+          bomId: bomId,
+          additionalCosts: additionalCosts,
+        );
+        debugPrint("💰 Additional costs added: $costResponse");
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ BOM successfully created!")),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Failed: ${createResponse["message"] ?? "Error"}")),
+        );
+      }
+    }
+  } catch (e) {
+    debugPrint("⚠️ Error creating BOM: $e");
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("⚠️ Unexpected error: $e")),
+      );
+    }
+  } finally {
+    setState(() => isLoading = false);
+  }
+}
+
+
+
+
+
+
   @override
   Widget build(BuildContext context) {
-    // 🧩 Step 1: Watch provider
     final materialData = ref.watch(materialProvider);
-
-    // 🧩 Step 2: Extract materials and additional costs
     final materials =
         List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
     final additionalCosts =
@@ -27,55 +123,51 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        title: const Text("BOM Summary"),
         backgroundColor: Colors.white,
         elevation: 0,
+        foregroundColor: Colors.black,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const CustomText(title: "Summary"),
-
               const SizedBox(height: 20),
 
-              // 🧩 Materials Section
-              const Text(
-                "Materials",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              const Text("Materials",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-
               if (materials.isEmpty)
-                const Text(
-                  "No materials added yet.",
-                  style: TextStyle(color: Colors.grey),
-                )
+                const Text("No materials added yet.")
               else
-                ...materials.map((item) => BOMSummaryCard(item: item)),
+                ...materials.map((m) => BOMSummaryCard(item: m)),
 
               const SizedBox(height: 30),
 
-              // 🧩 Additional Costs Section
-              const Text(
-                "Additional Costs",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              const Text("Additional Costs",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-
               if (additionalCosts.isEmpty)
-                const Text(
-                  "No additional costs added yet.",
-                  style: TextStyle(color: Colors.grey),
-                )
+                const Text("No additional costs added yet.")
               else
-                ...additionalCosts.map((item) => BOMSummaryCard(item: item)),
+                ...additionalCosts.map((c) => BOMSummaryCard(item: c)),
 
               const SizedBox(height: 40),
-
               if (materials.isNotEmpty || additionalCosts.isNotEmpty)
                 _buildTotalSection(materials, additionalCosts),
+
+              const SizedBox(height: 40),
+              CustomButton(
+                text: "Add to BOM",
+                outlined: true,
+                loading: isLoading,
+                onPressed: () => _addBOMToServer(materials, additionalCosts),
+              ),
+              const SizedBox(height: 20),
+              CustomButton(text: "Continue", onPressed: () {}),
             ],
           ),
         ),
@@ -83,20 +175,15 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-  // 🧩 TOTAL SUMMARY BUILDER
   Widget _buildTotalSection(
-    List<Map<String, dynamic>> materials,
-    List<Map<String, dynamic>> additionalCosts,
-  ) {
+      List<Map<String, dynamic>> materials, List<Map<String, dynamic>> additionalCosts) {
     double materialTotal = 0;
     double additionalTotal = 0;
 
-    // ✅ Use "Price" (AddMaterial naming convention)
     for (var m in materials) {
       final price = double.tryParse(m["Price"].toString()) ?? 0;
       materialTotal += price;
     }
-
     for (var c in additionalCosts) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;
       additionalTotal += amount;
@@ -106,7 +193,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
     return Container(
       padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(top: 10),
       decoration: BoxDecoration(
         color: const Color(0xFFF5F8F2),
         borderRadius: BorderRadius.circular(8),
@@ -115,14 +201,12 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Total",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text("Total Summary",
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
           _buildTotalRow("Materials Total", materialTotal),
           _buildTotalRow("Additional Costs Total", additionalTotal),
-          const Divider(thickness: 1, color: Colors.grey),
+          const Divider(),
           _buildTotalRow("Overall Total", total, bold: true),
         ],
       ),
@@ -135,25 +219,16 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black,
-              fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
-          Text(
-            "₦${value.toStringAsFixed(2)}",
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.black,
-              fontWeight: bold ? FontWeight.w600 : FontWeight.w400,
-            ),
-          ),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 16, fontWeight: bold ? FontWeight.w600 : FontWeight.w400)),
+          Text("₦${value.toStringAsFixed(2)}",
+              style: TextStyle(
+                  fontSize: 16, fontWeight: bold ? FontWeight.w600 : FontWeight.w400)),
         ],
       ),
     );
   }
 }
+
 

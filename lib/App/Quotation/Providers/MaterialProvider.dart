@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 final materialProvider =
     StateNotifierProvider<MaterialNotifier, Map<String, dynamic>>(
   (ref) => MaterialNotifier(),
@@ -13,6 +12,7 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
       : super({
           "materials": [],
           "additionalCosts": [],
+          "isLoaded": false,
         }) {
     _loadMaterials();
   }
@@ -25,15 +25,29 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId") ?? "default_user";
     final data = prefs.getString(_getKey(userId));
+
     if (data != null) {
-      state = Map<String, dynamic>.from(jsonDecode(data));
+      final decoded = Map<String, dynamic>.from(jsonDecode(data));
+      state = {
+        "materials": decoded["materials"] ?? [],
+        "additionalCosts": decoded["additionalCosts"] ?? [],
+        "isLoaded": true,
+      };
+    } else {
+      state = {"materials": [], "additionalCosts": [], "isLoaded": true};
     }
   }
 
   Future<void> _saveMaterials() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId") ?? "default_user";
-    await prefs.setString(_getKey(userId), jsonEncode(state));
+
+    final dataToSave = {
+      "materials": state["materials"],
+      "additionalCosts": state["additionalCosts"],
+    };
+
+    await prefs.setString(_getKey(userId), jsonEncode(dataToSave));
   }
 
   Future<void> addMaterial(Map<String, dynamic> newItem) async {
@@ -71,7 +85,7 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId") ?? "default_user";
-    state = {"materials": [], "additionalCosts": []};
+    state = {"materials": [], "additionalCosts": [], "isLoaded": true};
     await prefs.remove(_getKey(userId));
   }
 }
