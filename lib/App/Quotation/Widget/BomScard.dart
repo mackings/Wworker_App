@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 
+
+
 class BOMSummaryCard extends ConsumerStatefulWidget {
   final Map<String, dynamic> item;
+  final VoidCallback onQuantityChanged;
 
   const BOMSummaryCard({
     super.key,
-    required this.item, required Null Function() onQuantityChanged,
+    required this.item,
+    required this.onQuantityChanged,
   });
 
   @override
@@ -20,29 +24,33 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
   @override
   void initState() {
     super.initState();
-    quantity = (widget.item["quantity"] ?? 1).toInt(); // default to 1
+    quantity = (widget.item["quantity"] ?? 1).toInt();
   }
 
-  void _updateQuantity(int newQuantity) {
-    setState(() => quantity = newQuantity);
-    widget.item["quantity"] = quantity;
+void _updateQuantity(int newQuantity) {
+  setState(() => quantity = newQuantity);
+  
+  // 🔹 Store as string to match provider type
+  widget.item["quantity"] = quantity.toString();
 
-    // 🔹 Update provider state
-    final state = ref.read(materialProvider.notifier).state;
-
-    final materials = List<Map<String, dynamic>>.from(state["materials"]);
-    final index = materials.indexWhere((m) =>
-        m["Materialname"] == widget.item["Materialname"] &&
-        m["Product"] == widget.item["Product"]);
-    if (index != -1) {
-      materials[index] = widget.item;
-    }
-
-    ref.read(materialProvider.notifier).state = {
-      ...state,
-      "materials": materials,
-    };
+  // Update provider state
+  final state = ref.read(materialProvider.notifier).state;
+  final materials = List<Map<String, dynamic>>.from(state["materials"]);
+  final index = materials.indexWhere((m) =>
+      m["Materialname"] == widget.item["Materialname"] &&
+      m["Product"] == widget.item["Product"]);
+  if (index != -1) {
+    materials[index] = widget.item;
   }
+
+  ref.read(materialProvider.notifier).state = {
+    ...state,
+    "materials": materials,
+  };
+
+  widget.onQuantityChanged(); // trigger parent rebuild
+}
+
 
   void _increaseQuantity() => _updateQuantity(quantity + 1);
 
@@ -81,8 +89,6 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
   @override
   Widget build(BuildContext context) {
     final bool isMaterial = widget.item.containsKey("Materialname");
-
-    // Price or additional cost
     final double price = double.tryParse(
           (widget.item["Price"] ?? widget.item["amount"] ?? "0").toString(),
         ) ??
@@ -189,4 +195,3 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
     );
   }
 }
-

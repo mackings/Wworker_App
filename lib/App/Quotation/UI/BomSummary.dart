@@ -41,23 +41,26 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       final now = DateTime.now();
       final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
       final description = "$productName created on $formattedDate";
+      
 
-      final formattedMaterials = materials.map((m) {
-        return {
-          "woodType": m["Product"] ?? "",
-          "foamType": null,
-          "type": m["Materialname"] ?? "",
-          "width": double.tryParse(m["Width"].toString()) ?? 0,
-          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-          "length": double.tryParse(m["Length"].toString()) ?? 0,
-          "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
-          "unit": m["Unit"] ?? "cm",
-          "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
-          "price": double.tryParse(m["Price"].toString()) ?? 0,
-          "quantity": m["quantity"] ?? 1, // 🔹 use current quantity
-          "description": m["Materialname"] ?? "",
-        };
-      }).toList();
+final formattedMaterials = materials.map((m) {
+  return {
+    "woodType": m["Product"] ?? "",
+    "foamType": null,
+    "type": m["Materialname"] ?? "",
+    "width": double.tryParse(m["Width"].toString()) ?? 0,
+    "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+    "length": double.tryParse(m["Length"].toString()) ?? 0,
+    "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+    "unit": m["Unit"] ?? "cm",
+    "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+    "price": double.tryParse(m["Price"].toString()) ?? 0,
+    // 🔹 Parse quantity safely
+    "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
+    "description": m["Materialname"] ?? "",
+  };
+}).toList();
+
 
       final createResponse = await _bomService.createBOM(
         name: productName,
@@ -145,7 +148,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                     onQuantityChanged: () {
                       setState(
                         () {},
-                      ); // 🔹 Rebuild totals when quantity changes
+                      ); 
                     },
                   ),
                 ),
@@ -201,11 +204,12 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     double materialTotal = 0;
     double additionalTotal = 0;
 
-    for (var m in materials) {
-      final price = double.tryParse(m["Price"].toString()) ?? 0;
-      final qty = (m["quantity"] ?? 1).toInt();
-      materialTotal += price * qty; // 🔹 multiply by quantity
-    }
+for (var m in materials) {
+  final price = double.tryParse(m["Price"].toString()) ?? 0;
+  final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
+  materialTotal += price * qty;
+}
+
 
     for (var c in additionalCosts) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;

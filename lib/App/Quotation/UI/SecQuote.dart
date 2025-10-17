@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
+import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+
+
+
+class SecQuote extends ConsumerStatefulWidget {
+  final String name;
+  final String address;
+  final String nearestBusStop;
+  final String phone;
+  final String email;
+  final String description;
+
+  const SecQuote({
+    super.key,
+    required this.name,
+    required this.address,
+    required this.nearestBusStop,
+    required this.phone,
+    required this.email,
+    required this.description,
+  });
+
+  @override
+  ConsumerState<ConsumerStatefulWidget> createState() => _SecQuoteState();
+}
+
+class _SecQuoteState extends ConsumerState<SecQuote> {
+  @override
+  Widget build(BuildContext context) {
+    final materialData = ref.watch(materialProvider);
+    final materials = List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
+    final additionalCosts = List<Map<String, dynamic>>.from(materialData["additionalCosts"] ?? []);
+
+    // Convert materials to QuotationItems dynamically
+    final materialItems = materials.map((m) {
+      final quantity = m["quantity"] ?? 1;
+      final price = double.tryParse(m["Price"].toString()) ?? 0;
+      final total = price * quantity;
+
+      return QuotationItem(
+        product: m["Product"] ?? "Unnamed",
+        description: m["Materialname"] ?? "",
+        quantity: quantity,
+        unitPrice: "₦${price.toStringAsFixed(2)}",
+        total: "₦${total.toStringAsFixed(2)}",
+      );
+    }).toList();
+
+    // Convert additional costs if any
+    final costItems = additionalCosts.map((c) {
+      final amount = double.tryParse(c["amount"].toString()) ?? 0;
+      return QuotationItem(
+        product: c["type"] ?? "Additional",
+        description: c["description"] ?? "",
+        quantity: 1,
+        unitPrice: "₦${amount.toStringAsFixed(2)}",
+        total: "₦${amount.toStringAsFixed(2)}",
+      );
+    }).toList();
+
+    final allItems = [...materialItems, ...costItems];
+
+    // Calculate total sum
+    final totalSum = allItems.fold<double>(0, (sum, item) {
+      final val = double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0;
+      return sum + val;
+    });
+
+    return Scaffold(
+      appBar: AppBar(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+            child: Column(
+              children: [
+                // Company Info
+                QuotationInfo(
+                  title: "Company Information",
+                  contact: ContactInfo(
+                    name: "Sumit Nova Trust Ltd",
+                    address: "K3, plaza, New Garage, Ibadan.",
+                    nearestBusStop: "Alao Akala Expressway",
+                    phone: "07034567890",
+                    email: "admin@sumitnovatrustltd.com",
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Client Info
+                QuotationInfo(
+                  title: "Client Information",
+                  contact: ContactInfo(
+                    name: widget.name,
+                    address: widget.address,
+                    nearestBusStop: widget.nearestBusStop,
+                    phone: widget.phone,
+                    email: widget.email,
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Quotation Items Table
+                QuotationTable(items: allItems),
+
+                const SizedBox(height: 20),
+
+
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton(
+                          text: "Save",
+                          icon: Icons.save,
+                          onPressed: () {
+                            // TODO: implement save logic
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: CustomButton(
+                          text: "Send to Client",
+                          onPressed: () {
+                            // TODO: implement send logic
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                CustomButton(
+                  text: "Download PDF",
+                  outlined: true,
+                  onPressed: () {
+                    // TODO: generate PDF logic
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+

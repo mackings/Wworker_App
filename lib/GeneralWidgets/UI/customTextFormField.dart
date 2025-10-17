@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
 class CustomTextField extends StatefulWidget {
   final String label;
   final String hintText;
@@ -15,7 +13,8 @@ class CustomTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final TextAlign textAlign;
   final bool enabled;
-  final int? maxLines; // 👈 New optional parameter
+  final int? maxLines;
+  final FormFieldValidator<String>? validator; // ✅ Optional validator
 
   const CustomTextField({
     super.key,
@@ -29,7 +28,8 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.textAlign = TextAlign.start,
     this.enabled = true,
-    this.maxLines, // 👈 Add to constructor
+    this.maxLines,
+    this.validator, // ✅ Added to constructor
   });
 
   @override
@@ -67,7 +67,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
-          // 👇 Adjust height dynamically if maxLines > 1
           height: (widget.maxLines != null && widget.maxLines! > 1) ? null : 55,
           decoration: ShapeDecoration(
             color: const Color.fromARGB(255, 241, 238, 238),
@@ -88,12 +87,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return Center(
       child: TextFormField(
         controller: widget.controller,
+        validator: widget.validator, // ✅ Added validator support
         keyboardType: widget.keyboardType,
         obscureText: widget.isPassword ? _obscureText : false,
         textAlign: widget.textAlign,
         enabled: widget.enabled,
         textAlignVertical: TextAlignVertical.center,
-        maxLines: widget.maxLines ?? 1, // 👈 Use maxLines if provided
+        maxLines: widget.maxLines ?? 1,
         style: GoogleFonts.openSans(
           fontSize: 16,
           color: Colors.black87,
@@ -118,7 +118,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         _obscureText ? Icons.visibility_off : Icons.visibility,
                         color: const Color(0xFF7B7B7B),
                       ),
-                      onPressed: () => setState(() => _obscureText = !_obscureText),
+                      onPressed: () =>
+                          setState(() => _obscureText = !_obscureText),
                     ),
                     const SizedBox(width: 4),
                     Icon(_getIcon(), color: const Color(0xFF7B7B7B)),
@@ -132,7 +133,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
-      value: widget.dropdownItems?.isNotEmpty == true ? widget.dropdownItems!.first : null,
+      value: widget.dropdownItems?.isNotEmpty == true
+          ? widget.dropdownItems!.first
+          : null,
+      validator: widget.validator, // ✅ Added validator support
       items: widget.dropdownItems
           ?.map(
             (value) => DropdownMenuItem(
