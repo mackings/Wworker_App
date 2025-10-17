@@ -15,6 +15,7 @@ class CustomTextField extends StatefulWidget {
   final TextInputType keyboardType;
   final TextAlign textAlign;
   final bool enabled;
+  final int? maxLines; // 👈 New optional parameter
 
   const CustomTextField({
     super.key,
@@ -28,6 +29,7 @@ class CustomTextField extends StatefulWidget {
     this.keyboardType = TextInputType.text,
     this.textAlign = TextAlign.start,
     this.enabled = true,
+    this.maxLines, // 👈 Add to constructor
   });
 
   @override
@@ -63,10 +65,10 @@ class _CustomTextFieldState extends State<CustomTextField> {
           textAlign: TextAlign.left,
         ),
         const SizedBox(height: 8),
-
         Container(
           width: double.infinity,
-          height: 55,
+          // 👇 Adjust height dynamically if maxLines > 1
+          height: (widget.maxLines != null && widget.maxLines! > 1) ? null : 55,
           decoration: ShapeDecoration(
             color: const Color.fromARGB(255, 241, 238, 238),
             shape: RoundedRectangleBorder(
@@ -75,9 +77,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: widget.isDropdown
-                ? _buildDropdownField()
-                : _buildTextField(),
+            child: widget.isDropdown ? _buildDropdownField() : _buildTextField(),
           ),
         ),
       ],
@@ -93,6 +93,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         textAlign: widget.textAlign,
         enabled: widget.enabled,
         textAlignVertical: TextAlignVertical.center,
+        maxLines: widget.maxLines ?? 1, // 👈 Use maxLines if provided
         style: GoogleFonts.openSans(
           fontSize: 16,
           color: Colors.black87,
@@ -107,8 +108,6 @@ class _CustomTextFieldState extends State<CustomTextField> {
           border: InputBorder.none,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(vertical: 12),
-      
-          /// 👇 Move icon to the right
           suffixIcon: widget.isPassword
               ? Row(
                   mainAxisSize: MainAxisSize.min,
@@ -119,9 +118,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                         _obscureText ? Icons.visibility_off : Icons.visibility,
                         color: const Color(0xFF7B7B7B),
                       ),
-                      onPressed: () {
-                        setState(() => _obscureText = !_obscureText);
-                      },
+                      onPressed: () => setState(() => _obscureText = !_obscureText),
                     ),
                     const SizedBox(width: 4),
                     Icon(_getIcon(), color: const Color(0xFF7B7B7B)),
@@ -135,9 +132,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
-      value: widget.dropdownItems?.isNotEmpty == true
-          ? widget.dropdownItems!.first
-          : null,
+      value: widget.dropdownItems?.isNotEmpty == true ? widget.dropdownItems!.first : null,
       items: widget.dropdownItems
           ?.map(
             (value) => DropdownMenuItem(
