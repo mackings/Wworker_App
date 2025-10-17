@@ -24,33 +24,45 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
   @override
   void initState() {
     super.initState();
-    quantity = (widget.item["quantity"] ?? 1).toInt();
+
+    // 🔹 Safely handle any type (int, double, string, null)
+    final q = widget.item["quantity"];
+    if (q is int) {
+      quantity = q;
+    } else if (q is double) {
+      quantity = q.toInt();
+    } else if (q is String) {
+      quantity = int.tryParse(q) ?? 1;
+    } else {
+      quantity = 1;
+    }
   }
 
-void _updateQuantity(int newQuantity) {
-  setState(() => quantity = newQuantity);
-  
-  // 🔹 Store as string to match provider type
-  widget.item["quantity"] = quantity.toString();
+  void _updateQuantity(int newQuantity) {
+    setState(() => quantity = newQuantity);
 
-  // Update provider state
-  final state = ref.read(materialProvider.notifier).state;
-  final materials = List<Map<String, dynamic>>.from(state["materials"]);
-  final index = materials.indexWhere((m) =>
-      m["Materialname"] == widget.item["Materialname"] &&
-      m["Product"] == widget.item["Product"]);
-  if (index != -1) {
-    materials[index] = widget.item;
+    // 🔹 Store as string for consistent provider structure
+    widget.item["quantity"] = quantity.toString();
+
+    // 🔹 Update provider state safely
+    final state = ref.read(materialProvider.notifier).state;
+    final materials = List<Map<String, dynamic>>.from(state["materials"]);
+
+    final index = materials.indexWhere((m) =>
+        m["Materialname"] == widget.item["Materialname"] &&
+        m["Product"] == widget.item["Product"]);
+
+    if (index != -1) {
+      materials[index] = widget.item;
+    }
+
+    ref.read(materialProvider.notifier).state = {
+      ...state,
+      "materials": materials,
+    };
+
+    widget.onQuantityChanged(); // trigger parent rebuild
   }
-
-  ref.read(materialProvider.notifier).state = {
-    ...state,
-    "materials": materials,
-  };
-
-  widget.onQuantityChanged(); // trigger parent rebuild
-}
-
 
   void _increaseQuantity() => _updateQuantity(quantity + 1);
 
@@ -89,6 +101,7 @@ void _updateQuantity(int newQuantity) {
   @override
   Widget build(BuildContext context) {
     final bool isMaterial = widget.item.containsKey("Materialname");
+
     final double price = double.tryParse(
           (widget.item["Price"] ?? widget.item["amount"] ?? "0").toString(),
         ) ??
@@ -115,7 +128,7 @@ void _updateQuantity(int newQuantity) {
             _buildRow('Square Meter', widget.item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
 
-            // Quantity controls
+            // 🔹 Quantity controls
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -156,7 +169,7 @@ void _updateQuantity(int newQuantity) {
 
           const SizedBox(height: 16),
 
-          // Price display only
+          // 🔹 Price display
           Container(
             padding: const EdgeInsets.all(8),
             decoration: ShapeDecoration(

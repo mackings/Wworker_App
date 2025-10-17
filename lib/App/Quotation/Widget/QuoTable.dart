@@ -106,7 +106,7 @@ class QuotationTable extends StatelessWidget {
       child: Row(
         children: [
           Expanded(flex: 2, child: Text(item.product, style: textStyle)),
-          Expanded(flex: 4, child: Text(item.description, style: textStyle)),
+          Expanded(flex: 2, child: Text(item.description, style: textStyle)),
           Expanded(flex: 2, child: Center(child: Text(item.quantity.toString(), style: textStyle))),
           Expanded(flex: 3, child: Text(item.unitPrice, style: textStyle)),
           Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: Text(item.total, style: totalStyle))),

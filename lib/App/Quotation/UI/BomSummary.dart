@@ -9,6 +9,9 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
+
 class BOMSummary extends ConsumerStatefulWidget {
   const BOMSummary({super.key});
 
@@ -41,7 +44,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       final now = DateTime.now();
       final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
       final description = "$productName created on $formattedDate";
-      
+
 
 final formattedMaterials = materials.map((m) {
   return {

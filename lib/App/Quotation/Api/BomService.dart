@@ -1,10 +1,10 @@
 
-
-
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
+
+
 
 class BOMService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -116,7 +116,53 @@ Future<Map<String, dynamic>> getAllBOMs() async {
 }
 
 
-  // 🔹 Centralized Error Handler
+
+// 🟢 4️⃣ CREATE QUOTATION
+Future<Map<String, dynamic>> createQuotation({
+  required String clientName,
+  required String clientAddress,
+  required String nearestBusStop,
+  required String phoneNumber,
+  required String email,
+  required String description,
+  required List<Map<String, dynamic>> items,
+  required Map<String, dynamic> service,
+  required double discount,
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    if (token == null) {
+      return {"success": false, "message": "No auth token found"};
+    }
+
+    final body = {
+      "clientName": clientName,
+      "clientAddress": clientAddress,
+      "nearestBusStop": nearestBusStop,
+      "phoneNumber": phoneNumber,
+      "email": email,
+      "description": description,
+      "items": items,
+      "service": service,
+      "discount": discount,
+    };
+
+    final response = await _dio.post(
+      "/api/quotation",
+      data: body,
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data;
+  } on DioException catch (e) {
+    return _handleError(e);
+  }
+}
+
+
+
   Map<String, dynamic> _handleError(DioException e) {
     debugPrint("⚠️ [HANDLE ERROR] => ${e.response?.data ?? e.message}");
     return {

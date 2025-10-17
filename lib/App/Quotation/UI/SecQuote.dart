@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
@@ -30,28 +31,27 @@ class SecQuote extends ConsumerStatefulWidget {
 }
 
 class _SecQuoteState extends ConsumerState<SecQuote> {
+  bool isLoading = false; // loading state
+
   @override
   Widget build(BuildContext context) {
     final materialData = ref.watch(materialProvider);
     final materials = List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
     final additionalCosts = List<Map<String, dynamic>>.from(materialData["additionalCosts"] ?? []);
 
-  
-final materialItems = materials.map((m) {
-  final quantity = int.tryParse(m["quantity"].toString()) ?? 1;
-  final price = double.tryParse(m["Price"].toString()) ?? 0;
-  final total = price * quantity;
+    final materialItems = materials.map((m) {
+      final quantity = int.tryParse(m["quantity"].toString()) ?? 1;
+      final price = double.tryParse(m["Price"].toString()) ?? 0;
+      final total = price * quantity;
 
-  return QuotationItem(
-    product: m["Product"] ?? "Unnamed",
-    description: m["Materialname"] ?? "",
-    quantity: quantity,
-    unitPrice: "₦${price.toStringAsFixed(2)}",
-    total: "₦${total.toStringAsFixed(2)}",
-  );
-}).toList();
-
-
+      return QuotationItem(
+        product: m["Product"] ?? "Unnamed",
+        description: m["Materialname"] ?? "",
+        quantity: quantity,
+        unitPrice: "₦${price.toStringAsFixed(2)}",
+        total: "₦${total.toStringAsFixed(2)}",
+      );
+    }).toList();
 
     final costItems = additionalCosts.map((c) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;
@@ -66,7 +66,6 @@ final materialItems = materials.map((m) {
 
     final allItems = [...materialItems, ...costItems];
 
-
     final totalSum = allItems.fold<double>(0, (sum, item) {
       final val = double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0;
       return sum + val;
@@ -80,7 +79,8 @@ final materialItems = materials.map((m) {
             padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
             child: Column(
               children: [
-                // Company Info
+          
+          
                 QuotationInfo(
                   title: "Company Information",
                   contact: ContactInfo(
@@ -94,7 +94,7 @@ final materialItems = materials.map((m) {
 
                 const SizedBox(height: 20),
 
-                // Client Info
+      
                 QuotationInfo(
                   title: "Client Information",
                   contact: ContactInfo(
@@ -108,11 +108,9 @@ final materialItems = materials.map((m) {
 
                 const SizedBox(height: 20),
 
-                // Quotation Items Table
                 QuotationTable(items: allItems),
 
                 const SizedBox(height: 20),
-
 
                 Padding(
                   padding: const EdgeInsets.all(8.0),
@@ -120,11 +118,79 @@ final materialItems = materials.map((m) {
                     children: [
                       Expanded(
                         child: CustomButton(
-                          text: "Save",
-                          icon: Icons.save,
-                          onPressed: () {
-                            // TODO: implement save logic
-                          },
+                          text: isLoading ? "Saving..." : "Save",
+                          icon: isLoading ? null : Icons.save,
+                          onPressed: isLoading
+                              ? null
+                              : () async {
+                                  setState(() => isLoading = true); // start loading
+
+                                  final bomService = BOMService();
+
+                                  // Prepare items
+                                  final items = materials.map((m) {
+                                    final quantity =
+                                        int.tryParse(m["quantity"].toString()) ?? 1;
+                                    final price =
+                                        double.tryParse(m["Price"].toString()) ?? 0;
+
+                                    return {
+                                      "woodType": m["Product"] ?? "",
+                                      "foamType": null,
+                                      "width": double.tryParse(m["Width"].toString()) ?? 0,
+                                      "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+                                      "length": double.tryParse(m["Length"].toString()) ?? 0,
+                                      "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+                                      "unit": m["Unit"] ?? "cm",
+                                      "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+                                      "quantity": quantity,
+                                      "costPrice": price,
+                                      "sellingPrice": price,
+                                      "description": m["Materialname"] ?? "",
+                                      "image": "",
+                                    };
+                                  }).toList();
+
+                                  // Prepare service
+                                  final totalServicePrice = materials.fold<double>(
+                                      0,
+                                      (sum, m) =>
+                                          sum + (double.tryParse(m["Price"].toString()) ?? 0) *
+                                              (int.tryParse(m["quantity"].toString()) ?? 1));
+                                  final service = {
+                                    "product": "Materials Service",
+                                    "quantity": 1,
+                                    "discount": 0,
+                                    "totalPrice": totalServicePrice,
+                                  };
+
+                                  final response = await bomService.createQuotation(
+                                    clientName: widget.name,
+                                    clientAddress: widget.address,
+                                    nearestBusStop: widget.nearestBusStop,
+                                    phoneNumber: widget.phone,
+                                    email: widget.email,
+                                    description: widget.description,
+                                    items: items,
+                                    service: service,
+                                    discount: 0.0,
+                                  );
+
+                                  setState(() => isLoading = false); // stop loading
+
+                                  if (response["success"] == true) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                          content: Text("✅ Quotation created successfully")),
+                                    );
+                                  } else {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                          content: Text(
+                                              "❌ Failed: ${response["message"] ?? "Error"}")),
+                                    );
+                                  }
+                                },
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -132,7 +198,7 @@ final materialItems = materials.map((m) {
                         child: CustomButton(
                           text: "Send to Client",
                           onPressed: () {
-                            // TODO: implement send logic
+                         
                           },
                         ),
                       ),
@@ -146,7 +212,7 @@ final materialItems = materials.map((m) {
                   text: "Download PDF",
                   outlined: true,
                   onPressed: () {
-                    // TODO: generate PDF logic
+                  
                   },
                 ),
               ],
