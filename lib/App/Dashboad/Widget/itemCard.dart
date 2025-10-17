@@ -36,7 +36,7 @@ class ItemsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔲 Inner bordered container for item details
+  
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -59,7 +59,7 @@ class ItemsCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-          // 🗑️ Delete button
+         
           GestureDetector(
             onTap: onDelete,
             child: Container(

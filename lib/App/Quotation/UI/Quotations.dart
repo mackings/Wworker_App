@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/App/Quotation/UI/AddMaterial.dart';
+import 'package:wworker/App/Quotation/UI/BomList.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
@@ -43,7 +44,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   text: "Add item from BOM List",
                   outlined: true,
                   icon: Icons.add,
-                  onPressed: () {},
+                  onPressed: () {
+                    Nav.push(BOMList());
+                  },
                 ),
 
                 SizedBox(height: 20),
