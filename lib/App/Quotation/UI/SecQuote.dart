@@ -36,22 +36,23 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     final materials = List<Map<String, dynamic>>.from(materialData["materials"] ?? []);
     final additionalCosts = List<Map<String, dynamic>>.from(materialData["additionalCosts"] ?? []);
 
-    // Convert materials to QuotationItems dynamically
-    final materialItems = materials.map((m) {
-      final quantity = m["quantity"] ?? 1;
-      final price = double.tryParse(m["Price"].toString()) ?? 0;
-      final total = price * quantity;
+  
+final materialItems = materials.map((m) {
+  final quantity = int.tryParse(m["quantity"].toString()) ?? 1;
+  final price = double.tryParse(m["Price"].toString()) ?? 0;
+  final total = price * quantity;
 
-      return QuotationItem(
-        product: m["Product"] ?? "Unnamed",
-        description: m["Materialname"] ?? "",
-        quantity: quantity,
-        unitPrice: "₦${price.toStringAsFixed(2)}",
-        total: "₦${total.toStringAsFixed(2)}",
-      );
-    }).toList();
+  return QuotationItem(
+    product: m["Product"] ?? "Unnamed",
+    description: m["Materialname"] ?? "",
+    quantity: quantity,
+    unitPrice: "₦${price.toStringAsFixed(2)}",
+    total: "₦${total.toStringAsFixed(2)}",
+  );
+}).toList();
 
-    // Convert additional costs if any
+
+
     final costItems = additionalCosts.map((c) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;
       return QuotationItem(
@@ -65,7 +66,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
     final allItems = [...materialItems, ...costItems];
 
-    // Calculate total sum
+
     final totalSum = allItems.fold<double>(0, (sum, item) {
       final val = double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0;
       return sum + val;
