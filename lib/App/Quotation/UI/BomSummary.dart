@@ -123,7 +123,6 @@ Future<void> _addBOMToServer(
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("BOM Summary"),
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,

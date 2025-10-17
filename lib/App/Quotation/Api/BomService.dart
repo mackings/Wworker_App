@@ -94,6 +94,28 @@ class BOMService {
     }
   }
 
+  // 🟢 3️⃣ GET ALL BOMs
+Future<Map<String, dynamic>> getAllBOMs() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    if (token == null) {
+      return {"success": false, "message": "No auth token found"};
+    }
+
+    final response = await _dio.get(
+      "/api/bom/",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data;
+  } on DioException catch (e) {
+    return _handleError(e);
+  }
+}
+
+
   // 🔹 Centralized Error Handler
   Map<String, dynamic> _handleError(DioException e) {
     debugPrint("⚠️ [HANDLE ERROR] => ${e.response?.data ?? e.message}");

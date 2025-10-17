@@ -4,11 +4,15 @@ import 'package:google_fonts/google_fonts.dart';
 class ItemsCard extends StatelessWidget {
   final Map<String, dynamic> item;
   final VoidCallback? onDelete;
+  final VoidCallback? onAdd;
+  final bool showAddButton;
 
   const ItemsCard({
     super.key,
     required this.item,
     this.onDelete,
+    this.onAdd,
+    this.showAddButton = false, // default = false (so existing pages won't break)
   });
 
   @override
@@ -36,7 +40,7 @@ class ItemsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-  
+          /// 🔹 Item details
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -59,25 +63,37 @@ class ItemsCard extends StatelessWidget {
 
           const SizedBox(height: 16),
 
-         
+          /// 🔹 Action button (Add or Delete)
           GestureDetector(
-            onTap: onDelete,
+            onTap: showAddButton ? onAdd : onDelete,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFF8B4513)),
+                border: Border.all(
+                  color: showAddButton
+                      ? const Color(0xFF2E7D32) // green border for Add
+                      : const Color(0xFF8B4513), // brown border for Delete
+                ),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.delete_outline, color: Color(0xFF8B4513), size: 20),
+                  Icon(
+                    showAddButton ? Icons.add_circle_outline : Icons.delete_outline,
+                    color: showAddButton
+                        ? const Color(0xFF2E7D32)
+                        : const Color(0xFF8B4513),
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Text(
-                    "Delete Item",
+                    showAddButton ? "Add to List" : "Delete Item",
                     style: GoogleFonts.openSans(
-                      color: const Color(0xFF8B4513),
+                      color: showAddButton
+                          ? const Color(0xFF2E7D32)
+                          : const Color(0xFF8B4513),
                       fontSize: 16,
                       fontWeight: FontWeight.w400,
                     ),
@@ -103,9 +119,17 @@ class ItemsCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: labelStyle),
-          Text(value.toString(), style: valueStyle),
+          Flexible(
+            child: Text(
+              value.toString(),
+              style: valueStyle,
+              textAlign: TextAlign.right,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
   }
 }
+
