@@ -150,8 +150,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ),
  Container(
   decoration: BoxDecoration(
-    border: Border.all(color: ColorsApp.btnColor, width: 1), // Customize color & width
-    borderRadius: BorderRadius.circular(8),           // Rounded corners
+    border: Border.all(color: ColorsApp.btnColor, width: 1),
+    borderRadius: BorderRadius.circular(8),         
   ),
   child: TextButton(
     onPressed: () {

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
 class ClientQuotationCard extends StatelessWidget {
   final Map<String, dynamic> quotation;
   final VoidCallback? onDelete;
@@ -164,9 +166,11 @@ Expanded(
                   textAlign: TextAlign.right,
                 ),
                 const SizedBox(height: 8),
+
+                
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: const EdgeInsets.symmetric(vertical: 6,),
                   decoration: ShapeDecoration(
                     color: const Color(0xFFEBF1E5),
                     shape: RoundedRectangleBorder(
@@ -182,6 +186,8 @@ Expanded(
                     ),
                   ),
                 ),
+
+
                 const SizedBox(height: 12),
                 GestureDetector(
                   onTap: onDelete,
