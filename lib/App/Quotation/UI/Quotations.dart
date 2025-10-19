@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/App/Quotation/UI/AddMaterial.dart';
+import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/BomList.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
@@ -24,6 +25,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
             padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
             child: Column(
               children: [
+
                 CustomEmptyQuotes(
                   title: "Quotation",
                   buttonText: "",
@@ -50,12 +52,16 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                 ),
 
                 SizedBox(height: 20),
+
                 CustomButton(
                   text: "Add item from Quotation",
                   outlined: true,
                   icon: Icons.add,
-                  onPressed: () {},
+                  onPressed: () {
+                    Nav.push(AllClienrQuotations());
+                  },
                 ),
+
               ],
             ),
           ),

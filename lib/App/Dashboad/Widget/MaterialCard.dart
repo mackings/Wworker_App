@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Product/Api/ProService.dart';
 import 'package:wworker/App/Product/Model/ProModel.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
+import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
@@ -147,12 +148,28 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                     ),
                 ],
               ),
-              TextButton(
-                onPressed: () {
-                  Nav.push(const AddProduct());
-                },
-                child: const Text("Add Product"),
-              ),
+ Container(
+  decoration: BoxDecoration(
+    border: Border.all(color: ColorsApp.btnColor, width: 1), // Customize color & width
+    borderRadius: BorderRadius.circular(8),           // Rounded corners
+  ),
+  child: TextButton(
+    onPressed: () {
+      Nav.push(const AddProduct());
+    },
+    style: TextButton.styleFrom(
+      padding: const EdgeInsets.symmetric(horizontal: 10, ), 
+      foregroundColor: ColorsApp.btnColor
+    ),
+    child: Row(
+      children: [
+        Icon(Icons.add),
+        const Text("Create Product"),
+      ],
+    ),
+  ),
+)
+
             ],
           ),
 
@@ -282,6 +299,7 @@ else
           ),
         ],
       );
+
 
   Widget _buildDropdown(
     String label,
