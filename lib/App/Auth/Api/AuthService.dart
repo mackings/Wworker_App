@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -20,12 +22,30 @@ class AuthService {
         debugPrint("📥 [DATA] => ${response.data}");
         return handler.next(response);
       },
-      onError: (DioException e, handler) {
+      onError: (DioException e, handler) async {
         debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
         debugPrint("📛 [MESSAGE] => ${e.message}");
+
         if (e.response != null) {
           debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
         }
+
+        // 🟠 Add Retry Logic (2 retries)
+        final requestOptions = e.requestOptions;
+        final retries = (requestOptions.extra["retries"] ?? 0) + 1;
+
+        if (retries <= 2) {
+          debugPrint("🔁 Retrying request... attempt #$retries");
+          requestOptions.extra["retries"] = retries;
+          await Future.delayed(const Duration(seconds: 1)); // short delay
+          try {
+            final response = await _dio.fetch(requestOptions);
+            return handler.resolve(response);
+          } catch (err) {
+            return handler.next(err as DioException);
+          }
+        }
+
         return handler.next(e);
       },
     ));
@@ -52,42 +72,60 @@ class AuthService {
     }
   }
 
-  // 🟢 SIGNIN (stores token + userId + email)
+  // 🟢 SIGNIN
   Future<Map<String, dynamic>> signin({
     required String email,
     required String password,
   }) async {
     try {
-      debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/signin");
-      debugPrint("📦 [DATA] => {email: $email, password: $password}");
-
       final response = await _dio.post(
         "/api/auth/signin",
         data: {"email": email, "password": password},
       );
 
-      debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.realUri}");
-      debugPrint("📥 [DATA] => ${response.data}");
-
       final data = response.data;
+      debugPrint("✅ [RESPONSE DATA] => $data");
+      debugPrint("🧩 [DATA TYPE] => ${data["data"]?.runtimeType}");
+
+      dynamic mainData = data["data"];
+
+      // 🔹 Decode stringified JSON if needed
+      if (mainData is String) {
+        try {
+          mainData = jsonDecode(mainData);
+          debugPrint("🧩 [DECODED DATA] => $mainData");
+        } catch (e) {
+          debugPrint("⚠️ Could not decode string data: $e");
+        }
+      }
+
+      if (mainData is List && mainData.isNotEmpty) {
+        mainData = mainData.first;
+      }
+
+      if (mainData is! Map) {
+        debugPrint("⚠️ Unexpected data structure: $mainData");
+        return {"success": false, "message": "Invalid response format"};
+      }
+
+      final token = mainData["token"];
+      final user = mainData["user"];
+      final userId = user?["id"];
 
       if (data["success"] == true) {
         final prefs = await SharedPreferences.getInstance();
-
-        final token = data["data"]?["token"];
-        final userId = data["data"]?["user"]?["id"];
 
         if (token != null && token is String) {
           await prefs.setString("token", token);
           await prefs.setString("email", email);
         } else {
-          debugPrint("⚠️ No token found in response data: ${data["data"]}");
+          debugPrint("⚠️ No token found in response");
         }
 
         if (userId != null && userId is String) {
           await prefs.setString("userId", userId);
         } else {
-          debugPrint("⚠️ No user ID found in response data: ${data["data"]}");
+          debugPrint("⚠️ No user ID found in response");
         }
       }
 
@@ -121,7 +159,6 @@ class AuthService {
 
       final data = response.data;
 
-      // ✅ Save userId (if included in response)
       if (data["data"]?["userId"] != null) {
         await prefs.setString("userId", data["data"]["userId"]);
       }
@@ -160,7 +197,6 @@ class AuthService {
 
       final data = response.data;
 
-      // ✅ Save reset token if returned
       if (data["data"]?["resetToken"] != null) {
         await prefs.setString("resetToken", data["data"]["resetToken"]);
       }
@@ -212,7 +248,7 @@ class AuthService {
     };
   }
 
-  // 🟢 LOGOUT & CLEAR STORAGE
+  // 🟢 LOGOUT
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
