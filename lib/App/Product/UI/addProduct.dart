@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Product/providers/provider.dart';
+import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
+import 'package:wworker/App/Quotation/UI/Quotations.dart';
+import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
@@ -27,20 +31,24 @@ class _AddProductState extends ConsumerState<AddProduct> {
         nameController.text.isEmpty ||
         descController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields and select an image")),
+        const SnackBar(
+          content: Text("Please fill all fields and select an image"),
+        ),
       );
       return;
     }
 
     setState(() => isLoading = true);
 
-    final response = await ref.read(productServiceProvider).createProduct(
-      name: nameController.text,
-      subCategory: selectedSubCategory ?? "",
-      description: descController.text,
-      category: selectedCategory ?? "",
-      imagePath: imagePath!,
-    );
+    final response = await ref
+        .read(productServiceProvider)
+        .createProduct(
+          name: nameController.text,
+          subCategory: selectedSubCategory ?? "",
+          description: descController.text,
+          category: selectedCategory ?? "",
+          imagePath: imagePath!,
+        );
 
     setState(() => isLoading = false);
 
@@ -59,7 +67,10 @@ class _AddProductState extends ConsumerState<AddProduct> {
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 30,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -93,7 +104,8 @@ class _AddProductState extends ConsumerState<AddProduct> {
                       hintText: "Select a category",
                       isDropdown: true,
                       dropdownItems: ["Wood", "Foam", "Plank", "Others"],
-                      onChanged: (value) => setState(() => selectedCategory = value),
+                      onChanged: (value) =>
+                          setState(() => selectedCategory = value),
                     ),
                     const SizedBox(height: 20),
                     CustomTextField(
@@ -101,14 +113,22 @@ class _AddProductState extends ConsumerState<AddProduct> {
                       hintText: "Select a subcategory",
                       isDropdown: true,
                       dropdownItems: ["Wood", "Foam", "Plank", "Others"],
-                      onChanged: (value) => setState(() => selectedSubCategory = value),
+                      onChanged: (value) =>
+                          setState(() => selectedSubCategory = value),
                     ),
                     const SizedBox(height: 40),
 
                     /// 👇 Button remains clickable
+                    // CustomButton(
+                    //   text: "Upload Product",
+                    //   onPressed: _uploadProduct,
+                    // ),
+
                     CustomButton(
                       text: "Upload Product",
-                      onPressed: _uploadProduct,
+                      onPressed: () {
+                        Nav.push(QuotationSummary());
+                      },
                     ),
                   ],
                 ),
@@ -117,6 +137,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
           ),
 
           /// 🔄 Overlay Loader
+          ///
           if (isLoading)
             Positioned.fill(
               child: Container(

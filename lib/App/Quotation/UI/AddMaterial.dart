@@ -5,12 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Dashboad/Widget/MaterialCard.dart';
 import 'package:wworker/App/Dashboad/Widget/OthercostCard.dart';
 import 'package:wworker/App/Dashboad/Widget/itemCard.dart';
+import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
-import 'package:wworker/App/Quotation/UI/BomSummary.dart';
+import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-
-
 
 class AddMaterial extends ConsumerStatefulWidget {
   const AddMaterial({super.key});
@@ -49,11 +48,7 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     final isProviderLoaded = data["isLoaded"] == true;
 
     if (isUserLoading || !isProviderLoaded) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (userId == null) {
@@ -69,8 +64,9 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
     // ✅ Extract lists safely
     final materials = List<Map<String, dynamic>>.from(data["materials"] ?? []);
-    final additionalCosts =
-        List<Map<String, dynamic>>.from(data["additionalCosts"] ?? []);
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      data["additionalCosts"] ?? [],
+    );
 
     return Scaffold(
       appBar: AppBar(),
@@ -82,8 +78,10 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
             children: [
               /// --- MATERIAL SECTION ---
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 19,
+                  vertical: 19,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade400),
                   borderRadius: BorderRadius.circular(10),
@@ -132,15 +130,18 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
               /// --- ADDITIONAL COST SECTION ---
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 19, vertical: 19),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 19,
+                  vertical: 19,
+                ),
                 decoration: BoxDecoration(
                   border: Border.all(color: Colors.grey.shade400),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: InkWell(
-                  onTap: () =>
-                      setState(() => isAdditionalExpanded = !isAdditionalExpanded),
+                  onTap: () => setState(
+                    () => isAdditionalExpanded = !isAdditionalExpanded,
+                  ),
                   child: Row(
                     children: [
                       Icon(
@@ -219,37 +220,70 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 );
               }),
 
-              SizedBox(height: 20,),
+              SizedBox(height: 20),
 
-                    CustomButton(
-        text: (materials.isEmpty && additionalCosts.isEmpty)
-            ? "Create New BOM"
-            : "Continue",
-        outlined: (materials.isEmpty && additionalCosts.isEmpty),
-        onPressed: () {
-          if (materials.isEmpty && additionalCosts.isEmpty) {
-          
-            setState(() {
-              isExpanded = true;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Add at least one material or additional cost to continue"),
-              ),
-            );
-          } else {
-            Nav.push(BOMSummary());
-          }
-        },
-      ),
+
+CustomButton(
+  text: (materials.isEmpty && additionalCosts.isEmpty)
+      ? "Create New BOM"
+      : "Continue",
+  outlined: (materials.isEmpty && additionalCosts.isEmpty),
+  onPressed: () {
+    if (materials.isEmpty && additionalCosts.isEmpty) {
+      setState(() {
+        isExpanded = true;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Add at least one material or additional cost to continue",
+          ),
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => SelectOptionSheet(
+          title: "Select Product",
+          options: [
+            OptionItem(
+              label: "Create New Product",
+              onTap: () {
+
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AddProduct(),
+                  ),
+                );
+              },
+            ),
+            OptionItem(
+              label: "Select Existing Products",
+              onTap: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Select existing products clicked"),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      );
+    }
+  },
+),
+
 
               const SizedBox(height: 100),
             ],
           ),
         ),
       ),
-
-
     );
   }
 }

@@ -143,9 +143,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               if (materials.isEmpty)
                 const Text("No materials added yet.")
               else
-                // ...materials.map(
-                //   (m) => _buildMaterialCard(m),
-                // ),
 
                                 ...materials.map(
                   (m) => BOMSummaryCard(item: m)
