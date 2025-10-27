@@ -3,109 +3,89 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 
 
-
-class BOMSummaryCard extends ConsumerStatefulWidget {
+class BOMSummaryCard extends ConsumerWidget {
   final Map<String, dynamic> item;
-  final VoidCallback onQuantityChanged;
+  final VoidCallback? onQuantityChanged;
 
   const BOMSummaryCard({
     super.key,
     required this.item,
-    required this.onQuantityChanged,
+    this.onQuantityChanged,
   });
 
   @override
-  ConsumerState<BOMSummaryCard> createState() => _BOMSummaryCardState();
-}
-
-class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
-  late int quantity;
-
-  @override
-  void initState() {
-    super.initState();
-
-    // 🔹 Safely handle any type (int, double, string, null)
-    final q = widget.item["quantity"];
+  Widget build(BuildContext context, WidgetRef ref) {
+    int quantity = 1;
+    final q = item["quantity"];
     if (q is int) {
       quantity = q;
     } else if (q is double) {
       quantity = q.toInt();
     } else if (q is String) {
       quantity = int.tryParse(q) ?? 1;
-    } else {
-      quantity = 1;
-    }
-  }
-
-  void _updateQuantity(int newQuantity) {
-    setState(() => quantity = newQuantity);
-
-    // 🔹 Store as string for consistent provider structure
-    widget.item["quantity"] = quantity.toString();
-
-    // 🔹 Update provider state safely
-    final state = ref.read(materialProvider.notifier).state;
-    final materials = List<Map<String, dynamic>>.from(state["materials"]);
-
-    final index = materials.indexWhere((m) =>
-        m["Materialname"] == widget.item["Materialname"] &&
-        m["Product"] == widget.item["Product"]);
-
-    if (index != -1) {
-      materials[index] = widget.item;
     }
 
-    ref.read(materialProvider.notifier).state = {
-      ...state,
-      "materials": materials,
-    };
+    void updateQuantity(int newQuantity) {
+      item["quantity"] = newQuantity.toString();
 
-    widget.onQuantityChanged(); // trigger parent rebuild
-  }
+      final state = ref.read(materialProvider.notifier).state;
+      final materials = List<Map<String, dynamic>>.from(state["materials"]);
 
-  void _increaseQuantity() => _updateQuantity(quantity + 1);
+      final index = materials.indexWhere((m) =>
+          m["Materialname"] == item["Materialname"] &&
+          m["Product"] == item["Product"]);
 
-  void _decreaseQuantity() {
-    if (quantity > 1) _updateQuantity(quantity - 1);
-  }
+      if (index != -1) materials[index] = item;
 
-  Widget _buildRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Color(0xFF302E2E),
-            fontSize: 16,
-            fontFamily: 'Open Sans',
-            fontWeight: FontWeight.w400,
-            height: 1.50,
-          ),
-        ),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Color(0xFF302E2E),
-            fontSize: 16,
-            fontFamily: 'Open Sans',
-            fontWeight: FontWeight.w400,
-            height: 1.50,
-          ),
-        ),
-      ],
-    );
-  }
+      ref.read(materialProvider.notifier).state = {
+        ...state,
+        "materials": materials,
+      };
 
-  @override
-  Widget build(BuildContext context) {
-    final bool isMaterial = widget.item.containsKey("Materialname");
+      onQuantityChanged?.call();
+    }
+
+    void increaseQuantity() => updateQuantity(quantity + 1);
+    void decreaseQuantity() {
+      if (quantity > 1) updateQuantity(quantity - 1);
+    }
+
+    final bool isMaterial = item.containsKey("Woodtype") ||
+        item.containsKey("Materialname") ||
+        item.containsKey("Product");
 
     final double price = double.tryParse(
-          (widget.item["Price"] ?? widget.item["amount"] ?? "0").toString(),
+          (item["Price"] ?? item["amount"] ?? "0").toString(),
         ) ??
         0;
+
+    Widget buildRow(String label, String value) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+        ],
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
@@ -113,19 +93,19 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (isMaterial) ...[
-            _buildRow('Product', widget.item["Product"] ?? "-"),
+            buildRow('Product', item["Product"] ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Material Name', widget.item["Materialname"] ?? "-"),
+            buildRow('Material Name', item["Woodtype"] ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Width', widget.item["Width"]?.toString() ?? "-"),
+            buildRow('Width', item["Width"]?.toString() ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Length', widget.item["Length"]?.toString() ?? "-"),
+            buildRow('Length', item["Length"]?.toString() ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Thickness', widget.item["Thickness"]?.toString() ?? "-"),
+            buildRow('Thickness', item["Thickness"]?.toString() ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Unit', widget.item["Unit"]?.toString() ?? "-"),
+            buildRow('Unit', item["Unit"]?.toString() ?? "-"),
             const SizedBox(height: 12),
-            _buildRow('Square Meter', widget.item["Sqm"]?.toString() ?? "-"),
+            buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
 
             // 🔹 Quantity controls
@@ -145,10 +125,10 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: _decreaseQuantity,
+                      onPressed: decreaseQuantity,
                     ),
                     Text(
-                      quantity.toString(),
+                      item["quantity"]?.toString() ?? "1",
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -156,20 +136,20 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.add_circle_outline),
-                      onPressed: _increaseQuantity,
+                      onPressed: increaseQuantity,
                     ),
                   ],
                 ),
               ],
             ),
           ] else ...[
-            _buildRow('Description', widget.item["description"] ?? "-"),
+            buildRow('Description', item["description"] ?? "-"),
             const SizedBox(height: 12),
           ],
 
           const SizedBox(height: 16),
 
-          // 🔹 Price display
+          // 🔹 Price section
           Container(
             padding: const EdgeInsets.all(8),
             decoration: ShapeDecoration(
@@ -208,3 +188,4 @@ class _BOMSummaryCardState extends ConsumerState<BOMSummaryCard> {
     );
   }
 }
+

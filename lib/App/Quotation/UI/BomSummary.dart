@@ -45,25 +45,22 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
       final description = "$productName created on $formattedDate";
 
-
-final formattedMaterials = materials.map((m) {
-  return {
-    "woodType": m["Product"] ?? "",
-    "foamType": null,
-    "type": m["Materialname"] ?? "",
-    "width": double.tryParse(m["Width"].toString()) ?? 0,
-    "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-    "length": double.tryParse(m["Length"].toString()) ?? 0,
-    "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
-    "unit": m["Unit"] ?? "cm",
-    "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
-    "price": double.tryParse(m["Price"].toString()) ?? 0,
-    // 🔹 Parse quantity safely
-    "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
-    "description": m["Materialname"] ?? "",
-  };
-}).toList();
-
+      final formattedMaterials = materials.map((m) {
+        return {
+          "woodType": m["Product"] ?? "",
+          "foamType": null,
+          "type": m["Materialname"] ?? "",
+          "width": double.tryParse(m["Width"].toString()) ?? 0,
+          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+          "length": double.tryParse(m["Length"].toString()) ?? 0,
+          "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+          "unit": m["Unit"] ?? "cm",
+          "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+          "price": double.tryParse(m["Price"].toString()) ?? 0,
+          "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
+          "description": m["Product"] ?? "",
+        };
+      }).toList();
 
       final createResponse = await _bomService.createBOM(
         name: productName,
@@ -142,18 +139,16 @@ final formattedMaterials = materials.map((m) {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
+
               if (materials.isEmpty)
                 const Text("No materials added yet.")
               else
-                ...materials.map(
-                  (m) => BOMSummaryCard(
-                    item: m,
-                    onQuantityChanged: () {
-                      setState(
-                        () {},
-                      ); 
-                    },
-                  ),
+                // ...materials.map(
+                //   (m) => _buildMaterialCard(m),
+                // ),
+
+                                ...materials.map(
+                  (m) => BOMSummaryCard(item: m)
                 ),
 
               const SizedBox(height: 30),
@@ -163,23 +158,24 @@ final formattedMaterials = materials.map((m) {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
+
               if (additionalCosts.isEmpty)
                 const Text("No additional costs added yet.")
               else
                 ...additionalCosts.map(
                   (c) => BOMSummaryCard(
                     item: c,
-                    onQuantityChanged: () {
-                      setState(() {});
-                    },
+                    onQuantityChanged: () => setState(() {}),
                   ),
                 ),
 
               const SizedBox(height: 40),
+
               if (materials.isNotEmpty || additionalCosts.isNotEmpty)
                 _buildTotalSection(materials, additionalCosts),
 
               const SizedBox(height: 40),
+
               CustomButton(
                 text: "Add to BOM",
                 outlined: true,
@@ -189,13 +185,204 @@ final formattedMaterials = materials.map((m) {
               const SizedBox(height: 20),
               CustomButton(
                 text: "Continue",
-                onPressed: () {
-                  Nav.push(FirstQuote());
-                },
+                onPressed: () => Nav.push(FirstQuote()),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // ✅ Fixed version of Material Body
+Widget _buildMaterialCard(Map<String, dynamic> item) {
+  return Consumer(builder: (context, ref, _) {
+    int quantity = 1;
+
+    final q = item["quantity"];
+    if (q is int) {
+      quantity = q;
+    } else if (q is double) {
+      quantity = q.toInt();
+    } else if (q is String) {
+      quantity = int.tryParse(q) ?? 1;
+    }
+
+    void updateQuantity(int newQuantity) {
+      item["quantity"] = newQuantity.toString();
+
+      final state = ref.read(materialProvider.notifier).state;
+      final materials = List<Map<String, dynamic>>.from(state["materials"]);
+
+      final index = materials.indexWhere((m) =>
+          m["Materialname"] == item["Materialname"] &&
+          m["Product"] == item["Product"]);
+
+      if (index != -1) {
+        materials[index] = item;
+      }
+
+      ref.read(materialProvider.notifier).state = {
+        ...state,
+        "materials": materials,
+      };
+    }
+
+    void increaseQuantity() => updateQuantity(quantity + 1);
+    void decreaseQuantity() {
+      if (quantity > 1) updateQuantity(quantity - 1);
+    }
+
+    final bool isMaterial = item.containsKey("Woodtype") ||
+        item.containsKey("Materialname") ||
+        item.containsKey("Product");
+
+    final double price = double.tryParse(
+          (item["Price"] ?? item["amount"] ?? "0").toString(),
+        ) ??
+        0;
+
+    Widget buildRow(String label, String value) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isMaterial) ...[
+            buildRow('Product', item["Product"] ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Material Name', item["Woodtype"] ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Width', item["Width"]?.toString() ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Length', item["Length"]?.toString() ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Thickness', item["Thickness"]?.toString() ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Unit', item["Unit"]?.toString() ?? "-"),
+            const SizedBox(height: 12),
+            buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
+            const SizedBox(height: 16),
+
+            // 🔹 Quantity controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Quantity',
+                  style: TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline),
+                      onPressed: decreaseQuantity,
+                    ),
+                    Text(
+                      item["quantity"]?.toString() ?? "1",
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline),
+                      onPressed: increaseQuantity,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ] else ...[
+            buildRow('Description', item["description"] ?? "-"),
+            const SizedBox(height: 12),
+          ],
+
+          const SizedBox(height: 16),
+
+          // 🔹 Price display
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: ShapeDecoration(
+              color: const Color(0xFFF5F8F2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Price',
+                  style: TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
+                  ),
+                ),
+                Text(
+                  "₦${price.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  });
+}
+
+
+  Widget? _buildMaterialRow(String label, dynamic value) {
+    if (value == null || value.toString().isEmpty) return null;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+          Text(value.toString(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        ],
       ),
     );
   }
@@ -207,12 +394,11 @@ final formattedMaterials = materials.map((m) {
     double materialTotal = 0;
     double additionalTotal = 0;
 
-for (var m in materials) {
-  final price = double.tryParse(m["Price"].toString()) ?? 0;
-  final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-  materialTotal += price * qty;
-}
-
+    for (var m in materials) {
+      final price = double.tryParse(m["Price"].toString()) ?? 0;
+      final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
+      materialTotal += price * qty;
+    }
 
     for (var c in additionalCosts) {
       final amount = double.tryParse(c["amount"].toString()) ?? 0;

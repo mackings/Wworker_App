@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Product/Api/ProService.dart';
-import 'package:wworker/App/Product/Model/ProModel.dart';
-import 'package:wworker/App/Product/UI/addProduct.dart';
-import 'package:wworker/Constant/colors.dart';
-import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+
 
 
 
@@ -28,8 +25,12 @@ class AddMaterialCard extends StatefulWidget {
 }
 
 class _AddMaterialCardState extends State<AddMaterialCard> {
-  String? selectedProduct;
   final List<String> units = ["cm", "m", "mm"];
+
+  final List<String> products = ["Wood", "Board", "Foam", "Other materials"];
+
+  String selectedProduct = "Wood";
+  
   final List<String> numbers = List.generate(100, (i) => "${i + 1}");
 
   String? width, length, thickness, unit;
@@ -39,27 +40,14 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final TextEditingController priceController = TextEditingController();
 
   final ProductService _productService = ProductService();
-  List<ProductModel> products = [];
+  //List<ProductModel> products = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchProducts();
   }
 
-  Future<void> _fetchProducts() async {
-    try {
-      final fetched = await _productService.getProducts();
-      setState(() {
-        products = fetched;
-        isLoading = false;
-      });
-    } catch (e) {
-      debugPrint("⚠️ Failed to fetch products: $e");
-      setState(() => isLoading = false);
-    }
-  }
 
   @override
   void dispose() {
@@ -88,8 +76,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final item = {
-      "Product": selectedProduct,
-      "Materialname": materialNameController.text.trim(),
+      "Woodtype": materialNameController.text.trim(),
       "Width": width,
       "Length": length,
       "Thickness": thickness,
@@ -101,12 +88,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     widget.onAddItem?.call(item);
 
     setState(() {
-      selectedProduct = null;
       width = null;
       length = null;
       thickness = null;
       unit = null;
     });
+
+
     materialNameController.clear();
     sqmController.clear();
     priceController.clear();
@@ -118,6 +106,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -148,27 +137,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                     ),
                 ],
               ),
- Container(
-  decoration: BoxDecoration(
-    border: Border.all(color: ColorsApp.btnColor, width: 1),
-    borderRadius: BorderRadius.circular(8),         
-  ),
-  child: TextButton(
-    onPressed: () {
-      Nav.push(const AddProduct());
-    },
-    style: TextButton.styleFrom(
-      padding: const EdgeInsets.symmetric(horizontal: 10, ), 
-      foregroundColor: ColorsApp.btnColor
-    ),
-    child: Row(
-      children: [
-        Icon(Icons.add),
-        const Text("Create Product"),
-      ],
-    ),
-  ),
-)
 
             ],
           ),
@@ -182,41 +150,41 @@ if (products.isEmpty)
     style: TextStyle(color: Colors.grey),
   )
 else
-  SingleChildScrollView(
-    scrollDirection: Axis.horizontal,
-    child: Row(
-      children: products.map((p) {
-        final selected = selectedProduct == p.name;
-        return GestureDetector(
-          onTap: () => setState(() => selectedProduct = p.name),
-          child: Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: selected
-                    ? const Color(0xFFA16438)
-                    : const Color(0xFFCCA183),
-              ),
+SingleChildScrollView(
+  scrollDirection: Axis.horizontal,
+  child: Row(
+    children: products.map((p) {
+      final selected = selectedProduct == p;
+      return GestureDetector(
+        onTap: () => setState(() => selectedProduct = p),
+        child: Container(
+          margin: const EdgeInsets.only(right: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
               color: selected
-                  ? const Color(0xFFFFF3E0)
-                  : Colors.transparent,
+                  ? const Color(0xFFA16438)
+                  : const Color(0xFFCCA183),
             ),
-            child: Text(
-              p.name,
-              style: GoogleFonts.openSans(
-                color: selected
-                    ? const Color(0xFFA16438)
-                    : const Color(0xFFCCA183),
-                fontWeight: FontWeight.w600,
-              ),
+            color: selected
+                ? const Color(0xFFFFF3E0)
+                : Colors.transparent,
+          ),
+          child: Text(
+            p,
+            style: GoogleFonts.openSans(
+              color: selected
+                  ? const Color(0xFFA16438)
+                  : const Color(0xFFCCA183),
+              fontWeight: FontWeight.w600,
             ),
           ),
-        );
-      }).toList(),
-    ),
+        ),
+      );
+    }).toList(),
   ),
+),
 
 
           const SizedBox(height: 16),
