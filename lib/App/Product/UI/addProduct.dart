@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Product/providers/provider.dart';
+import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
@@ -26,36 +27,52 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
   bool isLoading = false;
 
-  Future<void> _uploadProduct() async {
-    if (imagePath == null ||
-        nameController.text.isEmpty ||
-        descController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill all fields and select an image"),
-        ),
-      );
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    final response = await ref
-        .read(productServiceProvider)
-        .createProduct(
-          name: nameController.text,
-          subCategory: selectedSubCategory ?? "",
-          description: descController.text,
-          category: selectedCategory ?? "",
-          imagePath: imagePath!,
-        );
-
-    setState(() => isLoading = false);
-
+Future<void> _uploadProduct() async {
+  if (imagePath == null ||
+      nameController.text.isEmpty ||
+      descController.text.isEmpty) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(response["message"] ?? "Product upload complete")),
+      const SnackBar(
+        content: Text("Please fill all fields and select an image"),
+      ),
+    );
+    return;
+  }
+
+  setState(() => isLoading = true);
+
+  final response = await ref.read(productServiceProvider).createProduct(
+        name: nameController.text,
+        subCategory: selectedSubCategory ?? "",
+        description: descController.text,
+        category: selectedCategory ?? "",
+        imagePath: imagePath!,
+      );
+
+  setState(() => isLoading = false);
+
+  if (response["success"] == true) {
+    final productData = response["data"];
+    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+
+    // Save product info
+    quotationNotifier.setProduct(productData);
+
+    // Load materials & additional costs
+    quotationNotifier.loadFromMaterialProvider();
+
+    // ✅ Navigate to summary page
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuotationSummary()),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(response["message"] ?? "Upload failed")),
     );
   }
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -118,18 +135,12 @@ class _AddProductState extends ConsumerState<AddProduct> {
                     ),
                     const SizedBox(height: 40),
 
-                    /// 👇 Button remains clickable
-                    // CustomButton(
-                    //   text: "Upload Product",
-                    //   onPressed: _uploadProduct,
-                    // ),
-
+    
                     CustomButton(
                       text: "Upload Product",
-                      onPressed: () {
-                        Nav.push(QuotationSummary());
-                      },
+                      onPressed: _uploadProduct,
                     ),
+
                   ],
                 ),
               ),
