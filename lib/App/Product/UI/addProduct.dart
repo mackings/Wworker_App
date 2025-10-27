@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Product/providers/provider.dart';
+import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
-import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
-import 'package:wworker/App/Quotation/UI/Quotations.dart';
-import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
-import 'package:wworker/GeneralWidgets/Nav.dart';
+import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
+
+
 
 class AddProduct extends ConsumerStatefulWidget {
   const AddProduct({super.key});
@@ -27,6 +27,8 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
   bool isLoading = false;
 
+
+
 Future<void> _uploadProduct() async {
   if (imagePath == null ||
       nameController.text.isEmpty ||
@@ -34,6 +36,7 @@ Future<void> _uploadProduct() async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text("Please fill all fields and select an image"),
+        backgroundColor: Colors.redAccent,
       ),
     );
     return;
@@ -41,37 +44,81 @@ Future<void> _uploadProduct() async {
 
   setState(() => isLoading = true);
 
-  final response = await ref.read(productServiceProvider).createProduct(
-        name: nameController.text,
-        subCategory: selectedSubCategory ?? "",
-        description: descController.text,
-        category: selectedCategory ?? "",
-        imagePath: imagePath!,
+  try {
+    final response = await ref.read(productServiceProvider).createProduct(
+          name: nameController.text,
+          subCategory: selectedSubCategory ?? "",
+          description: descController.text,
+          category: selectedCategory ?? "",
+          imagePath: imagePath!,
+        );
+
+    setState(() => isLoading = false);
+
+    if (response["success"] == true) {
+      final productData = response["data"];
+
+      // 🔹 Access both providers
+      final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+      final materialNotifier = ref.read(materialProvider.notifier);
+
+      // 🔹 Get existing materials from Material Provider
+      final materialState = materialNotifier.state;
+      final materials =
+          List<Map<String, dynamic>>.from(materialState["materials"]);
+
+      // 🔹 Add uploaded product name to each material
+      final updatedMaterials = materials.map((m) {
+        return {
+          ...m,
+          "Product": productData["name"], // attach uploaded product name
+        };
+      }).toList();
+
+      // 🔹 Update Material Provider
+      materialNotifier.state = {
+        ...materialState,
+        "materials": updatedMaterials,
+      };
+
+      // 🔹 Save product info into Quotation provider
+      quotationNotifier.setProduct(productData);
+      quotationNotifier.loadFromMaterialProvider();
+
+      // ✅ Navigate to BOMSummary (not QuotationSummary)
+      if (context.mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const BOMSummary()),
+        );
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ Product uploaded and materials updated!"),
+          backgroundColor: Colors.green,
+        ),
       );
-
-  setState(() => isLoading = false);
-
-  if (response["success"] == true) {
-    final productData = response["data"];
-    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-
-    // Save product info
-    quotationNotifier.setProduct(productData);
-
-    // Load materials & additional costs
-    quotationNotifier.loadFromMaterialProvider();
-
-    // ✅ Navigate to summary page
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const QuotationSummary()),
-    );
-  } else {
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response["message"] ?? "Upload failed"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  } catch (e) {
+    setState(() => isLoading = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(response["message"] ?? "Upload failed")),
+      SnackBar(
+        content: Text("Error: $e"),
+        backgroundColor: Colors.redAccent,
+      ),
     );
   }
 }
+
+
 
 
   @override
