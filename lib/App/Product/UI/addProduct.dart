@@ -2,17 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Product/providers/provider.dart';
+import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
-import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
 
+
+
 class AddProduct extends ConsumerStatefulWidget {
-  const AddProduct({super.key});
+
+
+  final ProductModel? existingProduct; 
+
+  const AddProduct({super.key, this.existingProduct});
 
   @override
   ConsumerState<AddProduct> createState() => _AddProductState();
@@ -26,8 +32,51 @@ class _AddProductState extends ConsumerState<AddProduct> {
   final descController = TextEditingController();
 
   bool isLoading = false;
+  bool _isEdited = false; 
+
+  @override
+  void initState() {
+    super.initState();
+    final existing = widget.existingProduct;
+
+    if (existing != null) {
+      nameController.text = existing.name;
+      descController.text = existing.description;
+      selectedCategory = existing.category;
+      imagePath = existing.image;
+    }
+
+    // ✅ detect if user edits anything
+    nameController.addListener(() => _checkForChanges());
+    descController.addListener(() => _checkForChanges());
+  }
+
+  void _checkForChanges() {
+    final existing = widget.existingProduct;
+    if (existing == null) {
+      _isEdited = true;
+      return;
+    }
+
+    final edited = nameController.text != existing.name ||
+        descController.text != existing.description ||
+        selectedCategory != existing.category ||
+        imagePath != existing.image;
+
+    if (edited != _isEdited) {
+      setState(() => _isEdited = edited);
+    }
+  }
 
   Future<void> _uploadProduct() async {
+    final existing = widget.existingProduct;
+
+    if (existing != null && !_isEdited) {
+      _proceedWithQuotation(existing);
+      return;
+    }
+
+    // ✅ Otherwise, create new product
     if (imagePath == null ||
         nameController.text.isEmpty ||
         descController.text.isEmpty) {
@@ -55,52 +104,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
       if (response["success"] == true) {
         final productData = response["data"];
-
-        // 🔹 Access both providers
-        final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-        final materialNotifier = ref.read(materialProvider.notifier);
-
-        // 🔹 Get current materials & additional costs
-        final materialState = materialNotifier.state;
-        final materials =
-            List<Map<String, dynamic>>.from(materialState["materials"] ?? []);
-        final additionalCosts = List<Map<String, dynamic>>.from(
-            materialState["additionalCosts"] ?? []);
-
-        // 🔹 Add uploaded product name to each material
-        final updatedMaterials = materials.map((m) {
-          return {
-            ...m,
-            "Product": productData["name"], // attach uploaded product name
-          };
-        }).toList();
-
-        // 🧾 Build a full quotation record
-        final newQuotation = {
-          "product": productData,
-          "materials": updatedMaterials,
-          "additionalCosts": additionalCosts,
-        };
-
-        // ✅ Save as new quotation (append to existing quotations)
-        await quotationNotifier.addNewQuotation(newQuotation);
-
-        // ✅ DO NOT CLEAR MATERIALS - Let user keep adding quotations
-
-        // ✅ Navigate to Quotation Summary page
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const QuotationSummary()),
-          );
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("✅ Quotation created successfully! Materials preserved for next product."),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _proceedWithQuotation(productData);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -120,87 +124,122 @@ class _AddProductState extends ConsumerState<AddProduct> {
     }
   }
 
+  Future<void> _proceedWithQuotation(dynamic productData) async {
+    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+    final materialNotifier = ref.read(materialProvider.notifier);
+
+    final materialState = materialNotifier.state;
+    final materials =
+        List<Map<String, dynamic>>.from(materialState["materials"] ?? []);
+    final additionalCosts =
+        List<Map<String, dynamic>>.from(materialState["additionalCosts"] ?? []);
+
+    final updatedMaterials = materials
+        .map((m) => {...m, "Product": productData["name"]})
+        .toList();
+
+    final newQuotation = {
+      "product": productData,
+      "materials": updatedMaterials,
+      "additionalCosts": additionalCosts,
+    };
+
+    await quotationNotifier.addNewQuotation(newQuotation);
+
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const QuotationSummary()),
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("✅ Quotation created successfully!"),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final existing = widget.existingProduct;
+
     return Scaffold(
-      appBar: AppBar(),
+      appBar: AppBar(
+        title: CustomText(title: existing != null ? "Edit Existing Product" : "Add New Product",)
+      ),
       body: Stack(
         children: [
-          /// 🧱 Main Page Content
           SafeArea(
             child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 10,
-                  horizontal: 30,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const CustomText(title: "New product"),
-                    const SizedBox(height: 20),
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 30),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+CustomImgBg(
+  initialImageUrl: existing?.image,
+  onImageSelected: (image) {
+    setState(() {
+      imagePath = image?.path;
+    });
+    _checkForChanges();
+  },
+),
 
-                    CustomImgBg(
-                      onImageSelected: (image) {
-                        setState(() {
-                          imagePath = image?.path;
-                        });
-                        debugPrint("📸 Image selected: ${image?.path}");
-                      },
-                    ),
-
-                    const SizedBox(height: 20),
-                    CustomTextField(
-                      label: "Product name",
-                      hintText: "Enter product name",
-                      controller: nameController,
-                    ),
-                    const SizedBox(height: 20),
-                    CustomTextField(
-                      label: "Product description",
-                      hintText: "Enter product description",
-                      controller: descController,
-                    ),
-                    const SizedBox(height: 20),
-                    CustomTextField(
-                      label: "Category",
-                      hintText: "Select a category",
-                      isDropdown: true,
-                      dropdownItems: ["Wood", "Foam", "Plank", "Others"],
-                      onChanged: (value) =>
-                          setState(() => selectedCategory = value),
-                    ),
-                    const SizedBox(height: 20),
-                    CustomTextField(
-                      label: "Sub category",
-                      hintText: "Select a subcategory",
-                      isDropdown: true,
-                      dropdownItems: ["Wood", "Foam", "Plank", "Others"],
-                      onChanged: (value) =>
-                          setState(() => selectedSubCategory = value),
-                    ),
-                    const SizedBox(height: 40),
-
-                    CustomButton(
-                      text: "Upload Product",
-                      onPressed: _uploadProduct,
-                    ),
-                  ],
-                ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    label: "Product name",
+                    hintText: "Enter product name",
+                    controller: nameController,
+                  ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    label: "Product description",
+                    hintText: "Enter product description",
+                    controller: descController,
+                  ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    label: "Category",
+                    hintText: "Select a category",
+                    isDropdown: true,
+                    dropdownItems: ["Wood", "Foam", "Plank", "Others"],
+                    value: selectedCategory,
+                    onChanged: (value) {
+                      setState(() => selectedCategory = value);
+                      _checkForChanges();
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  CustomTextField(
+                    label: "Sub category",
+                    hintText: "Select a subcategory",
+                    isDropdown: true,
+                    dropdownItems: ["Wood", "Foam", "Plank", "Others"],
+                    value: selectedSubCategory,
+                    onChanged: (value) {
+                      setState(() => selectedSubCategory = value);
+                      _checkForChanges();
+                    },
+                  ),
+                  const SizedBox(height: 40),
+                  CustomButton(
+                    text: existing != null && !_isEdited
+                        ? "Use This Product"
+                        : "Upload Product",
+                    onPressed: _uploadProduct,
+                  ),
+                ],
               ),
             ),
           ),
-
-          /// 🔄 Overlay Loader
           if (isLoading)
             Positioned.fill(
               child: Container(
                 color: Colors.black.withOpacity(0.3),
                 child: const Center(
-                  child: CircularProgressIndicator(
-                    color: Colors.brown,
-                    strokeWidth: 4,
-                  ),
+                  child: CircularProgressIndicator(color: Colors.brown),
                 ),
               ),
             ),

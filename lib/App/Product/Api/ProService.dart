@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Product/Model/ProModel.dart';
+import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
 class ProductService {

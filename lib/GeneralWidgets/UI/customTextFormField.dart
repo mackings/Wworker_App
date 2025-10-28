@@ -14,7 +14,8 @@ class CustomTextField extends StatefulWidget {
   final TextAlign textAlign;
   final bool enabled;
   final int? maxLines;
-  final FormFieldValidator<String>? validator; // ✅ Optional validator
+  final FormFieldValidator<String>? validator;
+  final String? value; // ✅ Added for dropdown initial value
 
   const CustomTextField({
     super.key,
@@ -29,7 +30,8 @@ class CustomTextField extends StatefulWidget {
     this.textAlign = TextAlign.start,
     this.enabled = true,
     this.maxLines,
-    this.validator, // ✅ Added to constructor
+    this.validator,
+    this.value, // ✅ Added to constructor
   });
 
   @override
@@ -87,7 +89,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return Center(
       child: TextFormField(
         controller: widget.controller,
-        validator: widget.validator, // ✅ Added validator support
+        validator: widget.validator,
         keyboardType: widget.keyboardType,
         obscureText: widget.isPassword ? _obscureText : false,
         textAlign: widget.textAlign,
@@ -133,10 +135,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
-      value: widget.dropdownItems?.isNotEmpty == true
-          ? widget.dropdownItems!.first
-          : null,
-      validator: widget.validator, // ✅ Added validator support
+      value: widget.value, // ✅ Use preselected value if provided
+      validator: widget.validator,
       items: widget.dropdownItems
           ?.map(
             (value) => DropdownMenuItem(

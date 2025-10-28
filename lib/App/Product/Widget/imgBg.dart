@@ -10,6 +10,7 @@ class CustomImgBg extends StatefulWidget {
   final double borderRadius;
   final String placeholderText;
   final String? defaultImage;
+  final String? initialImageUrl; // ✅ added
   final void Function(File?)? onImageSelected;
 
   const CustomImgBg({
@@ -18,6 +19,7 @@ class CustomImgBg extends StatefulWidget {
     this.borderRadius = 12,
     this.placeholderText = "Add Design Image",
     this.defaultImage,
+    this.initialImageUrl, // ✅ added
     this.onImageSelected,
   });
 
@@ -42,11 +44,14 @@ class _CustomImgBgState extends State<CustomImgBg> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Prioritize user-selected image → initial network image → fallback image
     final imageProvider = _selectedImage != null
         ? FileImage(_selectedImage!)
-        : (widget.defaultImage != null
-            ? NetworkImage(widget.defaultImage!)
-            : const NetworkImage(Urls.woodImg)) as ImageProvider;
+        : (widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty
+            ? NetworkImage(widget.initialImageUrl!)
+            : (widget.defaultImage != null
+                ? NetworkImage(widget.defaultImage!)
+                : const NetworkImage(Urls.woodImg))) as ImageProvider;
 
     return GestureDetector(
       onTap: _pickImage,
@@ -61,23 +66,29 @@ class _CustomImgBgState extends State<CustomImgBg> {
             fit: BoxFit.cover,
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.add_a_photo, size: 66, color: Colors.white),
-              const SizedBox(height: 8),
-              Text(
-                widget.placeholderText,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.openSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  height: 1.6,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.4),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.add_a_photo, size: 66, color: Colors.white),
+                const SizedBox(height: 8),
+                Text(
+                  widget.placeholderText,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    height: 1.6,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

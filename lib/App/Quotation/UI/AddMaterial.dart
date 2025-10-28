@@ -7,6 +7,9 @@ import 'package:wworker/App/Dashboad/Widget/OthercostCard.dart';
 import 'package:wworker/App/Dashboad/Widget/itemCard.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
+import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
+import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
@@ -261,17 +264,51 @@ CustomButton(
                 );
               },
             ),
-            OptionItem(
-              label: "Select Existing Products",
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Select existing products clicked"),
-                  ),
-                );
-              },
-            ),
+OptionItem(
+  label: "Select Existing Products",
+  onTap: () async {
+    Navigator.pop(context);
+    final selectedProduct = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SelectExistingProductScreen()),
+    );
+
+    if (selectedProduct != null) {
+      final productData = selectedProduct.toJson();
+
+      final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+      final materialNotifier = ref.read(materialProvider.notifier);
+
+      final materials = List<Map<String, dynamic>>.from(
+        materialNotifier.state["materials"] ?? [],
+      );
+      final additionalCosts = List<Map<String, dynamic>>.from(
+        materialNotifier.state["additionalCosts"] ?? [],
+      );
+
+      final updatedMaterials = materials.map((m) => {
+            ...m,
+            "Product": productData["name"],
+          }).toList();
+
+      final newQuotation = {
+        "product": productData,
+        "materials": updatedMaterials,
+        "additionalCosts": additionalCosts,
+      };
+
+      await quotationNotifier.addNewQuotation(newQuotation);
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const QuotationSummary()),
+        );
+      }
+    }
+  },
+),
+
           ],
         ),
       );
