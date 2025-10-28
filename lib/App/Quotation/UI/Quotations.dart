@@ -11,6 +11,8 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 
 
+
+
 class AllQuotations extends ConsumerStatefulWidget {
   const AllQuotations({super.key});
 
@@ -19,6 +21,8 @@ class AllQuotations extends ConsumerStatefulWidget {
 }
 
 class _AllQuotationsState extends ConsumerState<AllQuotations> {
+
+
   @override
   Widget build(BuildContext context) {
     final materialData = ref.watch(materialProvider);
@@ -32,7 +36,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       body: SafeArea(
         child: Column(
           children: [
-            // ✅ Scrollable list
+           
+
+
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 30),
@@ -104,14 +110,19 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
               color: Colors.white,
               child: Column(
                 children: [
-                  CustomButton(
-                    text: "Create new BOM",
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(AddMaterial());
-                    },
-                  ),
+
+
+CustomButton(
+  text: hasItems ? "Continue" : "Create New BOM",
+  icon: Icons.add,
+  onPressed: () {
+    Nav.push(AddMaterial());
+  },
+),
+
+
                   const SizedBox(height: 12),
+
                   CustomButton(
                     text: "Add item from BOM List",
                     outlined: true,
@@ -120,18 +131,25 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                       Nav.push(BOMList());
                     },
                   ),
+
                   const SizedBox(height: 12),
+
                   CustomButton(
                     text: "Add item from Quotation",
                     outlined: true,
                     icon: Icons.add,
                     onPressed: () {
-                      Nav.push(AllClienrQuotations());
+                      Nav.push(AllClientQuotations());
                     },
                   ),
+
+
+
                 ],
               ),
             ),
+
+
           ],
         ),
       ),

@@ -48,9 +48,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       final formattedMaterials = materials.map((m) {
         return {
-          "woodType": m["Product"] ?? "",
+          "woodType": m["Product"] ?? "", // ✅ Product type (Wood, Foam, Board, etc.)
           "foamType": null,
-          "type": m["Materialname"] ?? "",
+          "type": m["Materialname"] ?? "", // ✅ Material name
           "width": double.tryParse(m["Width"].toString()) ?? 0,
           "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
           "length": double.tryParse(m["Length"].toString()) ?? 0,
@@ -59,7 +59,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
           "price": double.tryParse(m["Price"].toString()) ?? 0,
           "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
-          "description": m["Product"] ?? "",
+          "description": m["Materialname"] ?? "", // ✅ Use material name for description
         };
       }).toList();
 
@@ -144,10 +144,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               if (materials.isEmpty)
                 const Text("No materials added yet.")
               else
-
-                                ...materials.map(
-                  (m) => BOMSummaryCard(item: m)
-                ),
+                ...materials.map((m) => _buildMaterialCard(m)),
 
               const SizedBox(height: 30),
 
@@ -161,10 +158,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                 const Text("No additional costs added yet.")
               else
                 ...additionalCosts.map(
-                  (c) => BOMSummaryCard(
-                    item: c,
-                    onQuantityChanged: () => setState(() {}),
-                  ),
+                  (c) => _buildAdditionalCostCard(c),
                 ),
 
               const SizedBox(height: 40),
@@ -181,20 +175,18 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                 onPressed: () => _addBOMToServer(materials, additionalCosts),
               ),
               const SizedBox(height: 20),
-CustomButton(
-  text: "Continue",
-  onPressed: () {
-    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-    
-    // Sync the latest material + additional costs into quotation provider
-    quotationNotifier.setMaterials(materials);
-    quotationNotifier.setAdditionalCosts(additionalCosts);
+              CustomButton(
+                text: "Continue",
+                onPressed: () {
+                  final quotationNotifier =
+                      ref.read(quotationSummaryProvider.notifier);
 
-    Nav.push(QuotationSummary());
+                  quotationNotifier.setMaterials(materials);
+                  quotationNotifier.setAdditionalCosts(additionalCosts);
 
-  },
-),
-
+                  Nav.push(QuotationSummary());
+                },
+              ),
             ],
           ),
         ),
@@ -202,91 +194,94 @@ CustomButton(
     );
   }
 
-  // ✅ Fixed version of Material Body
-Widget _buildMaterialCard(Map<String, dynamic> item) {
-  return Consumer(builder: (context, ref, _) {
-    int quantity = 1;
+  // ✅ Material Card
+  Widget _buildMaterialCard(Map<String, dynamic> item) {
+    return Consumer(builder: (context, ref, _) {
+      int quantity = 1;
 
-    final q = item["quantity"];
-    if (q is int) {
-      quantity = q;
-    } else if (q is double) {
-      quantity = q.toInt();
-    } else if (q is String) {
-      quantity = int.tryParse(q) ?? 1;
-    }
-
-    void updateQuantity(int newQuantity) {
-      item["quantity"] = newQuantity.toString();
-
-      final state = ref.read(materialProvider.notifier).state;
-      final materials = List<Map<String, dynamic>>.from(state["materials"]);
-
-      final index = materials.indexWhere((m) =>
-          m["Materialname"] == item["Materialname"] &&
-          m["Product"] == item["Product"]);
-
-      if (index != -1) {
-        materials[index] = item;
+      final q = item["quantity"];
+      if (q is int) {
+        quantity = q;
+      } else if (q is double) {
+        quantity = q.toInt();
+      } else if (q is String) {
+        quantity = int.tryParse(q) ?? 1;
       }
 
-      ref.read(materialProvider.notifier).state = {
-        ...state,
-        "materials": materials,
-      };
-    }
+      void updateQuantity(int newQuantity) {
+        item["quantity"] = newQuantity.toString();
 
-    void increaseQuantity() => updateQuantity(quantity + 1);
-    void decreaseQuantity() {
-      if (quantity > 1) updateQuantity(quantity - 1);
-    }
+        final state = ref.read(materialProvider.notifier).state;
+        final materials = List<Map<String, dynamic>>.from(state["materials"]);
 
-    final bool isMaterial = item.containsKey("Woodtype") ||
-        item.containsKey("Materialname") ||
-        item.containsKey("Product");
+        final index = materials.indexWhere((m) =>
+            m["Materialname"] == item["Materialname"] &&
+            m["Product"] == item["Product"]);
 
-    final double price = double.tryParse(
-          (item["Price"] ?? item["amount"] ?? "0").toString(),
-        ) ??
-        0;
+        if (index != -1) {
+          materials[index] = item;
+        }
 
-    Widget buildRow(String label, String value) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF302E2E),
-              fontSize: 16,
-              fontFamily: 'Open Sans',
-              fontWeight: FontWeight.w400,
-              height: 1.50,
+        ref.read(materialProvider.notifier).state = {
+          ...state,
+          "materials": materials,
+        };
+      }
+
+      void increaseQuantity() => updateQuantity(quantity + 1);
+      void decreaseQuantity() {
+        if (quantity > 1) updateQuantity(quantity - 1);
+      }
+
+      final double price = double.tryParse(
+            (item["Price"] ?? "0").toString(),
+          ) ??
+          0;
+
+      Widget buildRow(String label, String value) {
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF302E2E),
+                fontSize: 16,
+                fontFamily: 'Open Sans',
+                fontWeight: FontWeight.w400,
+                height: 1.50,
+              ),
             ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF302E2E),
-              fontSize: 16,
-              fontFamily: 'Open Sans',
-              fontWeight: FontWeight.w400,
-              height: 1.50,
+            Text(
+              value,
+              style: const TextStyle(
+                color: Color(0xFF302E2E),
+                fontSize: 16,
+                fontFamily: 'Open Sans',
+                fontWeight: FontWeight.w400,
+                height: 1.50,
+              ),
             ),
-          ),
-        ],
-      );
-    }
+          ],
+        );
+      }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (isMaterial) ...[
-            buildRow('Product', item["Product"] ?? "-"),
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF5F8F2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ✅ Product Type (Wood, Foam, Board, etc.)
+            buildRow('Product Type', item["Product"] ?? "-"),
             const SizedBox(height: 12),
-            buildRow('Material Name', item["Woodtype"] ?? "-"),
+            // ✅ Material Name
+            buildRow('Material Name', item["Materialname"] ?? "-"),
             const SizedBox(height: 12),
             buildRow('Width', item["Width"]?.toString() ?? "-"),
             const SizedBox(height: 12),
@@ -319,7 +314,7 @@ Widget _buildMaterialCard(Map<String, dynamic> item) {
                       onPressed: decreaseQuantity,
                     ),
                     Text(
-                      item["quantity"]?.toString() ?? "1",
+                      quantity.toString(),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -333,18 +328,105 @@ Widget _buildMaterialCard(Map<String, dynamic> item) {
                 ),
               ],
             ),
-          ] else ...[
-            buildRow('Description', item["description"] ?? "-"),
-            const SizedBox(height: 12),
-          ],
 
+            const SizedBox(height: 16),
+
+            // 🔹 Price display
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Price',
+                    style: TextStyle(
+                      color: Color(0xFF302E2E),
+                      fontSize: 16,
+                      fontFamily: 'Open Sans',
+                      fontWeight: FontWeight.w400,
+                      height: 1.50,
+                    ),
+                  ),
+                  Text(
+                    "₦${price.toStringAsFixed(2)}",
+                    style: const TextStyle(
+                      color: Color(0xFF302E2E),
+                      fontSize: 16,
+                      fontFamily: 'Open Sans',
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // ✅ Additional Cost Card
+  Widget _buildAdditionalCostCard(Map<String, dynamic> item) {
+    final double amount = double.tryParse(
+          (item["amount"] ?? "0").toString(),
+        ) ??
+        0;
+
+    Widget buildRow(String label, String value) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF302E2E),
+              fontSize: 16,
+              fontFamily: 'Open Sans',
+              fontWeight: FontWeight.w400,
+              height: 1.50,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F8F2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          buildRow('Type', item["type"] ?? "-"),
+          const SizedBox(height: 12),
+          buildRow('Description', item["description"] ?? "-"),
           const SizedBox(height: 16),
 
-          // 🔹 Price display
+          // 🔹 Amount display
           Container(
             padding: const EdgeInsets.all(8),
             decoration: ShapeDecoration(
-              color: const Color(0xFFF5F8F2),
+              color: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(4),
               ),
@@ -353,7 +435,7 @@ Widget _buildMaterialCard(Map<String, dynamic> item) {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Price',
+                  'Amount',
                   style: TextStyle(
                     color: Color(0xFF302E2E),
                     fontSize: 16,
@@ -363,33 +445,17 @@ Widget _buildMaterialCard(Map<String, dynamic> item) {
                   ),
                 ),
                 Text(
-                  "₦${price.toStringAsFixed(2)}",
+                  "₦${amount.toStringAsFixed(2)}",
                   style: const TextStyle(
                     color: Color(0xFF302E2E),
                     fontSize: 16,
                     fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  });
-}
-
-
-  Widget? _buildMaterialRow(String label, dynamic value) {
-    if (value == null || value.toString().isEmpty) return null;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-          Text(value.toString(), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
         ],
       ),
     );

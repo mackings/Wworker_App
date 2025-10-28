@@ -8,10 +8,13 @@ import 'package:wworker/App/Dashboad/Widget/itemCard.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
+import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+
+
 
 
 
@@ -300,10 +303,16 @@ OptionItem(
       await quotationNotifier.addNewQuotation(newQuotation);
 
       if (mounted) {
+        
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const QuotationSummary()),
         );
+
+      //  Navigator.push(
+      //     context,
+      //     MaterialPageRoute(builder: (context) => const BOMSummary()),
+      //   );
       }
     }
   },

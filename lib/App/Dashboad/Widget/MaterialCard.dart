@@ -40,14 +40,12 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final TextEditingController priceController = TextEditingController();
 
   final ProductService _productService = ProductService();
-  //List<ProductModel> products = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
   }
-
 
   @override
   void dispose() {
@@ -58,8 +56,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   void _handleAddItem() {
-    if (selectedProduct == null ||
-        materialNameController.text.trim().isEmpty ||
+    // ✅ Removed null check for selectedProduct since it has a default value
+    if (materialNameController.text.trim().isEmpty ||
         width == null ||
         length == null ||
         thickness == null ||
@@ -76,13 +74,15 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final item = {
-      "Woodtype": materialNameController.text.trim(),
+      "Product": selectedProduct, // ✅ Added: Save selected product type (Wood, Foam, Board, etc.)
+      "Materialname": materialNameController.text.trim(), // ✅ Changed from Woodtype to Materialname
       "Width": width,
       "Length": length,
       "Thickness": thickness,
       "Unit": unit,
       "Sqm": sqmController.text.trim(),
       "Price": priceController.text.trim(),
+      "quantity": "1", // ✅ Added: Default quantity
     };
 
     widget.onAddItem?.call(item);
@@ -93,7 +93,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       thickness = null;
       unit = null;
     });
-
 
     materialNameController.clear();
     sqmController.clear();
@@ -106,7 +105,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -127,65 +125,68 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               Row(
                 children: [
                   if (widget.icon != null)
-                    Text(
-                      widget.title,
-                      style: GoogleFonts.openSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF302E2E),
-                      ),
+                    Icon(widget.icon, color: widget.color),
+                  if (widget.icon != null) const SizedBox(width: 8),
+                  Text(
+                    widget.title,
+                    style: GoogleFonts.openSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF302E2E),
                     ),
+                  ),
                 ],
               ),
-
             ],
           ),
 
           const SizedBox(height: 16),
 
-// 🟢 Product list (no loading indicator shown)
-if (products.isEmpty)
-  const Text(
-    "No products found.",
-    style: TextStyle(color: Colors.grey),
-  )
-else
-SingleChildScrollView(
-  scrollDirection: Axis.horizontal,
-  child: Row(
-    children: products.map((p) {
-      final selected = selectedProduct == p;
-      return GestureDetector(
-        onTap: () => setState(() => selectedProduct = p),
-        child: Container(
-          margin: const EdgeInsets.only(right: 8),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: selected
-                  ? const Color(0xFFA16438)
-                  : const Color(0xFFCCA183),
+          // 🟢 Product type selection
+          if (products.isEmpty)
+            const Text(
+              "No products found.",
+              style: TextStyle(color: Colors.grey),
+            )
+          else
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: products.map((p) {
+                  final selected = selectedProduct == p;
+                  return GestureDetector(
+                    onTap: () => setState(() => selectedProduct = p),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFFA16438)
+                              : const Color(0xFFCCA183),
+                        ),
+                        color: selected
+                            ? const Color(0xFFFFF3E0)
+                            : Colors.transparent,
+                      ),
+                      child: Text(
+                        p,
+                        style: GoogleFonts.openSans(
+                          color: selected
+                              ? const Color(0xFFA16438)
+                              : const Color(0xFFCCA183),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
-            color: selected
-                ? const Color(0xFFFFF3E0)
-                : Colors.transparent,
-          ),
-          child: Text(
-            p,
-            style: GoogleFonts.openSans(
-              color: selected
-                  ? const Color(0xFFA16438)
-                  : const Color(0xFFCCA183),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      );
-    }).toList(),
-  ),
-),
-
 
           const SizedBox(height: 16),
           _buildInput("Material Name", controller: materialNameController),
@@ -268,7 +269,6 @@ SingleChildScrollView(
         ],
       );
 
-
   Widget _buildDropdown(
     String label,
     List<String> items,
@@ -307,4 +307,3 @@ SingleChildScrollView(
     );
   }
 }
-

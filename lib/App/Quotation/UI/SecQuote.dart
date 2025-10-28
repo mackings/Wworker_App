@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
-import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/customText.dart';
+
 
 
 
@@ -80,7 +81,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Quotation Details")),
+      appBar: AppBar(title: CustomText(title: "Quotation Table",)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),

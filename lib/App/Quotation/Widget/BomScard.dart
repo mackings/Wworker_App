@@ -108,40 +108,6 @@ class BOMSummaryCard extends ConsumerWidget {
             buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
 
-            // 🔹 Quantity controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quantity',
-                  style: TextStyle(
-                    color: Color(0xFF302E2E),
-                    fontSize: 16,
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: decreaseQuantity,
-                    ),
-                    Text(
-                      item["quantity"]?.toString() ?? "1",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: increaseQuantity,
-                    ),
-                  ],
-                ),
-              ],
-            ),
           ] else ...[
             buildRow('Description', item["description"] ?? "-"),
             const SizedBox(height: 12),

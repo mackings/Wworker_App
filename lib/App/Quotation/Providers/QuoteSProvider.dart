@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 
 
-
 final quotationSummaryProvider =
     StateNotifierProvider<QuotationSummaryNotifier, Map<String, dynamic>>(
   (ref) => QuotationSummaryNotifier(ref),
@@ -38,7 +37,8 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
           "materials": next["materials"],
           "additionalCosts": next["additionalCosts"],
         };
-        await _saveQuotation();
+        // ❌ REMOVED: await _saveQuotation(); 
+        // This was causing duplicates because _saveQuotation calls _addOrUpdateQuotationInList
       }
     });
   }
@@ -84,12 +84,8 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
       "additionalCosts": state["additionalCosts"],
     };
 
+    // ✅ Only save the current active quotation, don't add to list
     await prefs.setString(_getKey(userId), jsonEncode(dataToSave));
-
-    // 🆕 Append to list if valid
-    if (state["product"] != null) {
-      await _addOrUpdateQuotationInList(dataToSave);
-    }
   }
 
   // ==================================================
@@ -127,7 +123,7 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
   Future<void> clearAll() async => await deleteCurrentQuotation();
 
   // ==================================================
-  // 🧾 Append New Quotation (Fixed)
+  // 🧾 Append New Quotation (ONLY method that adds to list)
   // ==================================================
   Future<void> addNewQuotation(Map<String, dynamic> quotation) async {
     final prefs = await SharedPreferences.getInstance();
@@ -164,30 +160,7 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
   // 🧾 Multi-Quotation Support
   // ==================================================
 
-  Future<void> _addOrUpdateQuotationInList(
-      Map<String, dynamic> newQuotation) async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString("userId") ?? "default_user";
-    final key = _getListKey(userId);
-
-    final data = prefs.getString(key);
-    List<Map<String, dynamic>> quotations = [];
-
-    if (data != null) {
-      quotations = List<Map<String, dynamic>>.from(jsonDecode(data));
-    }
-
-    final newId = DateTime.now().millisecondsSinceEpoch.toString();
-    quotations.add({
-      ...newQuotation,
-      "id": newId,
-      "createdAt": DateTime.now().toIso8601String(),
-    });
-
-    await prefs.setString(key, jsonEncode(quotations));
-
-    state = {...state, "quotationCount": quotations.length};
-  }
+  // ❌ REMOVED: _addOrUpdateQuotationInList() - this was causing duplicates
 
   Future<List<Map<String, dynamic>>> getAllQuotations() async {
     final prefs = await SharedPreferences.getInstance();
@@ -197,8 +170,7 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
     final data = prefs.getString(key);
     if (data == null) return [];
 
-    final quotations =
-        List<Map<String, dynamic>>.from(jsonDecode(data));
+    final quotations = List<Map<String, dynamic>>.from(jsonDecode(data));
 
     quotations.sort((a, b) {
       final aDate = DateTime.tryParse(a["createdAt"] ?? "") ?? DateTime(0);

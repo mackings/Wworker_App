@@ -5,18 +5,15 @@ import 'package:wworker/App/Product/providers/provider.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
+import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
-
-
-
 class AddProduct extends ConsumerStatefulWidget {
-
-
-  final ProductModel? existingProduct; 
+  final ProductModel? existingProduct;
 
   const AddProduct({super.key, this.existingProduct});
 
@@ -32,7 +29,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
   final descController = TextEditingController();
 
   bool isLoading = false;
-  bool _isEdited = false; 
+  bool _isEdited = false;
 
   @override
   void initState() {
@@ -58,7 +55,8 @@ class _AddProductState extends ConsumerState<AddProduct> {
       return;
     }
 
-    final edited = nameController.text != existing.name ||
+    final edited =
+        nameController.text != existing.name ||
         descController.text != existing.description ||
         selectedCategory != existing.category ||
         imagePath != existing.image;
@@ -92,7 +90,9 @@ class _AddProductState extends ConsumerState<AddProduct> {
     setState(() => isLoading = true);
 
     try {
-      final response = await ref.read(productServiceProvider).createProduct(
+      final response = await ref
+          .read(productServiceProvider)
+          .createProduct(
             name: nameController.text,
             subCategory: selectedSubCategory ?? "",
             description: descController.text,
@@ -116,66 +116,70 @@ class _AddProductState extends ConsumerState<AddProduct> {
     } catch (e) {
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Error: $e"),
-          backgroundColor: Colors.redAccent,
-        ),
+        SnackBar(content: Text("Error: $e"), backgroundColor: Colors.redAccent),
       );
     }
   }
 
-Future<void> _proceedWithQuotation(dynamic productData) async {
-  final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-  final materialNotifier = ref.read(materialProvider.notifier);
+  Future<void> _proceedWithQuotation(dynamic productData) async {
+    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+    final materialNotifier = ref.read(materialProvider.notifier);
 
-  final materialState = materialNotifier.state;
-  final materials =
-      List<Map<String, dynamic>>.from(materialState["materials"] ?? []);
-  final additionalCosts =
-      List<Map<String, dynamic>>.from(materialState["additionalCosts"] ?? []);
+    final materialState = materialNotifier.state;
+    final materials = List<Map<String, dynamic>>.from(
+      materialState["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      materialState["additionalCosts"] ?? [],
+    );
 
-  // ✅ Safely get product name
-  final productName = (productData is ProductModel)
-      ? productData.name
-      : (productData is Map<String, dynamic>)
-          ? productData["name"]
-          : "Unknown";
+    // ✅ Safely get product name
+    final productName = (productData is ProductModel)
+        ? productData.name
+        : (productData is Map<String, dynamic>)
+        ? productData["name"]
+        : "Unknown";
 
-  // ✅ Update materials with product name
-  final updatedMaterials =
-      materials.map((m) => {...m, "Product": productName}).toList();
+    // ✅ Update materials with product name
+    final updatedMaterials = materials
+        .map((m) => {...m, "Product": productName})
+        .toList();
 
-  final newQuotation = {
-    "product": (productData is ProductModel)
-        ? {
-            "productId": productData.productId,
-            "name": productData.name,
-            "category": productData.category,
-            "description": productData.description,
-            "image": productData.image,
-          }
-        : productData,
-    "materials": updatedMaterials,
-    "additionalCosts": additionalCosts,
-  };
+    final newQuotation = {
+      "product": (productData is ProductModel)
+          ? {
+              "productId": productData.productId,
+              "name": productData.name,
+              "category": productData.category,
+              "description": productData.description,
+              "image": productData.image,
+            }
+          : productData,
+      "materials": updatedMaterials,
+      "additionalCosts": additionalCosts,
+    };
 
-  await quotationNotifier.addNewQuotation(newQuotation);
+    await quotationNotifier.addNewQuotation(newQuotation);
 
-  if (context.mounted) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const QuotationSummary()),
+    if (context.mounted) {
+      // Navigator.push(
+      //   context,
+      //   MaterialPageRoute(builder: (context) => const QuotationSummary()),
+      // );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const BOMSummary()),
+      );
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("✅ Quotation created successfully!"),
+        backgroundColor: Colors.green,
+      ),
     );
   }
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("✅ Quotation created successfully!"),
-      backgroundColor: Colors.green,
-    ),
-  );
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -183,7 +187,9 @@ Future<void> _proceedWithQuotation(dynamic productData) async {
 
     return Scaffold(
       appBar: AppBar(
-        title: CustomText(title: existing != null ? "Edit Existing Product" : "Add New Product",)
+        title: CustomText(
+          title: existing != null ? "Edit Existing Product" : "Add New Product",
+        ),
       ),
       body: Stack(
         children: [
@@ -193,15 +199,15 @@ Future<void> _proceedWithQuotation(dynamic productData) async {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-CustomImgBg(
-  initialImageUrl: existing?.image,
-  onImageSelected: (image) {
-    setState(() {
-      imagePath = image?.path;
-    });
-    _checkForChanges();
-  },
-),
+                  CustomImgBg(
+                    initialImageUrl: existing?.image,
+                    onImageSelected: (image) {
+                      setState(() {
+                        imagePath = image?.path;
+                      });
+                      _checkForChanges();
+                    },
+                  ),
 
                   const SizedBox(height: 20),
                   CustomTextField(
@@ -245,6 +251,16 @@ CustomImgBg(
                         ? "Use This Product"
                         : "Upload Product",
                     onPressed: _uploadProduct,
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  CustomButton(
+                    text: "Cancel",
+                    outlined: true,
+                    onPressed: () {
+                      Nav.pop();
+                    },
                   ),
                 ],
               ),
