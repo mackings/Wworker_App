@@ -83,7 +83,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       appBar: AppBar(title: const Text("Quotation Details")),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
           child: Column(
             children: [
               QuotationInfo(
@@ -109,19 +109,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
               ),
               const SizedBox(height: 20),
               QuotationTable(items: allItems),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Text(
-                    "Total: ₦${totalSum.toStringAsFixed(2)}",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
+      
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),

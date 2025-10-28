@@ -148,7 +148,7 @@ Future<void> _proceedWithQuotation(dynamic productData) async {
   final newQuotation = {
     "product": (productData is ProductModel)
         ? {
-            "id": productData.productId,
+            "productId": productData.productId,
             "name": productData.name,
             "category": productData.category,
             "description": productData.description,

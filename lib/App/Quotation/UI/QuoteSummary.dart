@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
-import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 
@@ -122,9 +122,10 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
     }
 
 return Scaffold(
+  backgroundColor: Colors.white,
   appBar: AppBar(
-    title: Text("Quotations (${allQuotations.length})"),
-    backgroundColor: Colors.purple,
+    backgroundColor: Colors.white,
+    title: CustomText(title: "Quotations (${allQuotations.length})",),
   ),
   body: Stack(
     children: [
