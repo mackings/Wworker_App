@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
+import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 
 
@@ -118,22 +121,26 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text("Quotations (${allQuotations.length})"),
-        backgroundColor: Colors.purple,
-      ),
-      body: SafeArea(
+return Scaffold(
+  appBar: AppBar(
+    title: Text("Quotations (${allQuotations.length})"),
+    backgroundColor: Colors.purple,
+  ),
+  body: Stack(
+    children: [
+      // Main List
+      SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadAllQuotations,
           child: ListView.builder(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.only(
+                left: 20, right: 20, top: 20, bottom: 140), 
             itemCount: allQuotations.length,
             itemBuilder: (context, index) {
               final quotation = allQuotations[index];
               final product = quotation["product"] ?? {};
               final currentQuantity = quantities[index] ?? 1;
-              
+
               return Padding(
                 padding: const EdgeInsets.only(bottom: 20),
                 child: QuoteGlanceCard(
@@ -152,6 +159,76 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
           ),
         ),
       ),
+
+      // Bottom sheet-like container
+      Positioned(
+        left: 0,
+        right: 0,
+        bottom: 0,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+
+  CustomButton(
+  text: "Continue",
+  icon: Icons.add,
+  onPressed: () {
+    // ✅ Pass all quotations with their quantities
+    final quotationQuantitiesMap = <String, int>{};
+    
+    for (int i = 0; i < allQuotations.length; i++) {
+      final quotationId = allQuotations[i]["id"] as String;
+      quotationQuantitiesMap[quotationId] = quantities[i] ?? 1;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FirstQuote(
+          selectedQuotations: allQuotations,
+          quotationQuantities: quotationQuantitiesMap,
+        ),
+      ),
     );
+  },
+),
+              const SizedBox(height: 10),
+              CustomButton(
+                text: "Create new BOM",
+                icon: Icons.add,
+                outlined: true,
+                onPressed: () {
+                },
+              ),
+              const SizedBox(height: 10),
+
+              CustomButton(
+                text: "Add Item from Quotation",
+                icon: Icons.add,
+                outlined: true,
+                onPressed: () {
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  ),
+);
+
   }
 }

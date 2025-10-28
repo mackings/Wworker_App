@@ -8,34 +8,38 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 
 class FirstQuote extends ConsumerStatefulWidget {
-  const FirstQuote({super.key});
+  final List<Map<String, dynamic>>? selectedQuotations;
+  final Map<String, int>? quotationQuantities;
+
+  const FirstQuote({
+    super.key,
+    this.selectedQuotations,
+    this.quotationQuantities,
+  });
 
   @override
-  ConsumerState<ConsumerStatefulWidget> createState() => _FirstQuoteState();
+  ConsumerState<FirstQuote> createState() => _FirstQuoteState();
 }
 
 class _FirstQuoteState extends ConsumerState<FirstQuote> {
-
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _busStopController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
-  final TextEditingController _nameController = TextEditingController(); 
-    final TextEditingController _descriptionController = TextEditingController(); 
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-      ),
+      appBar: AppBar(backgroundColor: Colors.white),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 5),
             child: Form(
               key: _formKey,
               child: Column(
@@ -45,16 +49,15 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                     emailController: _emailController,
                     phoneController: _phoneController,
                     addressController: _addressController,
-                    busStopController: _busStopController, 
-                    descriptionController: _descriptionController
+                    busStopController: _busStopController,
+                    descriptionController: _descriptionController,
                   ),
-
                   const SizedBox(height: 30),
-
                   CustomButton(
                     text: "Continue",
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
+                        // ✅ Pass quotations and quantities to SecQuote
                         Nav.push(
                           SecQuote(
                             name: _nameController.text,
@@ -63,7 +66,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                             phone: _phoneController.text,
                             email: _emailController.text,
                             description: _descriptionController.text,
-                            
+                            selectedQuotations: widget.selectedQuotations ?? [],
+                            quotationQuantities: widget.quotationQuantities ?? {},
                           ),
                         );
                       }
@@ -76,5 +80,16 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _busStopController.dispose();
+    _addressController.dispose();
+    _nameController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 }

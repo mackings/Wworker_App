@@ -124,42 +124,58 @@ class _AddProductState extends ConsumerState<AddProduct> {
     }
   }
 
-  Future<void> _proceedWithQuotation(dynamic productData) async {
-    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-    final materialNotifier = ref.read(materialProvider.notifier);
+Future<void> _proceedWithQuotation(dynamic productData) async {
+  final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+  final materialNotifier = ref.read(materialProvider.notifier);
 
-    final materialState = materialNotifier.state;
-    final materials =
-        List<Map<String, dynamic>>.from(materialState["materials"] ?? []);
-    final additionalCosts =
-        List<Map<String, dynamic>>.from(materialState["additionalCosts"] ?? []);
+  final materialState = materialNotifier.state;
+  final materials =
+      List<Map<String, dynamic>>.from(materialState["materials"] ?? []);
+  final additionalCosts =
+      List<Map<String, dynamic>>.from(materialState["additionalCosts"] ?? []);
 
-    final updatedMaterials = materials
-        .map((m) => {...m, "Product": productData["name"]})
-        .toList();
+  // ✅ Safely get product name
+  final productName = (productData is ProductModel)
+      ? productData.name
+      : (productData is Map<String, dynamic>)
+          ? productData["name"]
+          : "Unknown";
 
-    final newQuotation = {
-      "product": productData,
-      "materials": updatedMaterials,
-      "additionalCosts": additionalCosts,
-    };
+  // ✅ Update materials with product name
+  final updatedMaterials =
+      materials.map((m) => {...m, "Product": productName}).toList();
 
-    await quotationNotifier.addNewQuotation(newQuotation);
+  final newQuotation = {
+    "product": (productData is ProductModel)
+        ? {
+            "id": productData.productId,
+            "name": productData.name,
+            "category": productData.category,
+            "description": productData.description,
+            "image": productData.image,
+          }
+        : productData,
+    "materials": updatedMaterials,
+    "additionalCosts": additionalCosts,
+  };
 
-    if (context.mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const QuotationSummary()),
-      );
-    }
+  await quotationNotifier.addNewQuotation(newQuotation);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("✅ Quotation created successfully!"),
-        backgroundColor: Colors.green,
-      ),
+  if (context.mounted) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const QuotationSummary()),
     );
   }
+
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(
+      content: Text("✅ Quotation created successfully!"),
+      backgroundColor: Colors.green,
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
