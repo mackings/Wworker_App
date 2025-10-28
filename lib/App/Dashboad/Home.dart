@@ -4,6 +4,7 @@ import 'package:wworker/App/Dashboad/Widget/customDash.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
+import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
@@ -51,7 +52,9 @@ class _HomeState extends ConsumerState<Home> {
                     DashboardIcon(
                       title: "Add Product",
                       icon: Icons.add_box_outlined,
-                      onTap: () {},
+                      onTap: () {
+                        Nav.push(QuotationSummary());
+                      },
                     ),
                     DashboardIcon(
                       title: "Generate Invoice",
@@ -117,33 +120,36 @@ class _HomeState extends ConsumerState<Home> {
                                 'description': quotation.description,
                                 'finalTotal': quotation.finalTotal,
                                 'status': quotation.status,
-                                'createdAt': quotation.createdAt.toIso8601String(),
+                                'createdAt': quotation.createdAt
+                                    .toIso8601String(),
                                 'quotationNumber': quotation.quotationNumber,
                                 'items': firstItem != null
                                     ? [
                                         {
-                                          'productName': quotation.service.product,
-                                          'woodType': firstItem.woodType ?? 'N/A',
+                                          'productName':
+                                              quotation.service.product,
+                                          'woodType':
+                                              firstItem.woodType ?? 'N/A',
                                           'image': firstItem.image.isNotEmpty
                                               ? firstItem.image
                                               : Urls.woodImg,
-                                        }
+                                        },
                                       ]
                                     : [],
                               },
-                              onDelete: () => notifier.deleteQuotation(quotation.id),
+                              onDelete: () =>
+                                  notifier.deleteQuotation(quotation.id),
                             );
                           },
                         ),
                         const SizedBox(height: 10),
- 
                       ],
                     );
                   },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (error, _) => Center(
-                    child: Text("Failed to load quotations: $error"),
-                  ),
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (error, _) =>
+                      Center(child: Text("Failed to load quotations: $error")),
                 ),
 
                 const SizedBox(height: 30),

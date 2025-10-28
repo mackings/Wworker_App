@@ -1,9 +1,10 @@
 import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+
+
 
 final quotationSummaryProvider =
     StateNotifierProvider<QuotationSummaryNotifier, Map<String, dynamic>>(
@@ -21,13 +22,39 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
           "isLoaded": false,
         }) {
     _loadQuotation();
+
+    // 👀 Automatically watch MaterialProvider changes
+    ref.listen<Map<String, dynamic>>(materialProvider, (previous, next) async {
+      if (previous == null) return;
+
+      final bool materialsChanged =
+          jsonEncode(previous["materials"]) != jsonEncode(next["materials"]);
+      final bool costsChanged = jsonEncode(previous["additionalCosts"]) !=
+          jsonEncode(next["additionalCosts"]);
+
+      if (materialsChanged || costsChanged) {
+        state = {
+          ...state,
+          "materials": next["materials"],
+          "additionalCosts": next["additionalCosts"],
+        };
+        await _saveQuotation();
+      }
+    });
   }
 
-  static const _storageKey = "user_quotation_summary";
+  // ==================================================
+  // 🗄️ Persistence Helpers
+  // ==================================================
+  static const _storageKeyPrefix = "user_quotation_";
+
+  String _getKey(String userId) => "$_storageKeyPrefix$userId";
+  String _getListKey(String userId) => "${_storageKeyPrefix}list_$userId";
 
   Future<void> _loadQuotation() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_storageKey);
+    final userId = prefs.getString("userId") ?? "default_user";
+    final data = prefs.getString(_getKey(userId));
 
     if (data != null) {
       final decoded = jsonDecode(data);
@@ -49,32 +76,151 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
 
   Future<void> _saveQuotation() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, jsonEncode(state));
+    final userId = prefs.getString("userId") ?? "default_user";
+
+    final dataToSave = {
+      "product": state["product"],
+      "materials": state["materials"],
+      "additionalCosts": state["additionalCosts"],
+    };
+
+    await prefs.setString(_getKey(userId), jsonEncode(dataToSave));
+
+    // 🆕 Append to list if valid
+    if (state["product"] != null) {
+      await _addOrUpdateQuotationInList(dataToSave);
+    }
   }
 
-  void setProduct(Map<String, dynamic> productData) async {
+  // ==================================================
+  // 🧩 Mutators
+  // ==================================================
+
+  Future<void> setProduct(Map<String, dynamic> productData) async {
     state = {...state, "product": productData};
     await _saveQuotation();
   }
 
-  void loadFromMaterialProvider() async {
-    final materialState = ref.read(materialProvider);
-    state = {
-      ...state,
-      "materials": materialState["materials"],
-      "additionalCosts": materialState["additionalCosts"],
-    };
+  Future<void> setMaterials(List<Map<String, dynamic>> materials) async {
+    state = {...state, "materials": materials};
     await _saveQuotation();
   }
 
-  void clearAll() async {
+  Future<void> setAdditionalCosts(
+      List<Map<String, dynamic>> additionalCosts) async {
+    state = {...state, "additionalCosts": additionalCosts};
+    await _saveQuotation();
+  }
+
+  Future<void> deleteCurrentQuotation() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_storageKey);
+    final userId = prefs.getString("userId") ?? "default_user";
+    await prefs.remove(_getKey(userId));
     state = {
       "product": null,
       "materials": [],
       "additionalCosts": [],
       "isLoaded": true,
     };
+  }
+
+  Future<void> clearAll() async => await deleteCurrentQuotation();
+
+  // ==================================================
+  // 🧾 Append New Quotation (Fixed)
+  // ==================================================
+  Future<void> addNewQuotation(Map<String, dynamic> quotation) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    List<Map<String, dynamic>> quotations = [];
+
+    if (data != null) {
+      quotations = List<Map<String, dynamic>>.from(jsonDecode(data));
+    }
+
+    final newId = DateTime.now().millisecondsSinceEpoch.toString();
+    quotations.add({
+      ...quotation,
+      "id": newId,
+      "createdAt": DateTime.now().toIso8601String(),
+    });
+
+    await prefs.setString(key, jsonEncode(quotations));
+
+    // Optional: make it the active quotation
+    state = {
+      "product": quotation["product"],
+      "materials": quotation["materials"],
+      "additionalCosts": quotation["additionalCosts"],
+      "isLoaded": true,
+      "quotationCount": quotations.length,
+    };
+  }
+
+  // ==================================================
+  // 🧾 Multi-Quotation Support
+  // ==================================================
+
+  Future<void> _addOrUpdateQuotationInList(
+      Map<String, dynamic> newQuotation) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    List<Map<String, dynamic>> quotations = [];
+
+    if (data != null) {
+      quotations = List<Map<String, dynamic>>.from(jsonDecode(data));
+    }
+
+    final newId = DateTime.now().millisecondsSinceEpoch.toString();
+    quotations.add({
+      ...newQuotation,
+      "id": newId,
+      "createdAt": DateTime.now().toIso8601String(),
+    });
+
+    await prefs.setString(key, jsonEncode(quotations));
+
+    state = {...state, "quotationCount": quotations.length};
+  }
+
+  Future<List<Map<String, dynamic>>> getAllQuotations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    if (data == null) return [];
+
+    final quotations =
+        List<Map<String, dynamic>>.from(jsonDecode(data));
+
+    quotations.sort((a, b) {
+      final aDate = DateTime.tryParse(a["createdAt"] ?? "") ?? DateTime(0);
+      final bDate = DateTime.tryParse(b["createdAt"] ?? "") ?? DateTime(0);
+      return bDate.compareTo(aDate);
+    });
+
+    return quotations;
+  }
+
+  Future<void> deleteQuotationById(String id) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    if (data == null) return;
+
+    List<Map<String, dynamic>> quotations =
+        List<Map<String, dynamic>>.from(jsonDecode(data));
+    quotations.removeWhere((q) => q["id"] == id);
+
+    await prefs.setString(key, jsonEncode(quotations));
   }
 }

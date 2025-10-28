@@ -3,81 +3,155 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
 
-class QuotationSummary extends ConsumerWidget {
+
+
+
+
+class QuotationSummary extends ConsumerStatefulWidget {
   const QuotationSummary({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(quotationSummaryProvider);
+  ConsumerState<QuotationSummary> createState() => _QuotationSummaryState();
+}
 
-    final product = data["product"];
-    final materials = List<Map<String, dynamic>>.from(data["materials"] ?? []);
-    final additionalCosts =
-        List<Map<String, dynamic>>.from(data["additionalCosts"] ?? []);
+class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
+  List<Map<String, dynamic>> allQuotations = [];
+  Map<int, int> quantities = {};
+  bool isLoading = true;
 
-    if (product == null) {
+  @override
+  void initState() {
+    super.initState();
+    _loadAllQuotations();
+  }
+
+  Future<void> _loadAllQuotations() async {
+    setState(() => isLoading = true);
+    
+    final quotations = await ref.read(quotationSummaryProvider.notifier).getAllQuotations();
+    
+    setState(() {
+      allQuotations = quotations;
+      // Initialize quantities for each quotation
+      for (int i = 0; i < quotations.length; i++) {
+        quantities[i] = 1;
+      }
+      isLoading = false;
+    });
+  }
+
+  void _increaseQuantity(int index) {
+    setState(() {
+      quantities[index] = (quantities[index] ?? 1) + 1;
+    });
+  }
+
+  void _decreaseQuantity(int index) {
+    setState(() {
+      if ((quantities[index] ?? 1) > 1) {
+        quantities[index] = (quantities[index] ?? 1) - 1;
+      }
+    });
+  }
+
+  Future<void> _deleteQuotation(String quotationId, int index) async {
+    await ref.read(quotationSummaryProvider.notifier).deleteQuotationById(quotationId);
+    await _loadAllQuotations(); // Refresh the list
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ Quotation deleted"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  double _calculateMaterialCost(List<Map<String, dynamic>> materials) {
+    return materials.fold<double>(
+      0,
+      (sum, item) =>
+          sum + (double.tryParse(item["Price"]?.toString() ?? "0") ?? 0.0),
+    );
+  }
+
+  double _calculateAdditionalCost(List<Map<String, dynamic>> additionalCosts) {
+    return additionalCosts.fold<double>(
+      0,
+      (sum, item) =>
+          sum + (double.tryParse(item["amount"]?.toString() ?? "0") ?? 0.0),
+    );
+  }
+
+  double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
+    final additionalCosts = List<Map<String, dynamic>>.from(quotation["additionalCosts"] ?? []);
+    
+    double total = _calculateMaterialCost(materials) + _calculateAdditionalCost(additionalCosts);
+    return total * quantity;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 👂 Listen for provider updates
+    ref.listen<Map<String, dynamic>>(quotationSummaryProvider, (prev, next) {
+      // Reload quotations when provider changes
+      _loadAllQuotations();
+    });
+
+    if (isLoading) {
       return const Scaffold(
-        body: Center(child: Text("No product found")),
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (allQuotations.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Quotation Summary"),
+          backgroundColor: Colors.purple,
+        ),
+        body: const Center(
+          child: Text("No quotations found. Add a product to create one!"),
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Quotation Summary")),
+      appBar: AppBar(
+        title: Text("Quotations (${allQuotations.length})"),
+        backgroundColor: Colors.purple,
+      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              QuoteGlanceCard(
-                imageUrl: product["image"],
-                productName: product["name"],
-                bomNo: product["productId"],
-                description: product["description"],
-                costPrice: _calculateCost(materials, additionalCosts),
-                sellingPrice: _calculateSelling(materials, additionalCosts),
-                quantity: 1,
-                onIncrease: () {},
-                onDecrease: () {},
-                onDelete: () {},
-              ),
-              const SizedBox(height: 30),
-              Text("🪵 Materials (${materials.length})"),
-              ...materials.map((m) => ListTile(
-                    title: Text(m["Woodtype"] ?? ""),
-                    subtitle: Text(
-                        "W:${m["Width"]} x L:${m["Length"]} x Th:${m["Thickness"]} ${m["Unit"]}"),
-                    trailing: Text("₦${m["Price"]}"),
-                  )),
-              const SizedBox(height: 20),
-              Text("💰 Additional Costs (${additionalCosts.length})"),
-              ...additionalCosts.map((c) => ListTile(
-                    title: Text(c["title"] ?? "Cost"),
-                    trailing: Text("₦${c["amount"] ?? 0}"),
-                  )),
-            ],
+        child: RefreshIndicator(
+          onRefresh: _loadAllQuotations,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: allQuotations.length,
+            itemBuilder: (context, index) {
+              final quotation = allQuotations[index];
+              final product = quotation["product"] ?? {};
+              final currentQuantity = quantities[index] ?? 1;
+              
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 20),
+                child: QuoteGlanceCard(
+                  imageUrl: product["image"] ?? "",
+                  productName: product["name"] ?? "Unknown Product",
+                  bomNo: product["productId"] ?? "N/A",
+                  description: product["description"] ?? "",
+                  costPrice: _calculateTotalCost(quotation, currentQuantity),
+                  quantity: currentQuantity,
+                  onIncrease: () => _increaseQuantity(index),
+                  onDecrease: () => _decreaseQuantity(index),
+                  onDelete: () => _deleteQuotation(quotation["id"], index),
+                ),
+              );
+            },
           ),
         ),
       ),
     );
-  }
-
-double _calculateCost(List materials, List additional) {
-  double materialSum = materials.fold<double>(
-    0,
-    (sum, item) => sum + (double.tryParse(item["Price"].toString()) ?? 0.0),
-  );
-
-  double addSum = additional.fold<double>(
-    0,
-    (sum, item) => sum + (double.tryParse(item["amount"].toString()) ?? 0.0),
-  );
-
-  return materialSum + addSum;
-}
-
-
-  double _calculateSelling(List materials, List additional) {
-    final base = _calculateCost(materials, additional);
-    return base * 1.2; // 20% markup (for demo)
   }
 }

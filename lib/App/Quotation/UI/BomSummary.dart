@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
-import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
+import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
+import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/App/Quotation/Widget/BomScard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
@@ -180,10 +181,20 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                 onPressed: () => _addBOMToServer(materials, additionalCosts),
               ),
               const SizedBox(height: 20),
-              CustomButton(
-                text: "Continue",
-                onPressed: () => Nav.push(FirstQuote()),
-              ),
+CustomButton(
+  text: "Continue",
+  onPressed: () {
+    final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+    
+    // Sync the latest material + additional costs into quotation provider
+    quotationNotifier.setMaterials(materials);
+    quotationNotifier.setAdditionalCosts(additionalCosts);
+
+    Nav.push(QuotationSummary());
+
+  },
+),
+
             ],
           ),
         ),
