@@ -31,10 +31,12 @@ class _SettingsState extends ConsumerState<Settings> {
               SizedBox(height: 30,),
 
               NotificationsWidget(),
-              
+
                SizedBox(height: 30,),
 
               StaffAccessWidget(),
+              
+                SizedBox(height: 30,),
           
           
             ],

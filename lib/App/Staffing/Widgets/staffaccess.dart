@@ -1,19 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
+import 'package:wworker/App/Staffing/View/addStaff.dart';
+import 'package:wworker/App/Staffing/View/manage.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
 class StaffAccessWidget extends StatelessWidget {
-  final VoidCallback? onManageAccount;
-  final VoidCallback? onStaffAccess;
   final VoidCallback? onDeleteAccount;
 
-  const StaffAccessWidget({
-    super.key,
-    this.onManageAccount,
-    this.onStaffAccess,
-    this.onDeleteAccount,
-  });
+  const StaffAccessWidget({super.key, this.onDeleteAccount});
 
   @override
   Widget build(BuildContext context) {
@@ -24,10 +19,7 @@ class StaffAccessWidget extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: ShapeDecoration(
             shape: RoundedRectangleBorder(
-              side: const BorderSide(
-                width: 1,
-                color: Color(0xFFD3D3D3),
-              ),
+              side: const BorderSide(width: 1, color: Color(0xFFD3D3D3)),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -60,7 +52,30 @@ class StaffAccessWidget extends StatelessWidget {
                 children: [
                   // Manage Account Button
                   InkWell(
-                    onTap: onManageAccount,
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => SelectOptionSheet(
+                          title: "Select Action",
+                          options: [
+                            OptionItem(
+                              label: "Add Staff",
+                              onTap: () {
+                                Nav.push(AddStaff());
+                              },
+                            ),
+                            OptionItem(
+                              label: "Manage Staff",
+                              onTap: () {
+                                Nav.push(StaffManagement());
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       width: double.infinity,
@@ -98,7 +113,24 @@ class StaffAccessWidget extends StatelessWidget {
 
                   // Staff Access Button
                   InkWell(
-                    onTap: onStaffAccess,
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => SelectOptionSheet(
+                          title: "Staff Access",
+                          options: [
+                            OptionItem(label: "Add New Staff", onTap: () {}),
+                            OptionItem(label: "View Staff List", onTap: () {}),
+                            OptionItem(
+                              label: "Manage Permissions",
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(8),
                     child: Container(
                       width: double.infinity,
@@ -126,7 +158,7 @@ class StaffAccessWidget extends StatelessWidget {
                           CustomText(
                             title: 'Staff Access',
                             titleColor: const Color(0xFF9CBA7F),
-                             titleFontSize: 15,
+                            titleFontSize: 15,
                           ),
                         ],
                       ),
@@ -136,7 +168,36 @@ class StaffAccessWidget extends StatelessWidget {
 
                   // Delete Account Button
                   InkWell(
-                    onTap: onDeleteAccount,
+                    onTap: () {
+                      // Show confirmation dialog
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Account'),
+                          content: const Text(
+                            'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(context);
+                                if (onDeleteAccount != null) {
+                                  onDeleteAccount!();
+                                }
+                              },
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: Color(0xFFD72638)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                     borderRadius: BorderRadius.circular(4),
                     child: Container(
                       width: double.infinity,
@@ -161,7 +222,7 @@ class StaffAccessWidget extends StatelessWidget {
                           CustomText(
                             title: 'Delete Account',
                             titleColor: const Color(0xFFD72638),
-                             titleFontSize: 15,
+                            titleFontSize: 15,
                           ),
                         ],
                       ),
