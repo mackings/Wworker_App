@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Dashboad/Home.dart';
+import 'package:wworker/App/Staffing/View/settings.dart';
 import 'package:wworker/GeneralWidgets/UI/NavBar.dart';
+
 
 
 class DashboardScreen extends StatefulWidget {
@@ -18,6 +20,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Center(child: Text('Orders')),
     Center(child: Text('Quotations')),
     Center(child: Text('Profile')),
+    Settings()
   ];
 
   @override
@@ -33,7 +36,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavItem(icon: Icons.calculate, label: "Quotation"),
           BottomNavItem(icon: Icons.shopping_cart_outlined, label: "Orders"),
           BottomNavItem(icon: Icons.description_outlined, label: "Quotes"),
-          BottomNavItem(icon: Icons.person_outline, label: "Profile"),
+          BottomNavItem(icon: Icons.settings, label: "Settings"),
           
         ],
       ),
