@@ -32,37 +32,54 @@ class BOMService {
     ));
   }
 
-  // 🟢 1️⃣ CREATE BOM (Materials)
-  Future<Map<String, dynamic>> createBOM({
-    required String name,
-    required String description,
-    required List<Map<String, dynamic>> materials,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
 
-      if (token == null) {
-        return {"success": false, "message": "No auth token found"};
-      }
 
-      final body = {
-        "name": name,
-        "description": description,
-        "materials": materials,
-      };
+// 🟢 1️⃣ CREATE BOM (Materials)
+// 🟢 1️⃣ CREATE BOM (Materials)
+Future<Map<String, dynamic>> createBOM({
+  required String name,
+  required String description,
+  required String productId,  // ✅ Added required productId
+  required List<Map<String, dynamic>> materials,
+  List<Map<String, dynamic>>? additionalCosts,  // ✅ Optional additionalCosts
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-      final response = await _dio.post(
-        "/api/bom/",
-        data: body,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      return response.data;
-    } on DioException catch (e) {
-      return _handleError(e);
+    if (token == null) {
+      return {"success": false, "message": "No auth token found"};
     }
+
+    final body = {
+      "name": name,
+      "description": description,
+      "productId": productId,  // ✅ Added productId to request body
+      "materials": materials,
+      if (additionalCosts != null && additionalCosts.isNotEmpty)
+        "additionalCosts": additionalCosts,  // ✅ Include if provided
+    };
+
+    print("📤 [REQUEST] => POST ${_dio.options.baseUrl}/api/bom/");
+    print("📦 [DATA] => $body");
+
+    final response = await _dio.post(
+      "/api/bom/",
+      data: body,
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    print("✅ [RESPONSE] => ${response.data}");
+
+    return response.data;
+  } on DioException catch (e) {
+    print("❌ [ERROR] => ${e.response?.data ?? e.message}");
+    return _handleError(e);
   }
+}
+
+
+
 
   // 🟢 2️⃣ ADD ADDITIONAL COSTS TO BOM
   Future<Map<String, dynamic>> addAdditionalCost({
@@ -94,6 +111,10 @@ class BOMService {
     }
   }
 
+
+
+
+
   // 🟢 3️⃣ GET ALL BOMs
 Future<Map<String, dynamic>> getAllBOMs() async {
   try {
@@ -114,6 +135,8 @@ Future<Map<String, dynamic>> getAllBOMs() async {
     return _handleError(e);
   }
 }
+
+
 
 
 

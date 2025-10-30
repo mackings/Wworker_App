@@ -5,7 +5,6 @@ import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
-import 'package:wworker/App/Quotation/Widget/BomScard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -24,90 +23,127 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   final BOMService _bomService = BOMService();
   bool isLoading = false;
 
-  Future<void> _addBOMToServer(
-    List<Map<String, dynamic>> materials,
-    List<Map<String, dynamic>> additionalCosts,
-  ) async {
-    setState(() => isLoading = true);
+Future<void> _addBOMToServer(
+  List<Map<String, dynamic>> materials,
+  List<Map<String, dynamic>> additionalCosts,
+) async {
+  setState(() => isLoading = true);
 
-    try {
-      if (materials.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please add at least one material.")),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      final firstMaterial = materials.first;
-      final productName = firstMaterial["Product"] ?? "BOM Item";
-
-      final now = DateTime.now();
-      final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
-      final description = "$productName created on $formattedDate";
-
-      final formattedMaterials = materials.map((m) {
-        return {
-          "woodType": m["Product"] ?? "", // ✅ Product type (Wood, Foam, Board, etc.)
-          "foamType": null,
-          "type": m["Materialname"] ?? "", // ✅ Material name
-          "width": double.tryParse(m["Width"].toString()) ?? 0,
-          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-          "length": double.tryParse(m["Length"].toString()) ?? 0,
-          "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
-          "unit": m["Unit"] ?? "cm",
-          "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
-          "price": double.tryParse(m["Price"].toString()) ?? 0,
-          "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
-          "description": m["Materialname"] ?? "", // ✅ Use material name for description
-        };
-      }).toList();
-
-      final createResponse = await _bomService.createBOM(
-        name: productName,
-        description: description,
-        materials: formattedMaterials,
+  try {
+    if (materials.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add at least one material.")),
       );
-
-      if (createResponse["success"] == true) {
-        final bomId = createResponse["data"]["_id"];
-        debugPrint("✅ BOM created with ID: $bomId");
-
-        if (additionalCosts.isNotEmpty) {
-          final costResponse = await _bomService.addAdditionalCost(
-            bomId: bomId,
-            additionalCosts: additionalCosts,
-          );
-          debugPrint("💰 Additional costs added: $costResponse");
-        }
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("✅ BOM successfully created!")),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "❌ Failed: ${createResponse["message"] ?? "Error"}",
-              ),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("⚠️ Error creating BOM: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("⚠️ Unexpected error: $e")));
-      }
-    } finally {
       setState(() => isLoading = false);
+      return;
     }
+
+    // ✅ Get productId from quotationSummaryProvider
+    final quotationState = ref.read(quotationSummaryProvider);
+    final productData = quotationState["product"];
+    
+    if (productData == null || productData["productId"] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Product ID not found. Please select a product."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      setState(() => isLoading = false);
+      return;
+    }
+
+    final String productId = productData["productId"];
+    final productName = productData["name"] ?? "BOM Item";
+
+    final now = DateTime.now();
+    final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
+    final description = "$productName created on $formattedDate";
+
+    final formattedMaterials = materials.map((m) {
+      return {
+        "woodType": m["Product"] ?? "",
+        "foamType": null,
+        "type": m["Materialname"] ?? "",
+        "width": double.tryParse(m["Width"].toString()) ?? 0,
+        "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+        "length": double.tryParse(m["Length"].toString()) ?? 0,
+        "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
+        "unit": m["Unit"] ?? "cm",
+        "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
+        "price": double.tryParse(m["Price"].toString()) ?? 0,
+        "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
+        "description": m["Materialname"] ?? "",
+      };
+    }).toList();
+
+    // ✅ Format additional costs with name field
+    final formattedAdditionalCosts = additionalCosts.map((c) {
+      return {
+        "name": c["type"] ?? "Additional Cost",  // ✅ Added name field
+        "type": c["type"] ?? "",
+        "description": c["description"] ?? "",
+        "amount": double.tryParse(c["amount"]?.toString() ?? "0") ?? 0,
+      };
+    }).toList();
+
+    debugPrint("📤 Creating BOM with productId: $productId");
+    debugPrint("📦 Materials: ${formattedMaterials.length}");
+    debugPrint("💰 Additional Costs: ${formattedAdditionalCosts.length}");
+
+    // ✅ Create BOM with productId and additionalCosts
+    final createResponse = await _bomService.createBOM(
+      name: productName,
+      description: description,
+      productId: productId,
+      materials: formattedMaterials,
+      additionalCosts: formattedAdditionalCosts.isNotEmpty 
+          ? formattedAdditionalCosts 
+          : null,
+    );
+
+    if (createResponse["success"] == true) {
+      final bomData = createResponse["data"];
+      debugPrint("✅ BOM created successfully!");
+      debugPrint("📋 BOM ID: ${bomData["_id"]}");
+      debugPrint("💵 Total Cost: ${bomData["totalCost"]}");
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("✅ BOM successfully created!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "❌ Failed: ${createResponse["message"] ?? "Unknown error"}",
+            ),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  } catch (e) {
+    debugPrint("⚠️ Error creating BOM: $e");
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("⚠️ Unexpected error: $e"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    }
+  } finally {
+    setState(() => isLoading = false);
   }
+}
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -277,10 +313,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Product Type (Wood, Foam, Board, etc.)
             buildRow('Product Type', item["Product"] ?? "-"),
             const SizedBox(height: 12),
-            // ✅ Material Name
             buildRow('Material Name', item["Materialname"] ?? "-"),
             const SizedBox(height: 12),
             buildRow('Width', item["Width"]?.toString() ?? "-"),
@@ -294,7 +328,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
             buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
 
-            // 🔹 Quantity controls
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -331,7 +364,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
             const SizedBox(height: 16),
 
-            // 🔹 Price display
             Container(
               padding: const EdgeInsets.all(8),
               decoration: ShapeDecoration(
@@ -422,7 +454,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           buildRow('Description', item["description"] ?? "-"),
           const SizedBox(height: 16),
 
-          // 🔹 Amount display
           Container(
             padding: const EdgeInsets.all(8),
             decoration: ShapeDecoration(

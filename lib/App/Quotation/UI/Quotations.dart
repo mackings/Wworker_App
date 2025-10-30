@@ -8,6 +8,7 @@ import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/BomList.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 
@@ -32,7 +33,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     final hasItems = materials.isNotEmpty || additionalCosts.isNotEmpty;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("All Quotations")),
+      appBar: AppBar(title: CustomText(title: "Quotations",)),
       body: SafeArea(
         child: Column(
           children: [
