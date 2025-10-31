@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
+import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
@@ -53,7 +54,7 @@ class _HomeState extends ConsumerState<Home> {
                       title: "Add Product",
                       icon: Icons.add_box_outlined,
                       onTap: () {
-                        Nav.push(QuotationSummary());
+                        Nav.push(AddProduct());
                       },
                     ),
                     DashboardIcon(

@@ -21,6 +21,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Center(child: Text('Quotations')),
     Center(child: Text('Profile')),
     Settings()
+    
   ];
 
   @override

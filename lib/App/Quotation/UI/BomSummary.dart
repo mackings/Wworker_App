@@ -328,39 +328,39 @@ Future<void> _addBOMToServer(
             buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
 
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Quantity',
-                  style: TextStyle(
-                    color: Color(0xFF302E2E),
-                    fontSize: 16,
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline),
-                      onPressed: decreaseQuantity,
-                    ),
-                    Text(
-                      quantity.toString(),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline),
-                      onPressed: increaseQuantity,
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            // Row(
+            //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //   children: [
+            //     const Text(
+            //       'Quantity',
+            //       style: TextStyle(
+            //         color: Color(0xFF302E2E),
+            //         fontSize: 16,
+            //         fontFamily: 'Open Sans',
+            //         fontWeight: FontWeight.w500,
+            //       ),
+            //     ),
+            //     // Row(
+            //     //   children: [
+            //     //     IconButton(
+            //     //       icon: const Icon(Icons.remove_circle_outline),
+            //     //       onPressed: decreaseQuantity,
+            //     //     ),
+            //     //     Text(
+            //     //       quantity.toString(),
+            //     //       style: const TextStyle(
+            //     //         fontSize: 16,
+            //     //         fontWeight: FontWeight.bold,
+            //     //       ),
+            //     //     ),
+            //     //     IconButton(
+            //     //       icon: const Icon(Icons.add_circle_outline),
+            //     //       onPressed: increaseQuantity,
+            //     //     ),
+            //     //   ],
+            //     // ),
+            //   ],
+            // ),
 
             const SizedBox(height: 16),
 
