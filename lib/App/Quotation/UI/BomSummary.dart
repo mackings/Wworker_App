@@ -230,6 +230,8 @@ Future<void> _addBOMToServer(
     );
   }
 
+
+
   // ✅ Material Card
   Widget _buildMaterialCard(Map<String, dynamic> item) {
     return Consumer(builder: (context, ref, _) {
@@ -263,6 +265,7 @@ Future<void> _addBOMToServer(
           "materials": materials,
         };
       }
+
 
       void increaseQuantity() => updateQuantity(quantity + 1);
       void decreaseQuantity() {

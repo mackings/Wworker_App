@@ -130,6 +130,8 @@ class _BOMListState extends ConsumerState<BOMList> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+
+            
             CustomButton(
               text: "Add from BOM List",
               outlined: true,
