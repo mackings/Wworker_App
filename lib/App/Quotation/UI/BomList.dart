@@ -154,7 +154,9 @@ class _BOMListState extends ConsumerState<BOMList> {
             CustomButton(
               text: "Continue",
               onPressed: () {
-                Nav.push(BOMSummary());
+
+                Nav.push(AddMaterial());
+               // Nav.push(BOMSummary());
               },
             ),
           ],
