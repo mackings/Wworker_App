@@ -243,12 +243,59 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
       backgroundColor: Colors.transparent,
       builder: (context) => _QuotationItemsBottomSheet(
         quotation: quotation,
-        onAddItems: () => _addQuotationItems(quotation),
+        onAddItem: (item) => _addSingleItem(item),
+        onAddAllItems: () => _addAllQuotationItems(quotation),
       ),
     );
   }
 
-  Future<void> _addQuotationItems(Quotation quotation) async {
+  Future<void> _addSingleItem(QuotationItem item) async {
+    final materialNotifier = ref.read(materialProvider.notifier);
+
+    final material = {
+      "Product": item.woodType ?? item.foamType ?? "Other materials",
+      "Materialname": item.description,
+      "Width": item.width.toString(),
+      "Length": item.length.toString(),
+      "Thickness": item.thickness.toString(),
+      "Unit": item.unit,
+      "Sqm": item.squareMeter.toString(),
+      "Price": item.sellingPrice.toString(),
+      "quantity": item.quantity.toString(),
+    };
+
+    await materialNotifier.addMaterial(material);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text("Item added successfully"),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+
+      // Navigate to BOM Summary
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const BOMSummary()),
+      );
+    }
+  }
+
+  Future<void> _addAllQuotationItems(Quotation quotation) async {
     // Close bottom sheet first
     Navigator.pop(context);
 
@@ -305,11 +352,13 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
 // ✨ Modern Bottom Sheet Widget
 class _QuotationItemsBottomSheet extends StatelessWidget {
   final Quotation quotation;
-  final VoidCallback onAddItems;
+  final Function(QuotationItem) onAddItem;
+  final VoidCallback onAddAllItems;
 
   const _QuotationItemsBottomSheet({
     required this.quotation,
-    required this.onAddItems,
+    required this.onAddItem,
+    required this.onAddAllItems,
   });
 
   @override
@@ -443,12 +492,12 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                         ),
                         itemBuilder: (context, index) {
                           final item = quotation.items[index];
-                          return _buildItemCard(item);
+                          return _buildItemCard(context, item);
                         },
                       ),
               ),
 
-              // Bottom action button
+              // Bottom action buttons
               if (quotation.items.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(20),
@@ -466,7 +515,7 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                     child: SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: onAddItems,
+                        onPressed: onAddAllItems,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFA16438),
                           foregroundColor: Colors.white,
@@ -501,6 +550,8 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
     );
   }
 
+
+
   Widget _buildInfoChip({required IconData icon, required String label}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -527,7 +578,7 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
     );
   }
 
-  Widget _buildItemCard(QuotationItem item) {
+  Widget _buildItemCard(BuildContext context, QuotationItem item) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -619,6 +670,27 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Add single item button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                Navigator.pop(context); // Close bottom sheet
+                onAddItem(item);
+              },
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text("Add This Item"),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFA16438),
+                side: const BorderSide(color: Color(0xFFA16438)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ),
         ],
