@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 import 'package:wworker/App/Quotation/Api/ClientQuotation.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
@@ -14,7 +15,14 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 class AllClientQuotations extends ConsumerStatefulWidget {
-  const AllClientQuotations({super.key});
+  final bool isForInvoice;
+  final String? clientName;
+  
+  const AllClientQuotations({
+    super.key,
+    this.isForInvoice = false,
+    this.clientName,
+  });
 
   @override
   ConsumerState<AllClientQuotations> createState() => _AllClientQuotationsState();
@@ -44,7 +52,12 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
       if (result['success'] == true) {
         final quotationResponse = QuotationResponse.fromJson(result);
         setState(() {
-          quotations = quotationResponse.data;
+          // Filter by client name if in invoice mode
+          quotations = widget.isForInvoice && widget.clientName != null
+              ? quotationResponse.data
+                  .where((q) => q.clientName == widget.clientName)
+                  .toList()
+              : quotationResponse.data;
           isLoading = false;
         });
       } else {
@@ -68,7 +81,11 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const CustomText(title: "Add from Quotations"),
+        title: CustomText(
+          title: widget.isForInvoice 
+              ? "Select Quotation for Invoice" 
+              : "Quotations",
+        ),
       ),
       body: _buildBody(),
     );
@@ -140,9 +157,11 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No quotations found.',
-              style: TextStyle(
+            Text(
+              widget.isForInvoice 
+                  ? 'No quotations found for ${widget.clientName}'
+                  : 'No quotations found.',
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: Colors.grey,
@@ -150,7 +169,9 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a quotation to get started',
+              widget.isForInvoice
+                  ? 'Create a quotation for this client first'
+                  : 'Create a quotation to get started',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -174,7 +195,22 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
               : null;
 
           return GestureDetector(
-            onTap: () => _showQuotationItemsBottomSheet(quotation),
+            onTap: () {
+              if (widget.isForInvoice) {
+                // Navigate to invoice preview
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InvoicePreview(
+                      quotation: quotation,
+                    ),
+                  ),
+                );
+              } else {
+                // Show normal bottom sheet
+                _showQuotationItemsBottomSheet(quotation);
+              }
+            },
             child: ClientQuotationCard(
               quotation: {
                 'clientName': quotation.clientName,
@@ -549,8 +585,6 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
       },
     );
   }
-
-
 
   Widget _buildInfoChip({required IconData icon, required String label}) {
     return Container(

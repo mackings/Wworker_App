@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
+import 'package:wworker/App/Invoice/View/clients_home.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
-import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+
+
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -60,7 +62,9 @@ class _HomeState extends ConsumerState<Home> {
                     DashboardIcon(
                       title: "Generate Invoice",
                       icon: Icons.receipt_long_outlined,
-                      onTap: () {},
+                      onTap: () {
+                        Nav.push(ClientsHome());
+                      },
                     ),
                     DashboardIcon(
                       title: "View Order",
@@ -103,7 +107,6 @@ class _HomeState extends ConsumerState<Home> {
                           title: "Recent Quotations",
                           textAlign: TextAlign.left,
                           titleFontSize: 17,
-                    
                         ),
                         const SizedBox(height: 10),
                         ListView.builder(
