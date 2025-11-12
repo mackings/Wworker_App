@@ -102,6 +102,8 @@ class _HomeState extends ConsumerState<Home> {
                         CustomText(
                           title: "Recent Quotations",
                           textAlign: TextAlign.left,
+                          titleFontSize: 17,
+                    
                         ),
                         const SizedBox(height: 10),
                         ListView.builder(
