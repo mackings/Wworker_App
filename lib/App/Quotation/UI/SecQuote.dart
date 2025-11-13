@@ -162,11 +162,13 @@ Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async
     final quantity = widget.quotationQuantities[quotationId] ?? 1;
     final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
     final product = quotation["product"] ?? {};
-    final productImage = product["image"] ?? ""; // ✅ Get image from product level
+    final productImage = product["image"] ?? "";
 
     return materials.map((m) {
       final materialQty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-      final price = double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
+      final unitPrice = double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
+      final totalQuantity = materialQty * quantity;
+      final totalPrice = unitPrice * totalQuantity;
 
       return {
         "woodType": m["Product"] ?? "",
@@ -177,23 +179,37 @@ Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async
         "thickness": double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
         "unit": m["Unit"] ?? "cm",
         "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
-        "quantity": materialQty * quantity,
-        "costPrice": price,
-        "sellingPrice": price,
+        "quantity": totalQuantity, // ✅ Send the actual quantity
+        "costPrice": unitPrice, // ✅ Send unit price
+        "sellingPrice": unitPrice, // ✅ Send unit price
         "description": m["Materialname"] ?? "",
-        "image": productImage, // ✅ Use image from product level
+        "image": productImage,
       };
     }).toList();
   }).expand((e) => e).toList();
 
-  final service = {
-    "product": "Materials Service",
-    "quantity": 1,
-    "discount": 0,
-    "totalPrice": totalSum,
-  };
+  // ✅ Only include service if there are actual additional costs
+  Map<String, dynamic>? service;
+  
+  // Calculate additional costs from quotations
+  double totalAdditionalCost = 0;
+  for (var quotation in widget.selectedQuotations) {
+    final additionalCosts = List<Map<String, dynamic>>.from(quotation["additionalCosts"] ?? []);
+    totalAdditionalCost += additionalCosts.fold<double>(
+      0,
+      (sum, c) => sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
+    );
+  }
 
-
+  // Only add service if there are additional costs
+  if (totalAdditionalCost > 0) {
+    service = {
+      "product": "Additional Services",
+      "quantity": 1,
+      "discount": 0,
+      "totalPrice": totalAdditionalCost,
+    };
+  }
 
   final response = await bomService.createQuotation(
     clientName: widget.name,
@@ -203,7 +219,7 @@ Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async
     email: widget.email,
     description: widget.description,
     items: items,
-    service: service,
+    service: service, // ✅ Will be null if no additional costs
     discount: 0.0,
   );
 
@@ -219,5 +235,7 @@ Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async
     );
   }
 }
+
+
 }
 

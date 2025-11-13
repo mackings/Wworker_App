@@ -5,8 +5,11 @@ import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/View/invoiceDetail.dart';
 import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 
+
+
+
 class InvoiceListPage extends StatefulWidget {
-  final String? clientName; // optional
+  final String? clientName;
 
   const InvoiceListPage({super.key, this.clientName});
 
@@ -49,6 +52,59 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
     }
   }
 
+  String _formatCurrency(double amount) {
+    return '₦${amount.toStringAsFixed(2)}';
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('MMM d, yyyy').format(date);
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'paid':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'overdue':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _getPaymentStatusColor(String paymentStatus) {
+    switch (paymentStatus.toLowerCase()) {
+      case 'paid':
+        return Colors.green;
+      case 'partial':
+        return Colors.blue;
+      case 'unpaid':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildStatusChip(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -56,12 +112,16 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         title: Text(
           widget.clientName != null
               ? "Invoices for ${widget.clientName}"
-              : "Invoices",
-          style: const TextStyle(fontWeight: FontWeight.bold),
+              : "All Invoices",
+          style: const TextStyle(
+            color: Colors.black,
+          ),
         ),
-        backgroundColor: const Color(0xFFA16438),
+  
+        elevation: 0,
       ),
       body: _buildBody(),
+
     );
   }
 
@@ -91,6 +151,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFA16438),
+                foregroundColor: Colors.white,
               ),
             ),
           ],
@@ -108,8 +169,13 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
             Text(
               widget.clientName != null
                   ? 'No invoices found for ${widget.clientName}'
-                  : 'No invoices found.',
+                  : 'No invoices found',
               style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Create your first invoice to get started',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
@@ -124,64 +190,186 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         itemCount: invoices.length,
         itemBuilder: (context, index) {
           final invoice = invoices[index];
-          final formattedDate = DateFormat(
-            'MMM d, yyyy',
-          ).format(invoice.createdAt);
+          return _buildInvoiceCard(invoice);
+        },
+      ),
+    );
+  }
 
-          return Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 2,
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ListTile(
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFA16438).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.picture_as_pdf,
-                  color: Color(0xFFA16438),
-                ),
-              ),
-              title: Text(
-                invoice.clientName,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF302E2E),
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Invoice: ${invoice.invoiceNumber}",
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                  Text(
-                    "Date: $formattedDate",
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-                ],
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, size: 18),
-                onPressed: () {
-                  // Navigate to invoice preview instead of detail
-                  // Navigator.push(
-                  //   context,
-                  //   MaterialPageRoute(
-                  //     builder: (_) =>
-                  //         InvoicePreview(invoice: invoice, quotation: null),
-                  //   ),
-                  // );
-                },
-              ),
+  Widget _buildInvoiceCard(InvoiceModel invoice) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      elevation: 1,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => InvoicePreview(invoice: invoice),
             ),
           );
         },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row with client name and status
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      invoice.clientName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFF302E2E),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  _buildStatusChip(invoice.paymentStatus, _getPaymentStatusColor(invoice.paymentStatus)),
+                ],
+              ),
+              
+              const SizedBox(height: 8),
+              
+              // Invoice details row
+              Row(
+                children: [
+                  Text(
+                    "Invoice #${invoice.invoiceNumber}",
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (invoice.quotationNumber.isNotEmpty)
+                    Text(
+                      "• Quotation #${invoice.quotationNumber}",
+                      style: const TextStyle(
+                        color: Colors.grey,
+                        fontSize: 13,
+                      ),
+                    ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Financial information
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Total Amount",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(invoice.finalTotal),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFA16438),
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        "Balance",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      Text(
+                        _formatCurrency(invoice.balance),
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: invoice.balance > 0 ? Colors.red : Colors.green,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Items and date information
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.inventory_2, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${invoice.items.length} item${invoice.items.length != 1 ? 's' : ''}",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 4),
+                      Text(
+                        _formatDate(invoice.createdAt),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              
+              // Due date warning if applicable
+              if (invoice.dueDate != null && invoice.dueDate!.isBefore(DateTime.now()) && invoice.balance > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, size: 14, color: Colors.red[300]),
+                      const SizedBox(width: 4),
+                      Text(
+                        "Overdue since ${_formatDate(invoice.dueDate!)}",
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.red[300],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

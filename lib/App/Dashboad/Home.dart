@@ -7,14 +7,13 @@ import 'package:wworker/App/Order/View/QuoforOrder.dart';
 import 'package:wworker/App/Order/View/allOrders.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
+import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
-
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -70,50 +69,54 @@ class _HomeState extends ConsumerState<Home> {
                       },
                     ),
                     DashboardIcon(
-                      title: "View Order",
+                      title: "Database",
                       icon: Icons.list_alt_outlined,
-                      onTap: () {},
+                      onTap: () {
+                        Nav.push(AllClientQuotations());
+                      },
                     ),
-DashboardIcon(
-  title: "Order",
-  icon: Icons.shopping_cart_outlined,
-  onTap: () {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => SelectOptionSheet(
-        title: "Select Action",
-        options: [
-          OptionItem(
-            label: "Create Order",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const SelectQuotationForOrder(), // No clientName needed!
-                ),
-              );
-            },
-          ),
-          OptionItem(
-            label: "View Orders",
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AllOrdersPage(),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  },
-),
+                    DashboardIcon(
+                      title: "Order",
+                      icon: Icons.shopping_cart_outlined,
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          backgroundColor: Colors.transparent,
+                          isScrollControlled: true,
+                          builder: (context) => SelectOptionSheet(
+                            title: "Select Action",
+                            options: [
+                              OptionItem(
+                                label: "Create Order",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const SelectQuotationForOrder(), // No clientName needed!
+                                    ),
+                                  );
+                                },
+                              ),
+                              OptionItem(
+                                label: "View Orders",
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const AllOrdersPage(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                     DashboardIcon(
                       title: "Sales",
                       icon: Icons.trending_up_outlined,

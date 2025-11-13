@@ -1,4 +1,3 @@
-
 /// Material Area and Cost Calculation Helper
 /// Implements the pricing and quantity calculation logic
 
@@ -12,6 +11,10 @@ class MaterialCalculationHelper {
         return value / 100;
       case 'm':
         return value;
+      case 'ft':
+        return value * 0.3048;
+      case 'in':
+        return value * 0.0254;
       default:
         return value;
     }
@@ -28,13 +31,22 @@ class MaterialCalculationHelper {
     return widthM * lengthM;
   }
 
-  /// Calculate cost per square meter
-  static double calculateCostPerSqm({
-    required double totalPrice,
+  /// Calculate total board price from price per unit area
+  /// Formula: Total Board Price = Total Area × Price per Unit Area
+  static double calculateTotalBoardPrice({
     required double totalAreaSqm,
+    required double pricePerSqm,
   }) {
-    if (totalAreaSqm <= 0) return 0;
-    return totalPrice / totalAreaSqm;
+    return totalAreaSqm * pricePerSqm;
+  }
+
+  /// Calculate project cost directly from price per unit area
+  /// Formula: Project Cost = Required Area × Price per Unit Area
+  static double calculateProjectCost({
+    required double requiredAreaSqm,
+    required double pricePerSqm,
+  }) {
+    return requiredAreaSqm * pricePerSqm;
   }
 
   /// Calculate minimum units needed with waste threshold
@@ -73,17 +85,6 @@ class MaterialCalculationHelper {
     }
   }
 
-  /// Calculate project cost based on required area
-  static double calculateProjectCost({
-    required double requiredAreaSqm,
-    required double standardAreaSqm,
-    required double standardPrice,
-  }) {
-    if (standardAreaSqm <= 0) return 0;
-    final costPerSqm = standardPrice / standardAreaSqm;
-    return requiredAreaSqm * costPerSqm;
-  }
-
   /// Calculate waste information
   static Map<String, dynamic> calculateWasteInfo({
     required double requiredArea,
@@ -110,7 +111,7 @@ class MaterialCalculationHelper {
 
   /// Format area with unit
   static String formatArea(double area, {String unit = 'sq m'}) {
-    return '${area.toStringAsFixed(2)} $unit';
+    return '${area.toStringAsFixed(4)} $unit';
   }
 }
 
@@ -118,21 +119,29 @@ class MaterialCalculationHelper {
 /// 
 /// // Calculate area
 /// double area = MaterialCalculationHelper.calculateArea(
-///   width: 120,
-///   length: 240,
-///   unit: 'cm',
-/// ); // Returns 2.88 sq m
+///   width: 4,
+///   length: 8,
+///   unit: 'ft',
+/// ); // Returns 2.9728 sq m (32 sq ft)
+/// 
+/// // Price per sq m is ₦10,087.50 per sq m (₦937.50 per sq ft)
+/// double pricePerSqm = 10087.50;
+/// 
+/// // Calculate total board price
+/// double boardPrice = MaterialCalculationHelper.calculateTotalBoardPrice(
+///   totalAreaSqm: 2.9728,
+///   pricePerSqm: 10087.50,
+/// ); // Returns ₦30,000
+/// 
+/// // Calculate project cost for 4ft × 4ft piece
+/// double projectCost = MaterialCalculationHelper.calculateProjectCost(
+///   requiredAreaSqm: 1.4864, // 16 sq ft
+///   pricePerSqm: 10087.50,
+/// ); // Returns ₦15,000
 /// 
 /// // Calculate minimum boards needed
 /// int boards = MaterialCalculationHelper.calculateMinimumUnits(
-///   requiredArea: 25, // sq ft needed
-///   unitArea: 32,     // 4ft × 8ft board = 32 sq ft
+///   requiredArea: 1.4864,
+///   unitArea: 2.9728,
 ///   wasteThreshold: 0.75,
-/// ); // Returns 1 (since 25 > 24 which is 75% of 32)
-/// 
-/// // Calculate project cost
-/// double cost = MaterialCalculationHelper.calculateProjectCost(
-///   requiredAreaSqm: 2.88,
-///   standardAreaSqm: 3.0, // Standard board size
-///   standardPrice: 30000,
-/// ); // Returns ₦28,800
+/// ); // Returns 1 board
