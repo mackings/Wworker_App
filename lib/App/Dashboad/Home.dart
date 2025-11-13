@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
 import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/App/Invoice/View/clients_home.dart';
+import 'package:wworker/App/Order/View/QuoforOrder.dart';
+import 'package:wworker/App/Order/View/allOrders.dart';
 import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
+import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -71,11 +74,46 @@ class _HomeState extends ConsumerState<Home> {
                       icon: Icons.list_alt_outlined,
                       onTap: () {},
                     ),
-                    DashboardIcon(
-                      title: "Order",
-                      icon: Icons.shopping_cart_outlined,
-                      onTap: () {},
-                    ),
+DashboardIcon(
+  title: "Order",
+  icon: Icons.shopping_cart_outlined,
+  onTap: () {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => SelectOptionSheet(
+        title: "Select Action",
+        options: [
+          OptionItem(
+            label: "Create Order",
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SelectQuotationForOrder(), // No clientName needed!
+                ),
+              );
+            },
+          ),
+          OptionItem(
+            label: "View Orders",
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AllOrdersPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  },
+),
                     DashboardIcon(
                       title: "Sales",
                       icon: Icons.trending_up_outlined,

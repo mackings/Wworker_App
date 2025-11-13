@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Invoice/Model/Client_model.dart';
+import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
 
@@ -105,4 +106,40 @@ class ClientService {
       };
     }
   }
+
+
+  // 🟢 GET INVOICES
+Future<List<InvoiceModel>> getInvoices() async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    if (token == null) {
+      throw Exception("No auth token found");
+    }
+
+    debugPrint("📤 [REQUEST] => GET ${Urls.baseUrl}/api/invoices/invoices");
+
+    final response = await _dio.get(
+      "/api/invoices/invoices",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    final data = response.data;
+
+    if (data["success"] == true && data["data"]?["invoices"] is List) {
+      final invoices = (data["data"]["invoices"] as List)
+          .map((json) => InvoiceModel.fromJson(json))
+          .toList();
+      return invoices;
+    } else {
+      return [];
+    }
+  } on DioException catch (e) {
+    debugPrint("⚠️ [GET INVOICES ERROR] => ${e.response?.data ?? e.message}");
+    return [];
+  }
+}
+
+
 }

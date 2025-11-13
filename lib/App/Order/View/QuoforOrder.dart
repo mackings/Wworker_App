@@ -10,11 +10,11 @@ import 'package:wworker/Constant/urls.dart';
 
 
 class SelectQuotationForOrder extends ConsumerStatefulWidget {
-  final String clientName;
+  final String? clientName; // Made optional
 
   const SelectQuotationForOrder({
     super.key,
-    required this.clientName,
+    this.clientName, // Optional parameter
   });
 
   @override
@@ -47,10 +47,15 @@ class _SelectQuotationForOrderState
       if (result['success'] == true) {
         final quotationResponse = QuotationResponse.fromJson(result);
         setState(() {
-          // Filter by client name
-          quotations = quotationResponse.data
-              .where((q) => q.clientName == widget.clientName)
-              .toList();
+          // Filter by client name only if provided
+          if (widget.clientName != null) {
+            quotations = quotationResponse.data
+                .where((q) => q.clientName == widget.clientName)
+                .toList();
+          } else {
+            // Show all quotations if no client name specified
+            quotations = quotationResponse.data;
+          }
           isLoading = false;
         });
       } else {
@@ -74,7 +79,17 @@ class _SelectQuotationForOrderState
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: const Text("Select Quotation for Order"),
+        title: Text(
+          widget.clientName != null
+              ? "Select Quotation for ${widget.clientName}"
+              : "Select Quotation for Order",
+          style: const TextStyle(
+            color: Color(0xFF302E2E),
+            fontWeight: FontWeight.w600,
+            fontSize: 18,
+          ),
+        ),
+
       ),
       body: _buildBody(),
     );
@@ -139,17 +154,23 @@ class _SelectQuotationForOrderState
             Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              'No quotations found for ${widget.clientName}',
+              widget.clientName != null
+                  ? 'No quotations found for ${widget.clientName}'
+                  : 'No quotations found',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
                 color: Colors.grey,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 8),
             Text(
-              'Create a quotation for this client first',
+              widget.clientName != null
+                  ? 'Create a quotation for this client first'
+                  : 'Create a quotation to get started',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              textAlign: TextAlign.center,
             ),
           ],
         ),

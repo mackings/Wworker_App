@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
-import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/App/Order/Widget/Order_card.dart';
+import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
+import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
+
+
+
+
+
 
 class AllOrdersPage extends StatefulWidget {
   const AllOrdersPage({super.key});
@@ -56,6 +62,67 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
         errorMessage = 'Error: $e';
       });
     }
+  }
+
+  Future<void> _deleteOrder(OrderModel order) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: Color(0xFFA16438)),
+      ),
+    );
+
+    final result = await _orderService.deleteOrder(order.id);
+
+    Navigator.pop(context); // Close loading dialog
+
+    if (result['success'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Order deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadOrders(); // Reload orders
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to delete order'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showUpdateStatusSheet(OrderModel order) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => UpdateOrderStatusSheet(
+        order: order,
+        onStatusUpdated: () {
+          Navigator.pop(context);
+          _loadOrders();
+        },
+      ),
+    );
+  }
+
+  void _showAddPaymentSheet(OrderModel order) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => AddPaymentSheet(
+        order: order,
+        onPaymentAdded: () {
+          Navigator.pop(context);
+          _loadOrders();
+        },
+      ),
+    );
   }
 
   @override
@@ -166,185 +233,20 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
         itemCount: orders.length,
         itemBuilder: (context, index) {
           final order = orders[index];
-          return _buildOrderCard(order);
+          return OrderCard(
+            order: order,
+            onTap: () {
+              // Navigate to order details if you have that page
+              debugPrint("View order: ${order.orderNumber}");
+            },
+            onDelete: order.status != 'completed' 
+                ? () => _deleteOrder(order) 
+                : null,
+            onAddPayment: () => _showAddPaymentSheet(order),
+            onUpdateStatus: () => _showUpdateStatusSheet(order),
+          );
         },
       ),
     );
-  }
-
-  Widget _buildOrderCard(OrderModel order) {
-    final firstItem = order.items.isNotEmpty ? order.items.first : null;
-    final image = (firstItem?['image']?.isNotEmpty ?? false)
-        ? firstItem!['image']
-        : Urls.woodImg;
-
-    Color statusColor;
-    String statusText;
-    
-    switch (order.status.toLowerCase()) {
-      case 'completed':
-        statusColor = Colors.green;
-        statusText = 'Completed';
-        break;
-      case 'in_progress':
-        statusColor = const Color(0xFF7CB342);
-        statusText = 'In Progress';
-        break;
-      case 'cancelled':
-        statusColor = Colors.red;
-        statusText = 'Cancelled';
-        break;
-      default:
-        statusColor = Colors.blue;
-        statusText = 'Pending';
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image Section
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(12),
-              topRight: Radius.circular(12),
-            ),
-            child: Image.network(
-              image,
-              width: double.infinity,
-              height: 200,
-              fit: BoxFit.cover,
-            ),
-          ),
-
-          // Details Section
-          Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              children: [
-                _buildDetailRow("Client:", order.clientName),
-                const SizedBox(height: 16),
-                _buildDetailRow("Order No:", order.orderNumber),
-                const SizedBox(height: 16),
-                _buildDetailRow(
-                  "Start Date:",
-                  order.startDate != null
-                      ? DateFormat('MMMM d, yyyy').format(order.startDate!)
-                      : 'N/A',
-                ),
-                const SizedBox(height: 16),
-                _buildDetailRow(
-                  "End Date:",
-                  order.endDate != null
-                      ? DateFormat('MMMM d, yyyy').format(order.endDate!)
-                      : 'N/A',
-                ),
-                const SizedBox(height: 16),
-                _buildDetailRow(
-                  "Amount Paid:",
-                  "₦${_formatNumber(order.amountPaid)}",
-                ),
-                const SizedBox(height: 16),
-                _buildDetailRow("Email:", order.email),
-                const SizedBox(height: 16),
-                _buildDetailRow(
-                  "Balance:",
-                  "₦${_formatNumber(order.balance)}",
-                  valueColor: const Color(0xFFA16438),
-                  valueBold: true,
-                ),
-                const SizedBox(height: 16),
-                _buildStatusRow("Status:", statusText, statusColor),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    Color? valueColor,
-    bool valueBold = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Flexible(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              color: valueColor ?? const Color(0xFF302E2E),
-              fontWeight: valueBold ? FontWeight.bold : FontWeight.w600,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusRow(String label, String statusText, Color statusColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 8,
-          ),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 14,
-              color: statusColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _formatNumber(double number) {
-    final formatter = NumberFormat('#,###');
-    return formatter.format(number);
   }
 }

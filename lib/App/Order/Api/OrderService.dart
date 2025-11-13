@@ -8,26 +8,44 @@ import 'package:wworker/Constant/urls.dart';
 class OrderService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
-  OrderService() {
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        debugPrint("📤 [ORDER REQUEST] => ${options.method} ${options.uri}");
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        debugPrint("✅ [ORDER RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
-        return handler.next(response);
-      },
-      onError: (DioException e, handler) {
-        debugPrint("❌ [ORDER ERROR] => ${e.requestOptions.uri}");
-        debugPrint("📛 [MESSAGE] => ${e.message}");
-        if (e.response != null) {
-          debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
-        }
-        return handler.next(e);
-      },
-    ));
-  }
+OrderService() {
+  _dio.interceptors.add(InterceptorsWrapper(
+    onRequest: (options, handler) {
+      debugPrint("📤 [ORDER REQUEST]");
+      debugPrint("➡️ URL: ${options.uri}");
+      debugPrint("🧾 METHOD: ${options.method}");
+      debugPrint("📋 HEADERS: ${options.headers}");
+      if (options.queryParameters.isNotEmpty) {
+        debugPrint("🔍 QUERY PARAMS: ${options.queryParameters}");
+      }
+      if (options.data != null) {
+        debugPrint("📦 BODY: ${options.data}");
+      }
+      return handler.next(options);
+    },
+    onResponse: (response, handler) {
+      debugPrint("✅ [ORDER RESPONSE]");
+      debugPrint("🔢 STATUS CODE: ${response.statusCode}");
+      debugPrint("📍 URL: ${response.requestOptions.uri}");
+      debugPrint("📄 DATA: ${response.data}");
+      return handler.next(response);
+    },
+    onError: (DioException e, handler) {
+      debugPrint("❌ [ORDER ERROR]");
+      debugPrint("📍 URL: ${e.requestOptions.uri}");
+      debugPrint("📛 MESSAGE: ${e.message}");
+      if (e.response != null) {
+        debugPrint("🔢 STATUS CODE: ${e.response?.statusCode}");
+        debugPrint("📄 RESPONSE DATA: ${e.response?.data}");
+      }
+      if (e.requestOptions.data != null) {
+        debugPrint("📦 REQUEST BODY: ${e.requestOptions.data}");
+      }
+      return handler.next(e);
+    },
+  ));
+}
+
 
   // 🟢 CREATE ORDER FROM QUOTATION
   Future<Map<String, dynamic>> createOrderFromQuotation({
@@ -147,50 +165,54 @@ class OrderService {
       };
     }
   }
+// 🟢 ADD PAYMENT TO ORDER
+Future<Map<String, dynamic>> addPayment({
+  required String orderId,
+  required double amount,
+  required String paymentMethod,
+  String? reference,
+  String? notes,
+  String? paymentDate,
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-  // 🟢 ADD PAYMENT TO ORDER
-  Future<Map<String, dynamic>> addPayment({
-    required String orderId,
-    required double amount,
-    required String paymentMethod,
-    String? reference,
-    String? notes,
-    String? paymentDate,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      if (token == null) {
-        throw Exception("No auth token found");
-      }
-
-      debugPrint("📤 [ADD PAYMENT] => POST ${Urls.baseUrl}/api/sales/orders/$orderId/payment");
-
-      final response = await _dio.post(
-        "/api/sales/orders/$orderId/payment",
-        data: {
-          "amount": amount,
-          "paymentMethod": paymentMethod,
-          if (reference != null) "reference": reference,
-          if (notes != null) "notes": notes,
-          if (paymentDate != null) "paymentDate": paymentDate,
-        },
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
-      );
-
-      debugPrint("✅ [ADD PAYMENT SUCCESS] => ${response.data}");
-      return response.data;
-    } on DioException catch (e) {
-      debugPrint("⚠️ [ADD PAYMENT ERROR] => ${e.response?.data ?? e.message}");
-      return {
-        "success": false,
-        "message": e.response?.data?["message"] ?? "Failed to add payment",
-      };
+    if (token == null) {
+      throw Exception("No auth token found");
     }
+
+    // 👇 Convert 100.0 → 100 if it has no decimal part
+    final dynamic formattedAmount =
+        amount % 1 == 0 ? amount.toInt() : amount;
+
+    debugPrint("📤 [ADD PAYMENT] => POST ${Urls.baseUrl}/api/orders/orders/$orderId/payment");
+
+    final response = await _dio.post(
+      "/api/orders/orders/$orderId/payment",
+      data: {
+        "amount": formattedAmount,
+        "paymentMethod": paymentMethod,
+        if (reference != null) "reference": reference,
+        if (notes != null) "notes": notes,
+        if (paymentDate != null) "paymentDate": paymentDate,
+      },
+      options: Options(
+        headers: {"Authorization": "Bearer $token"},
+      ),
+    );
+
+    debugPrint("✅ [ADD PAYMENT SUCCESS] => ${response.data}");
+    return response.data;
+  } on DioException catch (e) {
+    debugPrint("⚠️ [ADD PAYMENT ERROR] => ${e.response?.data ?? e.message}");
+    return {
+      "success": false,
+      "message": e.response?.data?["message"] ?? "Failed to add payment",
+    };
   }
+}
+
 
   // 🟢 UPDATE ORDER STATUS
   Future<Map<String, dynamic>> updateOrderStatus({
