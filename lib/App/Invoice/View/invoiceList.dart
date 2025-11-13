@@ -5,9 +5,6 @@ import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/View/invoiceDetail.dart';
 import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 
-
-
-
 class InvoiceListPage extends StatefulWidget {
   final String? clientName;
 
@@ -113,15 +110,12 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
           widget.clientName != null
               ? "Invoices for ${widget.clientName}"
               : "All Invoices",
-          style: const TextStyle(
-            color: Colors.black,
-          ),
+          style: const TextStyle(color: Colors.black),
         ),
-  
+
         elevation: 0,
       ),
       body: _buildBody(),
-
     );
   }
 
@@ -198,9 +192,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
 
   Widget _buildInvoiceCard(InvoiceModel invoice) {
     return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 1,
       margin: const EdgeInsets.only(bottom: 16),
       child: InkWell(
@@ -208,9 +200,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
         onTap: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => InvoicePreview(invoice: invoice),
-            ),
+            MaterialPageRoute(builder: (_) => InvoicePreview(invoice: invoice)),
           );
         },
         child: Padding(
@@ -233,12 +223,15 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  _buildStatusChip(invoice.paymentStatus, _getPaymentStatusColor(invoice.paymentStatus)),
+                  _buildStatusChip(
+                    invoice.paymentStatus,
+                    _getPaymentStatusColor(invoice.paymentStatus),
+                  ),
                 ],
               ),
-              
+
               const SizedBox(height: 8),
-              
+
               // Invoice details row
               Row(
                 children: [
@@ -254,16 +247,13 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                   if (invoice.quotationNumber.isNotEmpty)
                     Text(
                       "• Quotation #${invoice.quotationNumber}",
-                      style: const TextStyle(
-                        color: Colors.grey,
-                        fontSize: 13,
-                      ),
+                      style: const TextStyle(color: Colors.grey, fontSize: 13),
                     ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Financial information
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -273,10 +263,7 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                     children: [
                       Text(
                         "Total Amount",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
                         _formatCurrency(invoice.finalTotal),
@@ -288,68 +275,71 @@ class _InvoiceListPageState extends State<InvoiceListPage> {
                       ),
                     ],
                   ),
-                  
+
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
                         "Balance",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                       Text(
                         _formatCurrency(invoice.balance),
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: invoice.balance > 0 ? Colors.red : Colors.green,
+                          color: invoice.balance > 0
+                              ? Colors.red
+                              : Colors.green,
                         ),
                       ),
                     ],
                   ),
                 ],
               ),
-              
+
               const SizedBox(height: 12),
-              
+
               // Items and date information
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.inventory_2, size: 14, color: Colors.grey[500]),
+                      Icon(
+                        Icons.inventory_2,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         "${invoice.items.length} item${invoice.items.length != 1 ? 's' : ''}",
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
-                  
+
                   Row(
                     children: [
-                      Icon(Icons.calendar_today, size: 14, color: Colors.grey[500]),
+                      Icon(
+                        Icons.calendar_today,
+                        size: 14,
+                        color: Colors.grey[500],
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         _formatDate(invoice.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ],
               ),
-              
+
               // Due date warning if applicable
-              if (invoice.dueDate != null && invoice.dueDate!.isBefore(DateTime.now()) && invoice.balance > 0)
+              if (invoice.dueDate != null &&
+                  invoice.dueDate!.isBefore(DateTime.now()) &&
+                  invoice.balance > 0)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(

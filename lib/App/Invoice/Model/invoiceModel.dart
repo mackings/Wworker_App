@@ -78,7 +78,8 @@ class InvoiceModel {
       description: json["description"] ?? "",
       invoiceNumber: json["invoiceNumber"] ?? "",
       quotationNumber: json["quotationNumber"] ?? "",
-      items: (json["items"] as List<dynamic>?)
+      items:
+          (json["items"] as List<dynamic>?)
               ?.map((item) => InvoiceItem.fromJson(item))
               .toList() ??
           [],

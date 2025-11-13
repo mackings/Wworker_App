@@ -11,6 +11,7 @@ import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
+import 'package:wworker/App/Sales/Views/SalesAnalytics.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -102,7 +103,7 @@ class _HomeState extends ConsumerState<Home> {
                               OptionItem(
                                 label: "View Orders",
                                 onTap: () {
-                                  Navigator.pop(context);
+                                  //Navigator.pop(context);
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -120,7 +121,9 @@ class _HomeState extends ConsumerState<Home> {
                     DashboardIcon(
                       title: "Sales",
                       icon: Icons.trending_up_outlined,
-                      onTap: () {},
+                      onTap: () {
+                        Nav.push(SalesAnalyticsPage());
+                      },
                     ),
                   ],
                 ),

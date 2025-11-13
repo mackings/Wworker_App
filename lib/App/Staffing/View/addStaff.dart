@@ -6,9 +6,6 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
-
-
-
 class AddStaff extends ConsumerStatefulWidget {
   const AddStaff({super.key});
 
@@ -154,17 +151,16 @@ class _AddStaffState extends ConsumerState<AddStaff> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: CustomText(
-          title: "Add Staff",
-        ),
-      ),
+      appBar: AppBar(title: CustomText(title: "Add Staff")),
       body: Stack(
         children: [
           SafeArea(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
                 child: Column(
                   children: [
                     CustomTextField(

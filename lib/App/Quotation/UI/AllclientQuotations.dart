@@ -9,15 +9,10 @@ import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
-
-
-
 class AllClientQuotations extends ConsumerStatefulWidget {
   final bool isForInvoice;
   final String? clientName;
-  
+
   const AllClientQuotations({
     super.key,
     this.isForInvoice = false,
@@ -25,7 +20,8 @@ class AllClientQuotations extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<AllClientQuotations> createState() => _AllClientQuotationsState();
+  ConsumerState<AllClientQuotations> createState() =>
+      _AllClientQuotationsState();
 }
 
 class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
@@ -55,8 +51,8 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
           // Filter by client name if in invoice mode
           quotations = widget.isForInvoice && widget.clientName != null
               ? quotationResponse.data
-                  .where((q) => q.clientName == widget.clientName)
-                  .toList()
+                    .where((q) => q.clientName == widget.clientName)
+                    .toList()
               : quotationResponse.data;
           isLoading = false;
         });
@@ -82,8 +78,8 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
         backgroundColor: Colors.white,
         elevation: 0,
         title: CustomText(
-          title: widget.isForInvoice 
-              ? "Select Quotation for Invoice" 
+          title: widget.isForInvoice
+              ? "Select Quotation for Invoice"
               : "Quotations",
         ),
       ),
@@ -94,9 +90,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
   Widget _buildBody() {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFFA16438),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFFA16438)),
       );
     }
 
@@ -151,14 +145,10 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.receipt_long,
-              size: 80,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
-              widget.isForInvoice 
+              widget.isForInvoice
                   ? 'No quotations found for ${widget.clientName}'
                   : 'No quotations found.',
               style: const TextStyle(
@@ -172,10 +162,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
               widget.isForInvoice
                   ? 'Create a quotation for this client first'
                   : 'Create a quotation to get started',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -201,9 +188,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => InvoicePreview(
-                      quotation: quotation,
-                    ),
+                    builder: (context) => InvoicePreview(quotation: quotation),
                   ),
                 );
               } else {
@@ -228,7 +213,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
                           'image': firstItem.image.isNotEmpty
                               ? firstItem.image
                               : Urls.woodImg,
-                        }
+                        },
                       ]
                     : [],
               },
@@ -256,10 +241,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -309,16 +291,12 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
             children: [
               const Icon(Icons.check_circle, color: Colors.white),
               const SizedBox(width: 12),
-              const Expanded(
-                child: Text("Item added successfully"),
-              ),
+              const Expanded(child: Text("Item added successfully")),
             ],
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -369,9 +347,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -523,9 +499,8 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                         controller: scrollController,
                         padding: const EdgeInsets.all(20),
                         itemCount: quotation.items.length,
-                        separatorBuilder: (context, index) => const Divider(
-                          height: 24,
-                        ),
+                        separatorBuilder: (context, index) =>
+                            const Divider(height: 24),
                         itemBuilder: (context, index) {
                           final item = quotation.items[index];
                           return _buildItemCard(context, item);
@@ -764,4 +739,3 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
     );
   }
 }
-

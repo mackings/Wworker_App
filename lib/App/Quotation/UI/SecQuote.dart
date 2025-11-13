@@ -6,9 +6,6 @@ import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
-
 class SecQuote extends ConsumerStatefulWidget {
   final String name;
   final String address;
@@ -40,7 +37,6 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
   @override
   Widget build(BuildContext context) {
-
     List<QuotationItem> allItems = [];
 
     for (var quotation in widget.selectedQuotations) {
@@ -49,8 +45,12 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       final product = quotation["product"] ?? {};
 
       // Total cost of materials + additional costs
-      final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
-      final additionalCosts = List<Map<String, dynamic>>.from(quotation["additionalCosts"] ?? []);
+      final materials = List<Map<String, dynamic>>.from(
+        quotation["materials"] ?? [],
+      );
+      final additionalCosts = List<Map<String, dynamic>>.from(
+        quotation["additionalCosts"] ?? [],
+      );
 
       double materialCost = materials.fold<double>(
         0,
@@ -59,7 +59,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
       double additionalCost = additionalCosts.fold<double>(
         0,
-        (sum, c) => sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
+        (sum, c) =>
+            sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
       );
 
       double totalCostPerQuotation = (materialCost + additionalCost) * quantity;
@@ -77,11 +78,13 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
     final totalSum = allItems.fold<double>(
       0,
-      (sum, item) => sum + (double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0),
+      (sum, item) =>
+          sum +
+          (double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0),
     );
 
     return Scaffold(
-      appBar: AppBar(title: CustomText(title: "Quotation Table",)),
+      appBar: AppBar(title: CustomText(title: "Quotation Table")),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
@@ -110,7 +113,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
               ),
               const SizedBox(height: 20),
               QuotationTable(items: allItems),
-      
+
               const SizedBox(height: 20),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -120,7 +123,9 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                       child: CustomButton(
                         text: isLoading ? "Saving..." : "Save",
                         icon: isLoading ? null : Icons.save,
-                        onPressed: isLoading ? null : () => _saveQuotation(allItems, totalSum),
+                        onPressed: isLoading
+                            ? null
+                            : () => _saveQuotation(allItems, totalSum),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -150,92 +155,83 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     );
   }
 
+  Future<void> _saveQuotation(
+    List<QuotationItem> allItems,
+    double totalSum,
+  ) async {
+    setState(() => isLoading = true);
 
-Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async {
-  setState(() => isLoading = true);
+    final bomService = BOMService();
 
-  final bomService = BOMService();
+    // Flatten materials for backend
+    final items = widget.selectedQuotations
+        .map((quotation) {
+          final quotationId = quotation["id"] as String;
+          final quantity = widget.quotationQuantities[quotationId] ?? 1;
+          final materials = List<Map<String, dynamic>>.from(
+            quotation["materials"] ?? [],
+          );
+          final product = quotation["product"] ?? {};
+          final productImage = product["image"] ?? "";
 
-  // Flatten materials for backend
-  final items = widget.selectedQuotations.map((quotation) {
-    final quotationId = quotation["id"] as String;
-    final quantity = widget.quotationQuantities[quotationId] ?? 1;
-    final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
-    final product = quotation["product"] ?? {};
-    final productImage = product["image"] ?? "";
+          return materials.map((m) {
+            final materialQty =
+                int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
+            final unitPrice =
+                double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
+            final totalQuantity = materialQty * quantity;
+            final totalPrice = unitPrice * totalQuantity;
 
-    return materials.map((m) {
-      final materialQty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-      final unitPrice = double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
-      final totalQuantity = materialQty * quantity;
-      final totalPrice = unitPrice * totalQuantity;
+            return {
+              "woodType": m["Product"] ?? "",
+              "foamType": null,
+              "width": double.tryParse(m["Width"]?.toString() ?? "0") ?? 0,
+              "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+              "length": double.tryParse(m["Length"]?.toString() ?? "0") ?? 0,
+              "thickness":
+                  double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
+              "unit": m["Unit"] ?? "cm",
+              "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
+              "quantity": 1, // Set to 1 since we're sending total prices
+              "costPrice": totalPrice, // Send total cost price
+              "sellingPrice": totalPrice, // Send total selling price
+              "description": m["Materialname"] ?? "",
+              "image": productImage,
+            };
+          }).toList();
+        })
+        .expand((e) => e)
+        .toList();
 
-      return {
-        "woodType": m["Product"] ?? "",
-        "foamType": null,
-        "width": double.tryParse(m["Width"]?.toString() ?? "0") ?? 0,
-        "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-        "length": double.tryParse(m["Length"]?.toString() ?? "0") ?? 0,
-        "thickness": double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
-        "unit": m["Unit"] ?? "cm",
-        "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
-        "quantity": totalQuantity, // ✅ Send the actual quantity
-        "costPrice": unitPrice, // ✅ Send unit price
-        "sellingPrice": unitPrice, // ✅ Send unit price
-        "description": m["Materialname"] ?? "",
-        "image": productImage,
-      };
-    }).toList();
-  }).expand((e) => e).toList();
-
-  // ✅ Only include service if there are actual additional costs
-  Map<String, dynamic>? service;
-  
-  // Calculate additional costs from quotations
-  double totalAdditionalCost = 0;
-  for (var quotation in widget.selectedQuotations) {
-    final additionalCosts = List<Map<String, dynamic>>.from(quotation["additionalCosts"] ?? []);
-    totalAdditionalCost += additionalCosts.fold<double>(
-      0,
-      (sum, c) => sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
-    );
-  }
-
-  // Only add service if there are additional costs
-  if (totalAdditionalCost > 0) {
-    service = {
-      "product": "Additional Services",
+    final service = {
+      "product": "Materials Service",
       "quantity": 1,
       "discount": 0,
-      "totalPrice": totalAdditionalCost,
+      "totalPrice": totalSum,
     };
-  }
 
-  final response = await bomService.createQuotation(
-    clientName: widget.name,
-    clientAddress: widget.address,
-    nearestBusStop: widget.nearestBusStop,
-    phoneNumber: widget.phone,
-    email: widget.email,
-    description: widget.description,
-    items: items,
-    service: service, // ✅ Will be null if no additional costs
-    discount: 0.0,
-  );
-
-  setState(() => isLoading = false);
-
-  if (response["success"] == true) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("✅ Quotation created successfully")),
+    final response = await bomService.createQuotation(
+      clientName: widget.name,
+      clientAddress: widget.address,
+      nearestBusStop: widget.nearestBusStop,
+      phoneNumber: widget.phone,
+      email: widget.email,
+      description: widget.description,
+      items: items,
+      service: service,
+      discount: 0.0,
     );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
-    );
+
+    setState(() => isLoading = false);
+
+    if (response["success"] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Quotation created successfully")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
+      );
+    }
   }
 }
-
-
-}
-

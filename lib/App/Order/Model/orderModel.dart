@@ -104,9 +104,7 @@ class OrderModel {
       startDate: json['startDate'] != null
           ? DateTime.parse(json['startDate'])
           : null,
-      endDate: json['endDate'] != null
-          ? DateTime.parse(json['endDate'])
-          : null,
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
       notes: json['notes'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),

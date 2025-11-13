@@ -19,7 +19,9 @@ class InvoiceDetailPage extends StatelessWidget {
             Text("Amount Paid: ₦${invoice.amountPaid}"),
             Text("Balance: ₦${invoice.balance}"),
             Text("Status: ${invoice.paymentStatus}"),
-            Text("Due Date: ${invoice.dueDate != null ? invoice.dueDate.toString() : 'N/A'}"),
+            Text(
+              "Due Date: ${invoice.dueDate != null ? invoice.dueDate.toString() : 'N/A'}",
+            ),
             const SizedBox(height: 20),
             Text(invoice.notes ?? ''),
           ],

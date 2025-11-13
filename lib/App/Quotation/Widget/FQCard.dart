@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
-
 class FirstQuoteCard extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController emailController;
@@ -105,8 +104,7 @@ class FirstQuoteCard extends StatelessWidget {
               if (value == null || value.trim().isEmpty) {
                 return "Please enter your email";
               }
-              final emailRegex =
-                  RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+              final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
               if (!emailRegex.hasMatch(value.trim())) {
                 return "Enter a valid email";
               }

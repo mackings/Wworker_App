@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
 
-
 class CustomText extends StatelessWidget {
   final String? title;
   final String? subtitle;
@@ -39,8 +38,8 @@ class CustomText extends StatelessWidget {
       crossAxisAlignment: textAlign == TextAlign.left
           ? CrossAxisAlignment.start
           : textAlign == TextAlign.right
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.center,
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.center,
       children: [
         if (title != null)
           Text(

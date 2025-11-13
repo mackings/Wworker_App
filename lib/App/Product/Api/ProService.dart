@@ -9,26 +9,30 @@ class ProductService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
   ProductService() {
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
-        debugPrint("📦 [DATA] => ${options.data}");
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
-        debugPrint("📥 [DATA] => ${response.data}");
-        return handler.next(response);
-      },
-      onError: (DioException e, handler) {
-        debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
-        debugPrint("📛 [MESSAGE] => ${e.message}");
-        if (e.response != null) {
-          debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
-        }
-        return handler.next(e);
-      },
-    ));
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
+          debugPrint("📦 [DATA] => ${options.data}");
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint(
+            "✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
+          debugPrint("📥 [DATA] => ${response.data}");
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
+          debugPrint("📛 [MESSAGE] => ${e.message}");
+          if (e.response != null) {
+            debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
+          }
+          return handler.next(e);
+        },
+      ),
+    );
   }
 
   // 🟢 CREATE PRODUCT (Multipart POST)
@@ -89,9 +93,7 @@ class ProductService {
 
       final response = await _dio.get(
         "/api/product/",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       final data = response.data;

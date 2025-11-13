@@ -50,16 +50,17 @@ class _ResetPasswordState extends ConsumerState<ResetPassword> {
               const SizedBox(height: 20),
               const CustomText(
                 title: "Enter recovery code",
-                subtitle: "Enter the verification code we just sent to your mail",
+                subtitle:
+                    "Enter the verification code we just sent to your mail",
                 textAlign: TextAlign.left,
               ),
               const SizedBox(height: 40),
               CustomOTP(
                 onCompleted: _verifyOtp,
                 onResend: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("OTP resent")),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text("OTP resent")));
                 },
               ),
               if (isVerifying)

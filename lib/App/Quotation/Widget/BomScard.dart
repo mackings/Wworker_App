@@ -2,16 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 
-
 class BOMSummaryCard extends ConsumerWidget {
   final Map<String, dynamic> item;
   final VoidCallback? onQuantityChanged;
 
-  const BOMSummaryCard({
-    super.key,
-    required this.item,
-    this.onQuantityChanged,
-  });
+  const BOMSummaryCard({super.key, required this.item, this.onQuantityChanged});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,9 +26,11 @@ class BOMSummaryCard extends ConsumerWidget {
       final state = ref.read(materialProvider.notifier).state;
       final materials = List<Map<String, dynamic>>.from(state["materials"]);
 
-      final index = materials.indexWhere((m) =>
-          m["Materialname"] == item["Materialname"] &&
-          m["Product"] == item["Product"]);
+      final index = materials.indexWhere(
+        (m) =>
+            m["Materialname"] == item["Materialname"] &&
+            m["Product"] == item["Product"],
+      );
 
       if (index != -1) materials[index] = item;
 
@@ -50,13 +47,13 @@ class BOMSummaryCard extends ConsumerWidget {
       if (quantity > 1) updateQuantity(quantity - 1);
     }
 
-    final bool isMaterial = item.containsKey("Woodtype") ||
+    final bool isMaterial =
+        item.containsKey("Woodtype") ||
         item.containsKey("Materialname") ||
         item.containsKey("Product");
 
-    final double price = double.tryParse(
-          (item["Price"] ?? item["amount"] ?? "0").toString(),
-        ) ??
+    final double price =
+        double.tryParse((item["Price"] ?? item["amount"] ?? "0").toString()) ??
         0;
 
     Widget buildRow(String label, String value) {
@@ -107,7 +104,6 @@ class BOMSummaryCard extends ConsumerWidget {
             const SizedBox(height: 12),
             buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
             const SizedBox(height: 16),
-
           ] else ...[
             buildRow('Description', item["description"] ?? "-"),
             const SizedBox(height: 12),
@@ -154,4 +150,3 @@ class BOMSummaryCard extends ConsumerWidget {
     );
   }
 }
-

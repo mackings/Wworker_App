@@ -4,22 +4,21 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 
-
 final quotationSummaryProvider =
     StateNotifierProvider<QuotationSummaryNotifier, Map<String, dynamic>>(
-  (ref) => QuotationSummaryNotifier(ref),
-);
+      (ref) => QuotationSummaryNotifier(ref),
+    );
 
 class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
   final Ref ref;
 
   QuotationSummaryNotifier(this.ref)
-      : super({
-          "product": null,
-          "materials": [],
-          "additionalCosts": [],
-          "isLoaded": false,
-        }) {
+    : super({
+        "product": null,
+        "materials": [],
+        "additionalCosts": [],
+        "isLoaded": false,
+      }) {
     _loadQuotation();
 
     // 👀 Automatically watch MaterialProvider changes
@@ -28,7 +27,8 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
 
       final bool materialsChanged =
           jsonEncode(previous["materials"]) != jsonEncode(next["materials"]);
-      final bool costsChanged = jsonEncode(previous["additionalCosts"]) !=
+      final bool costsChanged =
+          jsonEncode(previous["additionalCosts"]) !=
           jsonEncode(next["additionalCosts"]);
 
       if (materialsChanged || costsChanged) {
@@ -37,7 +37,7 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
           "materials": next["materials"],
           "additionalCosts": next["additionalCosts"],
         };
-        // ❌ REMOVED: await _saveQuotation(); 
+        // ❌ REMOVED: await _saveQuotation();
         // This was causing duplicates because _saveQuotation calls _addOrUpdateQuotationInList
       }
     });
@@ -103,7 +103,8 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
   }
 
   Future<void> setAdditionalCosts(
-      List<Map<String, dynamic>> additionalCosts) async {
+    List<Map<String, dynamic>> additionalCosts,
+  ) async {
     state = {...state, "additionalCosts": additionalCosts};
     await _saveQuotation();
   }
@@ -189,8 +190,9 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
     final data = prefs.getString(key);
     if (data == null) return;
 
-    List<Map<String, dynamic>> quotations =
-        List<Map<String, dynamic>>.from(jsonDecode(data));
+    List<Map<String, dynamic>> quotations = List<Map<String, dynamic>>.from(
+      jsonDecode(data),
+    );
     quotations.removeWhere((q) => q["id"] == id);
 
     await prefs.setString(key, jsonEncode(quotations));

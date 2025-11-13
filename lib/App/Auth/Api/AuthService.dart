@@ -5,50 +5,53 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
 class AuthService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
   AuthService() {
     // 🟣 Global Logging for all API calls
-    _dio.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
-        debugPrint("📦 [DATA] => ${options.data}");
-        return handler.next(options);
-      },
-      onResponse: (response, handler) {
-        debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
-        debugPrint("📥 [DATA] => ${response.data}");
-        return handler.next(response);
-      },
-      onError: (DioException e, handler) async {
-        debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
-        debugPrint("📛 [MESSAGE] => ${e.message}");
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
+          debugPrint("📦 [DATA] => ${options.data}");
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint(
+            "✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
+          debugPrint("📥 [DATA] => ${response.data}");
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) async {
+          debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
+          debugPrint("📛 [MESSAGE] => ${e.message}");
 
-        if (e.response != null) {
-          debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
-        }
-
-        // 🟠 Add Retry Logic (2 retries)
-        final requestOptions = e.requestOptions;
-        final retries = (requestOptions.extra["retries"] ?? 0) + 1;
-
-        if (retries <= 2) {
-          debugPrint("🔁 Retrying request... attempt #$retries");
-          requestOptions.extra["retries"] = retries;
-          await Future.delayed(const Duration(seconds: 1)); // short delay
-          try {
-            final response = await _dio.fetch(requestOptions);
-            return handler.resolve(response);
-          } catch (err) {
-            return handler.next(err as DioException);
+          if (e.response != null) {
+            debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
           }
-        }
 
-        return handler.next(e);
-      },
-    ));
+          // 🟠 Add Retry Logic (2 retries)
+          final requestOptions = e.requestOptions;
+          final retries = (requestOptions.extra["retries"] ?? 0) + 1;
+
+          if (retries <= 2) {
+            debugPrint("🔁 Retrying request... attempt #$retries");
+            requestOptions.extra["retries"] = retries;
+            await Future.delayed(const Duration(seconds: 1)); // short delay
+            try {
+              final response = await _dio.fetch(requestOptions);
+              return handler.resolve(response);
+            } catch (err) {
+              return handler.next(err as DioException);
+            }
+          }
+
+          return handler.next(e);
+        },
+      ),
+    );
   }
 
   // 🟢 SIGNUP
@@ -151,10 +154,7 @@ class AuthService {
 
       final response = await _dio.post(
         "/api/auth/forgot-password",
-        data: {
-          "email": savedEmail,
-          "method": method,
-        },
+        data: {"email": savedEmail, "method": method},
       );
 
       final data = response.data;
@@ -170,15 +170,16 @@ class AuthService {
   }
 
   // 🟢 VERIFY OTP
-  Future<Map<String, dynamic>> verifyOtp({
-    required String otp,
-  }) async {
+  Future<Map<String, dynamic>> verifyOtp({required String otp}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final userId = prefs.getString("userId");
 
       if (userId == null) {
-        return {"success": false, "message": "No user ID found for OTP verification"};
+        return {
+          "success": false,
+          "message": "No user ID found for OTP verification",
+        };
       }
 
       debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/verify-otp");
@@ -186,10 +187,7 @@ class AuthService {
 
       final response = await _dio.post(
         "/api/auth/verify-otp",
-        data: {
-          "userId": userId,
-          "otp": otp,
-        },
+        data: {"userId": userId, "otp": otp},
       );
 
       debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.realUri}");
@@ -208,9 +206,7 @@ class AuthService {
   }
 
   // 🟢 RESET PASSWORD
-  Future<Map<String, dynamic>> resetPassword({
-    required String password,
-  }) async {
+  Future<Map<String, dynamic>> resetPassword({required String password}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final resetToken = prefs.getString("resetToken");
@@ -219,15 +215,14 @@ class AuthService {
         return {"success": false, "message": "No reset token found"};
       }
 
-      debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/reset-password");
+      debugPrint(
+        "📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/reset-password",
+      );
       debugPrint("📦 [DATA] => {resetToken: $resetToken, password: $password}");
 
       final response = await _dio.post(
         "/api/auth/reset-password",
-        data: {
-          "resetToken": resetToken,
-          "password": password,
-        },
+        data: {"resetToken": resetToken, "password": password},
       );
 
       debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.realUri}");

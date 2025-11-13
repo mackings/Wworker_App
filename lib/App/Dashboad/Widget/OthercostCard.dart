@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
 class OtherCostsCard extends StatefulWidget {
   final String title;
   final IconData? icon;
@@ -78,7 +77,8 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
 
   @override
   Widget build(BuildContext context) {
-    final costTypes = widget.costTypes ??
+    final costTypes =
+        widget.costTypes ??
         ["Logistics", "Workmanship", "Transport", "Miscellaneous"];
 
     return Container(
@@ -97,16 +97,16 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
             children: [
               Row(
                 children: [
-                  
-                  Text(widget.title,
-                      style: GoogleFonts.openSans(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF302E2E),
-                      )),
+                  Text(
+                    widget.title,
+                    style: GoogleFonts.openSans(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF302E2E),
+                    ),
+                  ),
                 ],
               ),
-      
             ],
           ),
 
@@ -122,8 +122,10 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
                   onTap: () => setState(() => selectedType = type),
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
@@ -164,12 +166,17 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
     );
   }
 
-  Widget _buildInput(String label, {TextEditingController? controller}) => Column(
+  Widget _buildInput(String label, {TextEditingController? controller}) =>
+      Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: GoogleFonts.openSans(
-                  fontSize: 16, color: const Color(0xFF7B7B7B))),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              color: const Color(0xFF7B7B7B),
+            ),
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: controller,

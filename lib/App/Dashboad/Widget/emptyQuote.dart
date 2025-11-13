@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
 class CustomEmptyQuotes extends StatelessWidget {
   final String title;
   final String buttonText;
@@ -22,21 +21,15 @@ class CustomEmptyQuotes extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-   
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-
-            CustomText(
-              title: title,
-              titleFontSize: 17,
-            ),
+            CustomText(title: title, titleFontSize: 17),
 
             GestureDetector(
               onTap: onButtonTap,
-              child: CustomText(subtitle: buttonText,)
+              child: CustomText(subtitle: buttonText),
             ),
-
           ],
         ),
 
@@ -50,7 +43,8 @@ class CustomEmptyQuotes extends StatelessWidget {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFD3D3D3)),
           ),
-          child: content ??
+          child:
+              content ??
               Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -60,7 +54,7 @@ class CustomEmptyQuotes extends StatelessWidget {
                     color: Color(0xFF8B4513),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   CustomText(
                     subtitle: emptyMessage,
                     textAlign: TextAlign.center,

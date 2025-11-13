@@ -2,18 +2,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:wworker/App/Auth/Api/AuthService.dart';
 
-
 final authServiceProvider = Provider<AuthService>((ref) {
   return AuthService();
 });
 
-
-final signupProvider = StateNotifierProvider<SignupNotifier, AsyncValue<Map<String, dynamic>>>(
-  (ref) => SignupNotifier(ref),
-);
+final signupProvider =
+    StateNotifierProvider<SignupNotifier, AsyncValue<Map<String, dynamic>>>(
+      (ref) => SignupNotifier(ref),
+    );
 
 class SignupNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
-  final Ref _ref; 
+  final Ref _ref;
 
   SignupNotifier(this._ref) : super(const AsyncValue.data({}));
 
@@ -24,7 +23,7 @@ class SignupNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   }) async {
     state = const AsyncValue.loading();
 
-    final service = _ref.read(authServiceProvider); 
+    final service = _ref.read(authServiceProvider);
     final result = await service.signup(
       email: email,
       phoneNumber: phoneNumber,
@@ -39,20 +38,17 @@ class SignupNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   }
 }
 
-
-final signinProvider = StateNotifierProvider<SigninNotifier, AsyncValue<Map<String, dynamic>>>(
-  (ref) => SigninNotifier(ref),
-);
+final signinProvider =
+    StateNotifierProvider<SigninNotifier, AsyncValue<Map<String, dynamic>>>(
+      (ref) => SigninNotifier(ref),
+    );
 
 class SigninNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   final Ref _ref;
 
   SigninNotifier(this._ref) : super(const AsyncValue.data({}));
 
-  Future<void> signin({
-    required String email,
-    required String password,
-  }) async {
+  Future<void> signin({required String email, required String password}) async {
     state = const AsyncValue.loading();
 
     final service = _ref.read(authServiceProvider);
@@ -66,15 +62,16 @@ class SigninNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   }
 }
 
-
 // Forgot Password Provider
-final forgotPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, method) async {
-  final authService = ref.watch(authServiceProvider);
-  return await authService.forgotPassword(method: method);
-});
+final forgotPasswordProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, method) async {
+      final authService = ref.watch(authServiceProvider);
+      return await authService.forgotPassword(method: method);
+    });
 
 // Reset Password Provider
-final resetPasswordProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, password) async {
-  final authService = ref.watch(authServiceProvider);
-  return await authService.resetPassword(password: password);
-});
+final resetPasswordProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, password) async {
+      final authService = ref.watch(authServiceProvider);
+      return await authService.resetPassword(password: password);
+    });

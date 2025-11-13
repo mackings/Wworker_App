@@ -16,7 +16,8 @@ class Updatepassword extends ConsumerStatefulWidget {
 
 class _UpdatepasswordState extends ConsumerState<Updatepassword> {
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
   bool isLoading = false;
 
   Future<void> _resetPassword() async {
@@ -24,22 +25,25 @@ class _UpdatepasswordState extends ConsumerState<Updatepassword> {
     final confirm = _confirmPasswordController.text.trim();
 
     if (password.isEmpty || confirm.isEmpty || password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
       return;
     }
 
     setState(() => isLoading = true);
 
-    final response =
-        await ref.read(authServiceProvider).resetPassword(password: password);
+    final response = await ref
+        .read(authServiceProvider)
+        .resetPassword(password: password);
 
     setState(() => isLoading = false);
 
     if (response["success"] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["message"] ?? "Password reset successful!")),
+        SnackBar(
+          content: Text(response["message"] ?? "Password reset successful!"),
+        ),
       );
       Nav.push(const Signin());
     } else {
@@ -62,7 +66,8 @@ class _UpdatepasswordState extends ConsumerState<Updatepassword> {
               const CustomText(
                 textAlign: TextAlign.left,
                 title: "Create New Password",
-                subtitle: "Reset password to quickly calculate your next project",
+                subtitle:
+                    "Reset password to quickly calculate your next project",
               ),
               const SizedBox(height: 20),
               CustomTextField(
@@ -72,7 +77,7 @@ class _UpdatepasswordState extends ConsumerState<Updatepassword> {
                 isPassword: true,
               ),
 
-                  const SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               CustomTextField(
                 controller: _confirmPasswordController,

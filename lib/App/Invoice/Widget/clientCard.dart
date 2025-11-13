@@ -18,31 +18,29 @@ class ClientsCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: ShapeDecoration(
         color: const Color(0xFFFCFCFC),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
- 
           Container(
             width: double.infinity,
             decoration: ShapeDecoration(
-              color: const Color(0xFFF5F8F2), 
+              color: const Color(0xFFF5F8F2),
               shape: RoundedRectangleBorder(
-                side: const BorderSide(
-                  width: 1,
-                  color: Color(0xFF8B4513), 
-                ),
+                side: const BorderSide(width: 1, color: Color(0xFF8B4513)),
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Increased padding
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ), // Increased padding
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded( // Makes client name take available space
+                Expanded(
+                  // Makes client name take available space
                   child: Text(
                     'Client Name',
                     style: TextStyle(
@@ -66,7 +64,6 @@ class ClientsCard extends StatelessWidget {
             ),
           ),
 
-
           const SizedBox(height: 16),
 
           // 🧾 Client Rows - Responsive
@@ -82,7 +79,10 @@ class ClientsCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Increased padding
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ), // Increased padding
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -101,14 +101,15 @@ class ClientsCard extends StatelessWidget {
                   ),
 
                   const SizedBox(width: 16), // Increased spacing
-
                   // Generate Invoice Button
                   InkWell(
                     onTap: () => onGenerateInvoice(clientName),
                     borderRadius: BorderRadius.circular(4),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8), // Increased padding
+                        horizontal: 16,
+                        vertical: 8,
+                      ), // Increased padding
                       decoration: ShapeDecoration(
                         color: const Color(0xFFB7835E), // Brown-Brown-300
                         shape: RoundedRectangleBorder(

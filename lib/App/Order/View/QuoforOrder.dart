@@ -6,9 +6,6 @@ import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
-
-
 class SelectQuotationForOrder extends ConsumerStatefulWidget {
   final String? clientName; // Made optional
 
@@ -89,7 +86,6 @@ class _SelectQuotationForOrderState
             fontSize: 18,
           ),
         ),
-
       ),
       body: _buildBody(),
     );
@@ -134,8 +130,10 @@ class _SelectQuotationForOrderState
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFA16438),
                 foregroundColor: Colors.white,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -185,8 +183,9 @@ class _SelectQuotationForOrderState
         itemCount: quotations.length,
         itemBuilder: (context, index) {
           final quotation = quotations[index];
-          final firstItem =
-              quotation.items.isNotEmpty ? quotation.items.first : null;
+          final firstItem = quotation.items.isNotEmpty
+              ? quotation.items.first
+              : null;
 
           return GestureDetector(
             onTap: () {
@@ -215,7 +214,7 @@ class _SelectQuotationForOrderState
                           'image': firstItem.image.isNotEmpty
                               ? firstItem.image
                               : Urls.woodImg,
-                        }
+                        },
                       ]
                     : [],
               },

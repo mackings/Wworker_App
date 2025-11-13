@@ -8,11 +8,6 @@ import 'package:wworker/App/Order/View/allOrders.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 
-
-
-
-
-
 class ClientsHome extends StatefulWidget {
   const ClientsHome({super.key});
 
@@ -61,10 +56,10 @@ class _ClientsHomeState extends State<ClientsHome> {
         .where((name) => name.isNotEmpty) // Filter out empty names
         .toSet()
         .toList();
-    
+
     // Sort alphabetically for better UX
     uniqueNames.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    
+
     return uniqueNames;
   }
 
@@ -93,9 +88,7 @@ class _ClientsHomeState extends State<ClientsHome> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFFA16438),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFFA16438)),
               );
             }
 
@@ -104,7 +97,11 @@ class _ClientsHomeState extends State<ClientsHome> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 60,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 16),
                     Text(
                       "Error: ${snapshot.error}",
@@ -127,10 +124,7 @@ class _ClientsHomeState extends State<ClientsHome> {
                     SizedBox(height: 16),
                     Text(
                       "No clients found",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -139,7 +133,8 @@ class _ClientsHomeState extends State<ClientsHome> {
 
             // Get unique client names and initialize filtered list
             _allClientNames = _getUniqueClientNames(clients);
-            if (_filteredClientNames.isEmpty && _searchController.text.isEmpty) {
+            if (_filteredClientNames.isEmpty &&
+                _searchController.text.isEmpty) {
               _filteredClientNames = _allClientNames;
             }
 
@@ -197,10 +192,7 @@ class _ClientsHomeState extends State<ClientsHome> {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "${_filteredClientNames.length} client${_filteredClientNames.length != 1 ? 's' : ''} found",
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
                     ),
                   ),
@@ -235,8 +227,9 @@ class _ClientsHomeState extends State<ClientsHome> {
                           child: ClientsCard(
                             clientNames: _filteredClientNames,
                             onGenerateInvoice: (clientName) {
-                              debugPrint("🧾 Generating invoice for $clientName");
-
+                              debugPrint(
+                                "🧾 Generating invoice for $clientName",
+                              );
 
                               showModalBottomSheet(
                                 context: context,
@@ -252,10 +245,11 @@ class _ClientsHomeState extends State<ClientsHome> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => AllClientQuotations(
-                                              isForInvoice: true,
-                                              clientName: clientName,
-                                            ),
+                                            builder: (context) =>
+                                                AllClientQuotations(
+                                                  isForInvoice: true,
+                                                  clientName: clientName,
+                                                ),
                                           ),
                                         );
                                       },
@@ -267,16 +261,15 @@ class _ClientsHomeState extends State<ClientsHome> {
                                         Navigator.push(
                                           context,
                                           MaterialPageRoute(
-                                            builder: (context) => InvoiceListPage(),
+                                            builder: (context) =>
+                                                InvoiceListPage(),
                                           ),
                                         );
                                       },
                                     ),
-            
                                   ],
                                 ),
                               );
-
                             },
                           ),
                         ),

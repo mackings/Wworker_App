@@ -5,8 +5,6 @@ import 'package:wworker/App/Quotation/Widget/FQCard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
-
 class FirstQuote extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? selectedQuotations;
   final Map<String, int>? quotationQuantities;
@@ -67,7 +65,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                             email: _emailController.text,
                             description: _descriptionController.text,
                             selectedQuotations: widget.selectedQuotations ?? [],
-                            quotationQuantities: widget.quotationQuantities ?? {},
+                            quotationQuantities:
+                                widget.quotationQuantities ?? {},
                           ),
                         );
                       }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
 class DatabaseWidget extends StatefulWidget {
   const DatabaseWidget({super.key});
 
@@ -22,10 +21,7 @@ class _DatabaseWidgetState extends State<DatabaseWidget> {
           padding: const EdgeInsets.all(16),
           decoration: ShapeDecoration(
             shape: RoundedRectangleBorder(
-              side: const BorderSide(
-                width: 1,
-                color: Color(0xFFD3D3D3),
-              ),
+              side: const BorderSide(width: 1, color: Color(0xFFD3D3D3)),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -37,13 +33,13 @@ class _DatabaseWidgetState extends State<DatabaseWidget> {
               // Database Header
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 16,
+                ),
                 decoration: ShapeDecoration(
                   shape: RoundedRectangleBorder(
-                    side: const BorderSide(
-                      width: 1,
-                      color: Color(0xFF9CBA7F),
-                    ),
+                    side: const BorderSide(width: 1, color: Color(0xFF9CBA7F)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),

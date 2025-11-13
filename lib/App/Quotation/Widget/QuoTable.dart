@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 class QuotationItem {
   final String product;
   final String description;
@@ -25,24 +24,26 @@ class QuotationTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Container(
-          width: constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: const Color(0xFFFBFBFB)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 12),
-              _buildRows(),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Container(
+            width: constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: const Color(0xFFFBFBFB)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 12),
+                _buildRows(),
+              ],
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   Widget _buildHeader() {
@@ -63,20 +64,33 @@ class QuotationTable extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Expanded(flex: 2, child: Center(child: Text('Product', style: headerStyle))),
-          Expanded(flex: 4, child: Center(child: Text('Desc', style: headerStyle))),
-          Expanded(flex: 2, child: Center(child: Text('Qty', style: headerStyle))),
-          Expanded(flex: 3, child: Center(child: Text('Price', style: headerStyle))),
-          Expanded(flex: 3, child: Center(child: Text('Total', style: headerStyle))),
+          Expanded(
+            flex: 2,
+            child: Center(child: Text('Product', style: headerStyle)),
+          ),
+          Expanded(
+            flex: 4,
+            child: Center(child: Text('Desc', style: headerStyle)),
+          ),
+          Expanded(
+            flex: 2,
+            child: Center(child: Text('Qty', style: headerStyle)),
+          ),
+          Expanded(
+            flex: 3,
+            child: Center(child: Text('Price', style: headerStyle)),
+          ),
+          Expanded(
+            flex: 3,
+            child: Center(child: Text('Total', style: headerStyle)),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildRows() {
-    return Column(
-      children: items.map((item) => _buildRow(item)).toList(),
-    );
+    return Column(children: items.map((item) => _buildRow(item)).toList());
   }
 
   Widget _buildRow(QuotationItem item) {
@@ -107,9 +121,20 @@ class QuotationTable extends StatelessWidget {
         children: [
           Expanded(flex: 2, child: Text(item.product, style: textStyle)),
           Expanded(flex: 2, child: Text(item.description, style: textStyle)),
-          Expanded(flex: 2, child: Center(child: Text(item.quantity.toString(), style: textStyle))),
+          Expanded(
+            flex: 2,
+            child: Center(
+              child: Text(item.quantity.toString(), style: textStyle),
+            ),
+          ),
           Expanded(flex: 3, child: Text(item.unitPrice, style: textStyle)),
-          Expanded(flex: 3, child: Align(alignment: Alignment.centerRight, child: Text(item.total, style: totalStyle))),
+          Expanded(
+            flex: 3,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(item.total, style: totalStyle),
+            ),
+          ),
         ],
       ),
     );

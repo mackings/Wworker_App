@@ -9,9 +9,6 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
-
 class QuotationSummary extends ConsumerStatefulWidget {
   const QuotationSummary({super.key});
 
@@ -205,7 +202,6 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
                     text: "Continue",
                     icon: Icons.add,
                     onPressed: () {
-                    
                       final quotationQuantitiesMap = <String, int>{};
 
                       for (int i = 0; i < allQuotations.length; i++) {
@@ -223,8 +219,6 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
                           ),
                         ),
                       );
-
-                      
                     },
                   ),
                   const SizedBox(height: 10),

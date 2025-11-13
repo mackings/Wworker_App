@@ -4,9 +4,6 @@ import 'package:wworker/App/Dashboad/Widget/Calculation_helper.dart';
 import 'package:wworker/App/Product/Api/ProService.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
-
-
 class AddMaterialCard extends StatefulWidget {
   final String title;
   final IconData? icon;
@@ -78,7 +75,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   /// Calculate standard material area
   void _calculateStandardArea() {
-    if (standardWidth != null && standardLength != null && standardUnit != null) {
+    if (standardWidth != null &&
+        standardLength != null &&
+        standardUnit != null) {
       final w = double.tryParse(standardWidth!);
       final l = double.tryParse(standardLength!);
 
@@ -100,7 +99,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     if (standardAreaSqm != null &&
         pricePerUnitController.text.isNotEmpty &&
         projectAreaSqm != null) {
-
       final pricePerUnit = double.tryParse(pricePerUnitController.text.trim());
 
       if (pricePerUnit != null && standardAreaSqm! > 0) {
@@ -131,110 +129,111 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
   }
 
-void _handleAddItem() {
-  // Validate all required fields
-  if (materialNameController.text.trim().isEmpty ||
-      width == null ||
-      length == null ||
-      thickness == null ||
-      unit == null ||
-      standardWidth == null ||
-      standardLength == null ||
-      standardUnit == null ||
-      pricePerUnitController.text.trim().isEmpty) {
+  void _handleAddItem() {
+    // Validate all required fields
+    if (materialNameController.text.trim().isEmpty ||
+        width == null ||
+        length == null ||
+        thickness == null ||
+        unit == null ||
+        standardWidth == null ||
+        standardLength == null ||
+        standardUnit == null ||
+        pricePerUnitController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please fill in all fields before adding."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    // Ensure calculations are done
+    if (projectAreaSqm == null ||
+        standardAreaSqm == null ||
+        pricePerSqm == null ||
+        totalBoardPrice == null ||
+        projectCost == null ||
+        minimumUnits == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please wait for calculations to complete."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Calculate waste information
+    final wasteInfo = MaterialCalculationHelper.calculateWasteInfo(
+      requiredArea: projectAreaSqm!,
+      unitArea: standardAreaSqm!,
+      unitsUsed: minimumUnits!,
+    );
+
+    // Create item WITHOUT underscore fields (only display fields)
+    final item = {
+      // Display Fields (shown to user)
+      "Product": selectedProduct,
+      "Materialname": materialNameController.text.trim(),
+      "Width": width,
+      "Length": length,
+      "Thickness": thickness,
+      "Unit": unit,
+      "Sqm": projectAreaSqm!.toStringAsFixed(2),
+      "Price": projectCost!.toStringAsFixed(2),
+      "quantity": minimumUnits.toString(),
+    };
+
+    // If you need the calculation fields for backend, create a separate map
+    final calculationData = {
+      "_ProjectAreaSqm": projectAreaSqm.toString(),
+      "_StandardWidth": standardWidth,
+      "_StandardLength": standardLength,
+      "_StandardUnit": standardUnit,
+      "_StandardAreaSqm": standardAreaSqm.toString(),
+      "_PricePerSqm": pricePerSqm.toString(),
+      "_TotalBoardPrice": totalBoardPrice.toString(),
+      "_ProjectCost": projectCost.toString(),
+      "_MinimumUnits": minimumUnits.toString(),
+      "_WasteThreshold": wasteThreshold.toString(),
+      "_TotalAreaUsed": wasteInfo['totalAreaUsed'].toString(),
+      "_WasteArea": wasteInfo['wasteArea'].toString(),
+      "_WastePercentage": wasteInfo['wastePercentage'].toString(),
+    };
+
+    // Pass both maps if needed, or just the display item
+    widget.onAddItem?.call(item);
+
+    // Reset form
+    setState(() {
+      width = null;
+      length = null;
+      thickness = null;
+      unit = null;
+      standardWidth = null;
+      standardLength = null;
+      standardUnit = null;
+      projectAreaSqm = null;
+      standardAreaSqm = null;
+      pricePerSqm = null;
+      totalBoardPrice = null;
+      projectCost = null;
+      minimumUnits = null;
+    });
+
+    materialNameController.clear();
+    pricePerUnitController.clear();
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Please fill in all fields before adding."),
-        backgroundColor: Colors.redAccent,
+        content: Text("Material added successfully!"),
+        backgroundColor: Colors.green,
       ),
     );
-    return;
   }
 
-  // Ensure calculations are done
-  if (projectAreaSqm == null || 
-      standardAreaSqm == null || 
-      pricePerSqm == null ||
-      totalBoardPrice == null ||
-      projectCost == null || 
-      minimumUnits == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Please wait for calculations to complete."),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    return;
-  }
-
-  // Calculate waste information
-  final wasteInfo = MaterialCalculationHelper.calculateWasteInfo(
-    requiredArea: projectAreaSqm!,
-    unitArea: standardAreaSqm!,
-    unitsUsed: minimumUnits!,
-  );
-
-  // Create item WITHOUT underscore fields (only display fields)
-  final item = {
-    // Display Fields (shown to user)
-    "Product": selectedProduct,
-    "Materialname": materialNameController.text.trim(),
-    "Width": width,
-    "Length": length,
-    "Thickness": thickness,
-    "Unit": unit,
-    "Sqm": projectAreaSqm!.toStringAsFixed(2),
-    "Price": projectCost!.toStringAsFixed(2),
-    "quantity": minimumUnits.toString(),
-  };
-
-  // If you need the calculation fields for backend, create a separate map
-  final calculationData = {
-    "_ProjectAreaSqm": projectAreaSqm.toString(),
-    "_StandardWidth": standardWidth,
-    "_StandardLength": standardLength,
-    "_StandardUnit": standardUnit,
-    "_StandardAreaSqm": standardAreaSqm.toString(),
-    "_PricePerSqm": pricePerSqm.toString(),
-    "_TotalBoardPrice": totalBoardPrice.toString(),
-    "_ProjectCost": projectCost.toString(),
-    "_MinimumUnits": minimumUnits.toString(),
-    "_WasteThreshold": wasteThreshold.toString(),
-    "_TotalAreaUsed": wasteInfo['totalAreaUsed'].toString(),
-    "_WasteArea": wasteInfo['wasteArea'].toString(),
-    "_WastePercentage": wasteInfo['wastePercentage'].toString(),
-  };
-
-  // Pass both maps if needed, or just the display item
-  widget.onAddItem?.call(item);
-
-  // Reset form
-  setState(() {
-    width = null;
-    length = null;
-    thickness = null;
-    unit = null;
-    standardWidth = null;
-    standardLength = null;
-    standardUnit = null;
-    projectAreaSqm = null;
-    standardAreaSqm = null;
-    pricePerSqm = null;
-    totalBoardPrice = null;
-    projectCost = null;
-    minimumUnits = null;
-  });
-
-  materialNameController.clear();
-  pricePerUnitController.clear();
-
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text("Material added successfully!"),
-      backgroundColor: Colors.green,
-    ),
-  );
-}
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -323,24 +322,14 @@ void _handleAddItem() {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown(
-                "Length (longer)",
-                numbers,
-                standardLength,
-                (v) {
-                  setState(() => standardLength = v);
-                  _calculateStandardArea();
-                },
-              ),
-              _buildDropdown(
-                "Width (shorter)",
-                numbers,
-                standardWidth,
-                (v) {
-                  setState(() => standardWidth = v);
-                  _calculateStandardArea();
-                },
-              ),
+              _buildDropdown("Length (longer)", numbers, standardLength, (v) {
+                setState(() => standardLength = v);
+                _calculateStandardArea();
+              }),
+              _buildDropdown("Width (shorter)", numbers, standardWidth, (v) {
+                setState(() => standardWidth = v);
+                _calculateStandardArea();
+              }),
             ],
           ),
 
@@ -349,15 +338,10 @@ void _handleAddItem() {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown(
-                "Unit",
-                units,
-                standardUnit,
-                (v) {
-                  setState(() => standardUnit = v);
-                  _calculateStandardArea();
-                },
-              ),
+              _buildDropdown("Unit", units, standardUnit, (v) {
+                setState(() => standardUnit = v);
+                _calculateStandardArea();
+              }),
               SizedBox(
                 width: (MediaQuery.of(context).size.width - 95) / 2,
                 child: _buildInput(
@@ -414,24 +398,14 @@ void _handleAddItem() {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown(
-                "Length (longer)",
-                numbers,
-                length,
-                (v) {
-                  setState(() => length = v);
-                  _calculateProjectArea();
-                },
-              ),
-              _buildDropdown(
-                "Width (shorter)",
-                numbers,
-                width,
-                (v) {
-                  setState(() => width = v);
-                  _calculateProjectArea();
-                },
-              ),
+              _buildDropdown("Length (longer)", numbers, length, (v) {
+                setState(() => length = v);
+                _calculateProjectArea();
+              }),
+              _buildDropdown("Width (shorter)", numbers, width, (v) {
+                setState(() => width = v);
+                _calculateProjectArea();
+              }),
             ],
           ),
 
@@ -447,15 +421,10 @@ void _handleAddItem() {
                 thickness,
                 (v) => setState(() => thickness = v),
               ),
-              _buildDropdown(
-                "Unit",
-                units,
-                unit,
-                (v) {
-                  setState(() => unit = v);
-                  _calculateProjectArea();
-                },
-              ),
+              _buildDropdown("Unit", units, unit, (v) {
+                setState(() => unit = v);
+                _calculateProjectArea();
+              }),
             ],
           ),
 
@@ -495,7 +464,9 @@ void _handleAddItem() {
           const SizedBox(height: 20),
 
           // Waste Threshold Slider
-          _buildSectionHeader("Waste Threshold (round up when remainder exceeds)"),
+          _buildSectionHeader(
+            "Waste Threshold (round up when remainder exceeds)",
+          ),
           const SizedBox(height: 8),
           Row(
             children: [
@@ -517,7 +488,10 @@ void _handleAddItem() {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5F5F5),
                   borderRadius: BorderRadius.circular(6),
@@ -537,9 +511,9 @@ void _handleAddItem() {
           const SizedBox(height: 20),
 
           // Section 3: Calculated Results
-          if (pricePerSqm != null && 
-              totalBoardPrice != null && 
-              projectCost != null && 
+          if (pricePerSqm != null &&
+              totalBoardPrice != null &&
+              projectCost != null &&
               minimumUnits != null)
             Container(
               padding: const EdgeInsets.all(12),
@@ -573,25 +547,25 @@ void _handleAddItem() {
                     "Project Cost:",
                     MaterialCalculationHelper.formatCurrency(projectCost!),
                   ),
-                  _buildResultRow(
-                    "Minimum Boards:",
-                    "$minimumUnits board(s)",
-                  ),
+                  _buildResultRow("Minimum Boards:", "$minimumUnits board(s)"),
                   // Show waste information
                   if (standardAreaSqm != null && projectAreaSqm != null)
                     Builder(
                       builder: (context) {
-                        final wasteInfo = MaterialCalculationHelper.calculateWasteInfo(
-                          requiredArea: projectAreaSqm!,
-                          unitArea: standardAreaSqm!,
-                          unitsUsed: minimumUnits!,
-                        );
+                        final wasteInfo =
+                            MaterialCalculationHelper.calculateWasteInfo(
+                              requiredArea: projectAreaSqm!,
+                              unitArea: standardAreaSqm!,
+                              unitsUsed: minimumUnits!,
+                            );
                         return Column(
                           children: [
                             const Divider(color: Color(0xFFCCA183)),
                             _buildResultRow(
                               "Total Area Used:",
-                              MaterialCalculationHelper.formatArea(wasteInfo['totalAreaUsed']),
+                              MaterialCalculationHelper.formatArea(
+                                wasteInfo['totalAreaUsed'],
+                              ),
                             ),
                             _buildResultRow(
                               "Waste:",
@@ -654,37 +628,33 @@ void _handleAddItem() {
     TextEditingController? controller,
     String? hint,
     void Function(String)? onChanged,
-  }) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.openSans(
-              fontSize: 14,
-              color: const Color(0xFF7B7B7B),
-            ),
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.openSans(
+          fontSize: 14,
+          color: const Color(0xFF7B7B7B),
+        ),
+      ),
+      const SizedBox(height: 6),
+      TextField(
+        controller: controller,
+        onChanged: onChanged,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.all(12),
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
           ),
-          const SizedBox(height: 6),
-          TextField(
-            controller: controller,
-            onChanged: onChanged,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(12),
-              hintText: hint,
-              hintStyle: const TextStyle(
-                color: Color(0xFFBDBDBD),
-                fontSize: 13,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-              ),
-            ),
-          ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 
   Widget _buildDropdown(
     String label,

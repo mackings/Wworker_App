@@ -9,8 +9,6 @@ import 'package:wworker/App/Quotation/Widget/AddListedBom.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
-
 class BOMList extends ConsumerStatefulWidget {
   const BOMList({super.key});
 
@@ -130,8 +128,6 @@ class _BOMListState extends ConsumerState<BOMList> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-
-            
             CustomButton(
               text: "Add from BOM List",
               outlined: true,
@@ -154,9 +150,8 @@ class _BOMListState extends ConsumerState<BOMList> {
             CustomButton(
               text: "Continue",
               onPressed: () {
-
                 Nav.push(AddMaterial());
-               // Nav.push(BOMSummary());
+                // Nav.push(BOMSummary());
               },
             ),
           ],

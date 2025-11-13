@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
 
-
-
 class CustomButton extends StatelessWidget {
   final String text;
   final VoidCallback? onPressed;
@@ -24,7 +22,7 @@ class CustomButton extends StatelessWidget {
     this.width = 327,
     this.borderRadius = 8,
     this.outlined = false,
-    this.loading = false, 
+    this.loading = false,
     this.icon,
     this.iconColor,
     this.textColor,
@@ -34,12 +32,15 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color btnBgColor =
-        outlined ? Colors.transparent : (backgroundColor ?? ColorsApp.btnColor);
-    final Color btnTextColor =
-        outlined ? (textColor ?? ColorsApp.btnColor) : (textColor ?? Colors.white);
-    final Color btnBorderColor =
-        outlined ? (borderColor ?? ColorsApp.btnColor) : Colors.transparent;
+    final Color btnBgColor = outlined
+        ? Colors.transparent
+        : (backgroundColor ?? ColorsApp.btnColor);
+    final Color btnTextColor = outlined
+        ? (textColor ?? ColorsApp.btnColor)
+        : (textColor ?? Colors.white);
+    final Color btnBorderColor = outlined
+        ? (borderColor ?? ColorsApp.btnColor)
+        : Colors.transparent;
 
     return GestureDetector(
       onTap: loading ? null : onPressed, // ✅ Disable when loading

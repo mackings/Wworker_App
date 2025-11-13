@@ -7,8 +7,6 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
 class ResetHome extends ConsumerStatefulWidget {
   const ResetHome({super.key});
 
@@ -43,7 +41,9 @@ class _ResetHomeState extends ConsumerState<ResetHome> {
       Nav.push(const ResetPassword());
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response["message"] ?? "Failed to send reset link")),
+        SnackBar(
+          content: Text(response["message"] ?? "Failed to send reset link"),
+        ),
       );
     }
   }
@@ -64,7 +64,8 @@ class _ResetHomeState extends ConsumerState<ResetHome> {
                     const SizedBox(height: 20),
                     const CustomText(
                       title: "Forgot Password?",
-                      subtitle: "Please select option to send link to reset password",
+                      subtitle:
+                          "Please select option to send link to reset password",
                       textAlign: TextAlign.left,
                     ),
                     const SizedBox(height: 40),
@@ -72,7 +73,10 @@ class _ResetHomeState extends ConsumerState<ResetHome> {
                     CustomRecoveryOption(
                       title: "Reset via Email",
                       subtitle: "Code will be sent to your email address",
-                      leadingIcon: const Icon(Icons.email_outlined, color: Color(0xFF302E2E)),
+                      leadingIcon: const Icon(
+                        Icons.email_outlined,
+                        color: Color(0xFF302E2E),
+                      ),
                       isSelected: selectedOption == "email",
                       onTap: () => setState(() => selectedOption = "email"),
                     ),
@@ -82,7 +86,10 @@ class _ResetHomeState extends ConsumerState<ResetHome> {
                     CustomRecoveryOption(
                       title: "Reset via Phone",
                       subtitle: "Code will be sent to your phone number",
-                      leadingIcon: const Icon(Icons.phone_outlined, color: Color(0xFF302E2E)),
+                      leadingIcon: const Icon(
+                        Icons.phone_outlined,
+                        color: Color(0xFF302E2E),
+                      ),
                       isSelected: selectedOption == "phone",
                       onTap: () => setState(() => selectedOption = "phone"),
                     ),

@@ -12,7 +12,8 @@ class ItemsCard extends StatelessWidget {
     required this.item,
     this.onDelete,
     this.onAdd,
-    this.showAddButton = false, // default = false (so existing pages won't break)
+    this.showAddButton =
+        false, // default = false (so existing pages won't break)
   });
 
   @override
@@ -51,12 +52,14 @@ class ItemsCard extends StatelessWidget {
             ),
             child: Column(
               children: item.entries
-                  .map((entry) => _buildRow(
-                        entry.key,
-                        entry.value,
-                        textStyleLabel,
-                        textStyleValue,
-                      ))
+                  .map(
+                    (entry) => _buildRow(
+                      entry.key,
+                      entry.value,
+                      textStyleLabel,
+                      textStyleValue,
+                    ),
+                  )
                   .toList(),
             ),
           ),
@@ -81,7 +84,9 @@ class ItemsCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    showAddButton ? Icons.add_circle_outline : Icons.delete_outline,
+                    showAddButton
+                        ? Icons.add_circle_outline
+                        : Icons.delete_outline,
                     color: showAddButton
                         ? const Color(0xFF2E7D32)
                         : const Color(0xFF8B4513),
@@ -132,4 +137,3 @@ class ItemsCard extends StatelessWidget {
     );
   }
 }
-

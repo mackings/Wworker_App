@@ -48,10 +48,11 @@ class _CustomImgBgState extends State<CustomImgBg> {
     final imageProvider = _selectedImage != null
         ? FileImage(_selectedImage!)
         : (widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty
-            ? NetworkImage(widget.initialImageUrl!)
-            : (widget.defaultImage != null
-                ? NetworkImage(widget.defaultImage!)
-                : const NetworkImage(Urls.woodImg))) as ImageProvider;
+                  ? NetworkImage(widget.initialImageUrl!)
+                  : (widget.defaultImage != null
+                        ? NetworkImage(widget.defaultImage!)
+                        : const NetworkImage(Urls.woodImg)))
+              as ImageProvider;
 
     return GestureDetector(
       onTap: _pickImage,
@@ -61,10 +62,7 @@ class _CustomImgBgState extends State<CustomImgBg> {
         padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 56),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          image: DecorationImage(
-            image: imageProvider,
-            fit: BoxFit.cover,
-          ),
+          image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
         ),
         child: Container(
           decoration: BoxDecoration(

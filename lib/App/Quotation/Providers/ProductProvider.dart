@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:wworker/App/Quotation/Api/ProductService.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 
+final productServiceProvider = Provider<ProductService>(
+  (ref) => ProductService(),
+);
 
-
-final productServiceProvider = Provider<ProductService>((ref) => ProductService());
-
-final productProvider = StateNotifierProvider<ProductNotifier, List<ProductModel>>((ref) {
-  return ProductNotifier(ref);
-});
+final productProvider =
+    StateNotifierProvider<ProductNotifier, List<ProductModel>>((ref) {
+      return ProductNotifier(ref);
+    });
 
 class ProductNotifier extends StateNotifier<List<ProductModel>> {
   final Ref ref;

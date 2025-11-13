@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
-
 class OrderCard extends StatelessWidget {
   final OrderModel order;
   final VoidCallback onTap;
@@ -148,7 +146,7 @@ class OrderCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   _buildStatusRow("Status:", statusText, statusColor),
-                  
+
                   // Action Buttons
                   if (onAddPayment != null || onUpdateStatus != null) ...[
                     const SizedBox(height: 20),
@@ -165,7 +163,9 @@ class OrderCard extends StatelessWidget {
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.primary,
                                 side: BorderSide(color: AppColors.primary),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -177,13 +177,17 @@ class OrderCard extends StatelessWidget {
                         if (onAddPayment != null)
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: order.balance > 0 ? onAddPayment : null,
+                              onPressed: order.balance > 0
+                                  ? onAddPayment
+                                  : null,
                               icon: const Icon(Icons.payment, size: 18),
                               label: const Text("Add Payment"),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -250,10 +254,7 @@ class OrderCard extends StatelessWidget {
           ),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           decoration: BoxDecoration(
             color: statusColor.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8),

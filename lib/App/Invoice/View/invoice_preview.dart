@@ -4,21 +4,15 @@ import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
-
-
-
 class InvoicePreview extends StatefulWidget {
   final Quotation? quotation;
   final InvoiceModel? invoice;
 
-  const InvoicePreview({
-    super.key,
-    this.quotation,
-    this.invoice,
-  }) : assert(
-          quotation != null || invoice != null,
-          'Either quotation or invoice must be provided',
-        );
+  const InvoicePreview({super.key, this.quotation, this.invoice})
+    : assert(
+        quotation != null || invoice != null,
+        'Either quotation or invoice must be provided',
+      );
 
   @override
   State<InvoicePreview> createState() => _InvoicePreviewState();
@@ -41,7 +35,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
   String get email => widget.quotation?.email ?? widget.invoice!.email;
   String get quotationNumber =>
       widget.quotation?.quotationNumber ?? widget.invoice!.quotationNumber;
-  String get nearestBusStop => 
+  String get nearestBusStop =>
       widget.quotation?.nearestBusStop ?? widget.invoice!.nearestBusStop;
   String get description =>
       widget.quotation?.description ?? widget.invoice!.description;
@@ -96,7 +90,8 @@ class _InvoicePreviewState extends State<InvoicePreview> {
   }
 
   double get grandTotal {
-    return widget.quotation?.finalTotal.toDouble() ?? widget.invoice!.finalTotal;
+    return widget.quotation?.finalTotal.toDouble() ??
+        widget.invoice!.finalTotal;
   }
 
   @override
@@ -159,8 +154,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               const SizedBox(height: 32),
 
               // Action Buttons - Only show for new invoices from quotations
-
-             if (!isExistingInvoice)
+              if (!isExistingInvoice)
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -239,8 +233,6 @@ class _InvoicePreviewState extends State<InvoicePreview> {
     );
   }
 
-
-
   Widget _buildDescriptionSection() {
     return Container(
       width: double.infinity,
@@ -264,10 +256,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           const SizedBox(height: 8),
           Text(
             description,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFF302E2E),
-            ),
+            style: const TextStyle(fontSize: 14, color: Color(0xFF302E2E)),
           ),
         ],
       ),
@@ -341,7 +330,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
             ),
             const SizedBox(height: 8),
           ],
-          
+
           // Quotation number
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -365,7 +354,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
             ],
           ),
           const SizedBox(height: 8),
-          
+
           // Date
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -388,7 +377,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               ),
             ],
           ),
-          
+
           // Due date for existing invoices
           if (isExistingInvoice && widget.invoice!.dueDate != null) ...[
             const SizedBox(height: 8),
@@ -414,7 +403,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               ],
             ),
           ],
-          
+
           // Payment status for existing invoices
           if (isExistingInvoice) ...[
             const SizedBox(height: 8),
@@ -435,8 +424,9 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _getStatusColor(widget.invoice!.paymentStatus)
-                        .withOpacity(0.1),
+                    color: _getStatusColor(
+                      widget.invoice!.paymentStatus,
+                    ).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -568,7 +558,9 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          invoiceItem.woodType ?? invoiceItem.foamType ?? "Material",
+                          invoiceItem.woodType ??
+                              invoiceItem.foamType ??
+                              "Material",
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -685,8 +677,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           // Show detailed breakdown for both quotations and invoices
           _buildSummaryRow("Sub-total", "₦${subtotal.toStringAsFixed(2)}"),
           if (serviceTotal > 0)
-            _buildSummaryRow(
-                "Service", "₦${serviceTotal.toStringAsFixed(2)}"),
+            _buildSummaryRow("Service", "₦${serviceTotal.toStringAsFixed(2)}"),
           if (discount > 0)
             _buildSummaryRow(
               "Discount",
@@ -694,7 +685,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               isDiscount: true,
             ),
           const Divider(height: 24, thickness: 2),
-          
+
           // Grand total
           _buildSummaryRow(
             "Grand Total",
@@ -702,7 +693,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
             isBold: true,
             isGrandTotal: true,
           ),
-          
+
           // Show payment details for existing invoices
           if (isExistingInvoice) ...[
             const SizedBox(height: 8),
@@ -758,10 +749,10 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               color: isDiscount
                   ? Colors.red
                   : isPaid
-                      ? Colors.green
-                      : isGrandTotal || isBalance
-                          ? const Color(0xFFA16438)
-                          : const Color(0xFF302E2E),
+                  ? Colors.green
+                  : isGrandTotal || isBalance
+                  ? const Color(0xFFA16438)
+                  : const Color(0xFF302E2E),
             ),
           ),
         ],
@@ -778,8 +769,9 @@ class _InvoicePreviewState extends State<InvoicePreview> {
 
     try {
       // Calculate due date (30 days from now)
-      final dueDate =
-          DateTime.now().add(const Duration(days: 30)).toIso8601String();
+      final dueDate = DateTime.now()
+          .add(const Duration(days: 30))
+          .toIso8601String();
 
       final response = await _clientService.createInvoice(
         quotationId: widget.quotation!.id,
@@ -838,9 +830,6 @@ class _InvoicePreviewState extends State<InvoicePreview> {
     }
   }
 }
-
-
-
 
 // ContactInfo model
 class ContactInfo {

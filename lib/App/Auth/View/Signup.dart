@@ -9,9 +9,6 @@ import 'package:wworker/GeneralWidgets/UI/AltSignup.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
-
-
-
 class Signup extends ConsumerStatefulWidget {
   const Signup({super.key});
 
@@ -39,32 +36,28 @@ class _SignupState extends ConsumerState<Signup> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || phone.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All fields are required")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("All fields are required")));
       return;
     }
 
     final notifier = ref.read(signupProvider.notifier);
-    await notifier.signup(
-      email: email,
-      phoneNumber: phone,
-      password: password,
-    );
+    await notifier.signup(email: email, phoneNumber: phone, password: password);
 
     final state = ref.read(signupProvider);
     state.when(
       data: (data) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Signup successful ✅")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Signup successful ✅")));
         Nav.push(const Signin());
       },
       loading: () {},
       error: (err, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$err")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$err")));
       },
     );
   }
@@ -118,18 +111,14 @@ class _SignupState extends ConsumerState<Signup> {
                     const TermsCheckbox(),
                     const SizedBox(height: 40),
 
-CustomButton(
-  text: isLoading ? "Signing up..." : "Sign Up",
-  onPressed: () {
-    if (!isLoading) {
-      _handleSignup();
-    }
-  },
-),
-
-
-
-
+                    CustomButton(
+                      text: isLoading ? "Signing up..." : "Sign Up",
+                      onPressed: () {
+                        if (!isLoading) {
+                          _handleSignup();
+                        }
+                      },
+                    ),
 
                     const SizedBox(height: 50),
                     CustomSignupAlt(
@@ -149,9 +138,7 @@ CustomButton(
           Container(
             color: Colors.black.withOpacity(0.4),
             child: const Center(
-              child: CircularProgressIndicator(
-                color: Color(0xFF8B4513),
-              ),
+              child: CircularProgressIndicator(color: Color(0xFF8B4513)),
             ),
           ),
       ],

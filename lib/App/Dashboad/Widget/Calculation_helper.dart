@@ -50,12 +50,12 @@ class MaterialCalculationHelper {
   }
 
   /// Calculate minimum units needed with waste threshold
-  /// 
+  ///
   /// Parameters:
   /// - requiredArea: Total area needed for the project
   /// - unitArea: Area of one standard material unit (board/sheet)
   /// - wasteThreshold: Percentage (0.0 to 1.0) - default 0.75 (75%)
-  /// 
+  ///
   /// Returns: Number of full units needed
   static int calculateMinimumUnits({
     required double requiredArea,
@@ -71,13 +71,13 @@ class MaterialCalculationHelper {
 
     // Calculate full units using integer division
     final fullUnits = (requiredArea / unitArea).floor();
-    
+
     // Calculate remainder
     final remainder = requiredArea - (fullUnits * unitArea);
-    
+
     // Check if remainder exceeds threshold
     final thresholdArea = unitArea * wasteThreshold;
-    
+
     if (remainder > thresholdArea) {
       return fullUnits + 1; // Round up
     } else {
@@ -93,8 +93,8 @@ class MaterialCalculationHelper {
   }) {
     final totalAreaUsed = unitsUsed * unitArea;
     final wasteArea = totalAreaUsed - requiredArea;
-    final wastePercentage = totalAreaUsed > 0 
-        ? (wasteArea / totalAreaUsed) * 100 
+    final wastePercentage = totalAreaUsed > 0
+        ? (wasteArea / totalAreaUsed) * 100
         : 0.0;
 
     return {
@@ -116,29 +116,29 @@ class MaterialCalculationHelper {
 }
 
 /// Example usage:
-/// 
+///
 /// // Calculate area
 /// double area = MaterialCalculationHelper.calculateArea(
 ///   width: 4,
 ///   length: 8,
 ///   unit: 'ft',
 /// ); // Returns 2.9728 sq m (32 sq ft)
-/// 
+///
 /// // Price per sq m is ₦10,087.50 per sq m (₦937.50 per sq ft)
 /// double pricePerSqm = 10087.50;
-/// 
+///
 /// // Calculate total board price
 /// double boardPrice = MaterialCalculationHelper.calculateTotalBoardPrice(
 ///   totalAreaSqm: 2.9728,
 ///   pricePerSqm: 10087.50,
 /// ); // Returns ₦30,000
-/// 
+///
 /// // Calculate project cost for 4ft × 4ft piece
 /// double projectCost = MaterialCalculationHelper.calculateProjectCost(
 ///   requiredAreaSqm: 1.4864, // 16 sq ft
 ///   pricePerSqm: 10087.50,
 /// ); // Returns ₦15,000
-/// 
+///
 /// // Calculate minimum boards needed
 /// int boards = MaterialCalculationHelper.calculateMinimumUnits(
 ///   requiredArea: 1.4864,

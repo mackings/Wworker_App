@@ -35,7 +35,6 @@ class QuotationInfo extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Text(
             title,
             style: GoogleFonts.openSans(
@@ -44,7 +43,6 @@ class QuotationInfo extends StatelessWidget {
               color: const Color(0xFF302E2E),
             ),
           ),
-
 
           const SizedBox(height: 12),
 
@@ -67,8 +65,6 @@ class QuotationInfo extends StatelessWidget {
               ],
             ),
           ),
-
-          
         ],
       ),
     );

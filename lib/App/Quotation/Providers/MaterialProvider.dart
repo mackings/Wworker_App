@@ -2,20 +2,14 @@ import 'dart:convert';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-
 final materialProvider =
     StateNotifierProvider<MaterialNotifier, Map<String, dynamic>>(
-  (ref) => MaterialNotifier(),
-);
+      (ref) => MaterialNotifier(),
+    );
 
 class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
   MaterialNotifier()
-      : super({
-          "materials": [],
-          "additionalCosts": [],
-          "isLoaded": false,
-        }) {
+    : super({"materials": [], "additionalCosts": [], "isLoaded": false}) {
     _loadMaterials();
   }
 
@@ -91,4 +85,3 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
     await prefs.remove(_getKey(userId));
   }
 }
-

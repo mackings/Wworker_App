@@ -1,8 +1,6 @@
 import 'package:wworker/App/Quotation/Model/ITemCostModel.dart';
 
 class BOMModel {
-
-
   final String id;
   final String userId;
   final String name;
@@ -37,11 +35,13 @@ class BOMModel {
       userId: json["userId"] ?? "",
       name: json["name"] ?? "",
       description: json["description"] ?? "",
-      materials: (json["materials"] as List<dynamic>?)
+      materials:
+          (json["materials"] as List<dynamic>?)
               ?.map((e) => MaterialItem.fromJson(e))
               .toList() ??
           [],
-      additionalCosts: (json["additionalCosts"] as List<dynamic>?)
+      additionalCosts:
+          (json["additionalCosts"] as List<dynamic>?)
               ?.map((e) => AdditionalCost.fromJson(e))
               .toList() ??
           [],

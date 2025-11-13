@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-
 class QuoteGlanceCard extends StatelessWidget {
   final String imageUrl;
   final String productName;
@@ -25,8 +24,12 @@ class QuoteGlanceCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  Widget _buildRow(String label, String value,
-      {bool bold = false, Color? color}) {
+  Widget _buildRow(
+    String label,
+    String value, {
+    bool bold = false,
+    Color? color,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -77,12 +80,15 @@ class QuoteGlanceCard extends StatelessWidget {
       child: Center(
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: screenWidth > 600 ? screenWidth * 0.6 : screenWidth * 0.95,
+            maxWidth: screenWidth > 600
+                ? screenWidth * 0.6
+                : screenWidth * 0.95,
           ),
           child: Card(
             color: const Color(0xFFF5F8F2),
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             elevation: 1,
             child: Padding(
               padding: const EdgeInsets.all(12),
@@ -174,7 +180,6 @@ class QuoteGlanceCard extends StatelessWidget {
 
                   const SizedBox(height: 16),
 
-     
                   GestureDetector(
                     onTap: onDelete,
                     child: Container(
@@ -183,7 +188,9 @@ class QuoteGlanceCard extends StatelessWidget {
                       decoration: ShapeDecoration(
                         shape: RoundedRectangleBorder(
                           side: const BorderSide(
-                              width: 1, color: Color(0xFF8B4513)),
+                            width: 1,
+                            color: Color(0xFF8B4513),
+                          ),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),

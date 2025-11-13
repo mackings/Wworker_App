@@ -5,11 +5,6 @@ import 'package:wworker/App/Order/Widget/Order_card.dart';
 import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
 import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
 
-
-
-
-
-
 class AllOrdersPage extends StatefulWidget {
   const AllOrdersPage({super.key});
 
@@ -239,8 +234,8 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
               // Navigate to order details if you have that page
               debugPrint("View order: ${order.orderNumber}");
             },
-            onDelete: order.status != 'completed' 
-                ? () => _deleteOrder(order) 
+            onDelete: order.status != 'completed'
+                ? () => _deleteOrder(order)
                 : null,
             onAddPayment: () => _showAddPaymentSheet(order),
             onUpdateStatus: () => _showUpdateStatusSheet(order),

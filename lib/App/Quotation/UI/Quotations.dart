@@ -13,10 +13,6 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
-
-
 class AllQuotations extends ConsumerStatefulWidget {
   const AllQuotations({super.key});
 
@@ -132,49 +128,47 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : allQuotations.isEmpty
-                      ? const Center(
-                          child: CustomEmptyQuotes(
-                            title: "Quotation",
-                            buttonText: "",
-                            emptyMessage: "No Quotations Found",
-                          ),
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _loadAllQuotations,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 25,
-                              vertical: 20,
-                            ),
-                            itemCount: allQuotations.length,
-                            itemBuilder: (context, index) {
-                              final quotation = allQuotations[index];
-                              final product = quotation["product"] ?? {};
-                              final currentQuantity = quantities[index] ?? 1;
-
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 20),
-                                child: QuoteGlanceCard(
-                                  imageUrl: product["image"] ?? "",
-                                  productName: product["name"] ?? "Unknown Product",
-                                  bomNo: product["productId"] ?? "N/A",
-                                  description: product["description"] ?? "",
-                                  costPrice: _calculateTotalCost(
-                                    quotation,
-                                    currentQuantity,
-                                  ),
-                                  quantity: currentQuantity,
-                                  onIncrease: () => _increaseQuantity(index),
-                                  onDecrease: () => _decreaseQuantity(index),
-                                  onDelete: () => _deleteQuotation(
-                                    quotation["id"],
-                                    index,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
+                  ? const Center(
+                      child: CustomEmptyQuotes(
+                        title: "Quotation",
+                        buttonText: "",
+                        emptyMessage: "No Quotations Found",
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _loadAllQuotations,
+                      child: ListView.builder(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 25,
+                          vertical: 20,
                         ),
+                        itemCount: allQuotations.length,
+                        itemBuilder: (context, index) {
+                          final quotation = allQuotations[index];
+                          final product = quotation["product"] ?? {};
+                          final currentQuantity = quantities[index] ?? 1;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 20),
+                            child: QuoteGlanceCard(
+                              imageUrl: product["image"] ?? "",
+                              productName: product["name"] ?? "Unknown Product",
+                              bomNo: product["productId"] ?? "N/A",
+                              description: product["description"] ?? "",
+                              costPrice: _calculateTotalCost(
+                                quotation,
+                                currentQuantity,
+                              ),
+                              quantity: currentQuantity,
+                              onIncrease: () => _increaseQuantity(index),
+                              onDecrease: () => _decreaseQuantity(index),
+                              onDelete: () =>
+                                  _deleteQuotation(quotation["id"], index),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
             ),
 
             Container(
@@ -191,7 +185,6 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
               ),
               child: Column(
                 children: [
-                  
                   // Show Continue button only when there are quotations
                   if (allQuotations.isNotEmpty) ...[
                     CustomButton(
@@ -219,7 +212,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  
+
                   // Always show Create New BOM button
                   CustomButton(
                     text: "Create New BOM",

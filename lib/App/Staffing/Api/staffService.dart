@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
 class StaffService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -18,7 +17,9 @@ class StaffService {
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint("✅ [STAFF RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
+          debugPrint(
+            "✅ [STAFF RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
           debugPrint("📥 [RESPONSE DATA] => ${response.data}");
           return handler.next(response);
         },
@@ -155,7 +156,7 @@ class StaffService {
   // 🔴 ERROR HANDLER
   Map<String, dynamic> _handleError(DioException e) {
     debugPrint("⚠️ [HANDLE STAFF ERROR] => ${e.response?.data ?? e.message}");
-    
+
     if (e.response != null) {
       return {
         "success": false,

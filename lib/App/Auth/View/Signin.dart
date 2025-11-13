@@ -10,8 +10,6 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
-
-
 class Signin extends ConsumerStatefulWidget {
   const Signin({super.key});
 
@@ -28,9 +26,9 @@ class _SigninState extends ConsumerState<Signin> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All fields are required")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("All fields are required")));
       return;
     }
 
@@ -47,16 +45,18 @@ class _SigninState extends ConsumerState<Signin> {
         data: (data) {
           if (data["success"] == true) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(data["message"] ?? "Signed in successfully")),
+              SnackBar(
+                content: Text(data["message"] ?? "Signed in successfully"),
+              ),
             );
             Nav.push(const DashboardScreen());
           }
         },
         loading: () {},
         error: (err, _) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(" $err")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(" $err")));
         },
       );
     });
@@ -121,9 +121,7 @@ class _SigninState extends ConsumerState<Signin> {
         if (isLoading)
           Container(
             color: Colors.black.withOpacity(0.3),
-            child: const Center(
-              child: CircularProgressIndicator(),
-            ),
+            child: const Center(child: CircularProgressIndicator()),
           ),
       ],
     );

@@ -151,10 +151,7 @@ class _UpdateOrderStatusSheetState extends State<UpdateOrderStatusSheet> {
                 const SizedBox(height: 8),
                 Text(
                   "Order: ${widget.order.orderNumber}",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 24),
 
@@ -167,9 +164,7 @@ class _UpdateOrderStatusSheetState extends State<UpdateOrderStatusSheet> {
                     margin: const EdgeInsets.only(bottom: 12),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isSelected
-                            ? status['color']
-                            : Colors.grey[300]!,
+                        color: isSelected ? status['color'] : Colors.grey[300]!,
                         width: isSelected ? 2 : 1,
                       ),
                       borderRadius: BorderRadius.circular(12),
@@ -178,15 +173,13 @@ class _UpdateOrderStatusSheetState extends State<UpdateOrderStatusSheet> {
                           : Colors.transparent,
                     ),
                     child: ListTile(
-                      leading: Icon(
-                        status['icon'],
-                        color: status['color'],
-                      ),
+                      leading: Icon(status['icon'], color: status['color']),
                       title: Text(
                         status['label'],
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
                           color: const Color(0xFF302E2E),
                         ),
                       ),
@@ -210,8 +203,8 @@ class _UpdateOrderStatusSheetState extends State<UpdateOrderStatusSheet> {
                               ),
                             )
                           : isSelected
-                              ? Icon(Icons.check_circle, color: status['color'])
-                              : null,
+                          ? Icon(Icons.check_circle, color: status['color'])
+                          : null,
                       onTap: () {
                         setState(() {
                           selectedStatus = status['value'];
@@ -243,8 +236,9 @@ class _UpdateOrderStatusSheetState extends State<UpdateOrderStatusSheet> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : const Text(

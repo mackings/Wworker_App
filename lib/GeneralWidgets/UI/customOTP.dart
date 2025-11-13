@@ -3,13 +3,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 
-
 class CustomOTP extends StatefulWidget {
   final int length;
   final void Function(String)? onCompleted;
   final VoidCallback? onResend;
   final bool showFromMessages;
-  final String? fromMessageCode; 
+  final String? fromMessageCode;
   final Duration resendDuration;
 
   const CustomOTP({
@@ -65,29 +64,30 @@ class _CustomOTPState extends State<CustomOTP> {
         t.cancel();
         setState(() => _canResend = true);
       } else {
-        setState(() => _remaining = Duration(seconds: _remaining.inSeconds - 1));
+        setState(
+          () => _remaining = Duration(seconds: _remaining.inSeconds - 1),
+        );
       }
     });
   }
 
-void _onBoxChanged(String value, int i) {
-  if (value.isNotEmpty) {
-    if (value.length > 1) {
-      _controllers[i].text = value.substring(value.length - 1);
+  void _onBoxChanged(String value, int i) {
+    if (value.isNotEmpty) {
+      if (value.length > 1) {
+        _controllers[i].text = value.substring(value.length - 1);
+      }
+      if (i + 1 < widget.length) _nodes[i + 1].requestFocus();
+    } else {
+      if (i - 1 >= 0) _nodes[i - 1].requestFocus();
     }
-    if (i + 1 < widget.length) _nodes[i + 1].requestFocus();
-  } else {
-    if (i - 1 >= 0) _nodes[i - 1].requestFocus();
+
+    final otp = _controllers.map((c) => c.text).join();
+
+    // ✅ Only call onCompleted when all boxes are filled
+    if (otp.length == widget.length && !otp.contains('')) {
+      widget.onCompleted?.call(otp);
+    }
   }
-
-  final otp = _controllers.map((c) => c.text).join();
-
-  // ✅ Only call onCompleted when all boxes are filled
-  if (otp.length == widget.length && !otp.contains('')) {
-    widget.onCompleted?.call(otp);
-  }
-}
-
 
   void _clearAll() {
     for (final c in _controllers) {
@@ -135,91 +135,90 @@ void _onBoxChanged(String value, int i) {
     setState(() {});
   }
 
-Widget _buildBox(int index) {
-  final bool isFilled = _controllers[index].text.isNotEmpty;
-  final bool isFocused = _nodes[index].hasFocus;
+  Widget _buildBox(int index) {
+    final bool isFilled = _controllers[index].text.isNotEmpty;
+    final bool isFocused = _nodes[index].hasFocus;
 
-  return GestureDetector(
-    onTap: () {
-      FocusScope.of(context).requestFocus(_nodes[index]);
-    },
-    onLongPress: () async {
-      final data = await Clipboard.getData(Clipboard.kTextPlain);
-      final pasted = data?.text ?? '';
-      if (pasted.isNotEmpty) {
-        final digits = pasted.replaceAll(RegExp(r'\D'), '');
-        if (digits.isNotEmpty) _fillFromMessage(digits);
-      }
-    },
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 120),
-      width: 52,
-      height: 52,
-      decoration: ShapeDecoration(
-        color: const Color(0xFFF5F8F2),
-        shape: RoundedRectangleBorder(
-          side: BorderSide(
-            width: 1,
-            color: isFocused
-                ? const Color(0xFFA16438)
-                : (isFilled ? const Color(0xFF8A8A8A) : const Color(0xFFD3D3D3)),
+    return GestureDetector(
+      onTap: () {
+        FocusScope.of(context).requestFocus(_nodes[index]);
+      },
+      onLongPress: () async {
+        final data = await Clipboard.getData(Clipboard.kTextPlain);
+        final pasted = data?.text ?? '';
+        if (pasted.isNotEmpty) {
+          final digits = pasted.replaceAll(RegExp(r'\D'), '');
+          if (digits.isNotEmpty) _fillFromMessage(digits);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        width: 52,
+        height: 52,
+        decoration: ShapeDecoration(
+          color: const Color(0xFFF5F8F2),
+          shape: RoundedRectangleBorder(
+            side: BorderSide(
+              width: 1,
+              color: isFocused
+                  ? const Color(0xFFA16438)
+                  : (isFilled
+                        ? const Color(0xFF8A8A8A)
+                        : const Color(0xFFD3D3D3)),
+            ),
+            borderRadius: BorderRadius.circular(6),
           ),
-          borderRadius: BorderRadius.circular(6),
+          shadows: isFocused
+              ? [
+                  const BoxShadow(
+                    color: Color(0x1AA16438),
+                    blurRadius: 4,
+                    offset: Offset(0, 2),
+                  ),
+                ]
+              : [],
         ),
-        shadows: isFocused
-            ? [
-                const BoxShadow(
-                  color: Color(0x1AA16438),
-                  blurRadius: 4,
-                  offset: Offset(0, 2),
-                )
-              ]
-            : [],
-      ),
-      child: Center(
-        child: TextField(
-          controller: _controllers[index],
-          focusNode: _nodes[index],
-          textAlign: TextAlign.center,
-          textAlignVertical: TextAlignVertical.center,
-          keyboardType: TextInputType.number,
-          maxLength: 1,
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: isFilled ? const Color(0xFF302E2E) : const Color(0xFF7B7B7B),
-            height: 1.2,
+        child: Center(
+          child: TextField(
+            controller: _controllers[index],
+            focusNode: _nodes[index],
+            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
+            keyboardType: TextInputType.number,
+            maxLength: 1,
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w500,
+              color: isFilled
+                  ? const Color(0xFF302E2E)
+                  : const Color(0xFF7B7B7B),
+              height: 1.2,
+            ),
+            decoration: const InputDecoration(
+              counterText: '',
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (v) => _onBoxChanged(v, index),
+            onTap: () {
+              FocusScope.of(context).requestFocus(_nodes[index]);
+            },
           ),
-          decoration: const InputDecoration(
-            counterText: '',
-            border: InputBorder.none,
-            isDense: true,
-            contentPadding: EdgeInsets.zero,
-          ),
-          onChanged: (v) => _onBoxChanged(v, index),
-          onTap: () {
-            FocusScope.of(context).requestFocus(_nodes[index]);
-          },
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-Widget _buildBoxesRow() {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: List.generate(
-      widget.length,
-      (i) => Padding(
-        padding: const EdgeInsets.all(2),
-        child: _buildBox(i),
+  Widget _buildBoxesRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: List.generate(
+        widget.length,
+        (i) => Padding(padding: const EdgeInsets.all(2), child: _buildBox(i)),
       ),
-    ),
-  );
-}
-
+    );
+  }
 
   Widget _buildTimerRow() {
     final timerText = _canResend ? '00:00' : '${_remaining.inSeconds} secs';
@@ -249,7 +248,9 @@ Widget _buildBoxesRow() {
               style: GoogleFonts.openSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w400,
-                color: _canResend ? const Color(0xFF302E2E) : const Color(0xFFB0B0B0),
+                color: _canResend
+                    ? const Color(0xFF302E2E)
+                    : const Color(0xFFB0B0B0),
               ),
             ),
           ),
@@ -263,9 +264,7 @@ Widget _buildBoxesRow() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.only(top: 8),
-      decoration: const BoxDecoration(
-   
-      ),
+      decoration: const BoxDecoration(),
       child: Column(
         children: [
           // header
@@ -275,7 +274,11 @@ Widget _buildBoxesRow() {
               const SizedBox(width: 44, height: 44),
               Opacity(
                 opacity: 0.10,
-                child: Container(width: 1, height: 25, color: const Color(0xFF212020)),
+                child: Container(
+                  width: 1,
+                  height: 25,
+                  color: const Color(0xFF212020),
+                ),
               ),
               SizedBox(
                 width: 285,
@@ -306,7 +309,11 @@ Widget _buildBoxesRow() {
               ),
               Opacity(
                 opacity: 0.10,
-                child: Container(width: 1, height: 25, color: const Color(0xFF212020)),
+                child: Container(
+                  width: 1,
+                  height: 25,
+                  color: const Color(0xFF212020),
+                ),
               ),
               const SizedBox(width: 44, height: 44),
             ],
@@ -347,7 +354,11 @@ Widget _buildBoxesRow() {
               borderRadius: BorderRadius.circular(4),
             ),
             shadows: const [
-              BoxShadow(color: Color(0x7F000000), blurRadius: 0, offset: Offset(0, 1))
+              BoxShadow(
+                color: Color(0x7F000000),
+                blurRadius: 0,
+                offset: Offset(0, 1),
+              ),
             ],
           ),
           child: Center(
@@ -355,7 +366,11 @@ Widget _buildBoxesRow() {
                 ? const Icon(Icons.clear, color: Color(0xFF302E2E))
                 : Text(
                     label,
-                    style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.w500, color: const Color(0xFF302E2E)),
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF302E2E),
+                    ),
                   ),
           ),
         ),
@@ -382,7 +397,6 @@ Widget _buildBoxesRow() {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 19),
           child: Column(
@@ -396,8 +410,7 @@ Widget _buildBoxesRow() {
         ),
 
         const SizedBox(height: 16),
-        if (widget.showFromMessages)
-          _buildFromMessagesCard(),
+        if (widget.showFromMessages) _buildFromMessagesCard(),
       ],
     );
   }

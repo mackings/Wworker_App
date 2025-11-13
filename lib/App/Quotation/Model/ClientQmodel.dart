@@ -12,7 +12,8 @@ class QuotationResponse {
   factory QuotationResponse.fromJson(Map<String, dynamic> json) {
     return QuotationResponse(
       success: json['success'] ?? false,
-      data: (json['data'] as List<dynamic>?)
+      data:
+          (json['data'] as List<dynamic>?)
               ?.map((e) => Quotation.fromJson(e))
               .toList() ??
           [],
@@ -23,10 +24,10 @@ class QuotationResponse {
   }
 
   Map<String, dynamic> toJson() => {
-        'success': success,
-        'data': data.map((e) => e.toJson()).toList(),
-        'pagination': pagination?.toJson(),
-      };
+    'success': success,
+    'data': data.map((e) => e.toJson()).toList(),
+    'pagination': pagination?.toJson(),
+  };
 }
 
 class Quotation {
@@ -82,7 +83,8 @@ class Quotation {
       phoneNumber: json['phoneNumber'] ?? '',
       email: json['email'] ?? '',
       description: json['description'] ?? '',
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((e) => QuotationItem.fromJson(e))
               .toList() ??
           [],
@@ -100,26 +102,26 @@ class Quotation {
   }
 
   Map<String, dynamic> toJson() => {
-        '_id': id,
-        'userId': userId,
-        'clientName': clientName,
-        'clientAddress': clientAddress,
-        'nearestBusStop': nearestBusStop,
-        'phoneNumber': phoneNumber,
-        'email': email,
-        'description': description,
-        'items': items.map((e) => e.toJson()).toList(),
-        'service': service.toJson(),
-        'discount': discount,
-        'totalCost': totalCost,
-        'totalSellingPrice': totalSellingPrice,
-        'discountAmount': discountAmount,
-        'finalTotal': finalTotal,
-        'status': status,
-        'quotationNumber': quotationNumber,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-      };
+    '_id': id,
+    'userId': userId,
+    'clientName': clientName,
+    'clientAddress': clientAddress,
+    'nearestBusStop': nearestBusStop,
+    'phoneNumber': phoneNumber,
+    'email': email,
+    'description': description,
+    'items': items.map((e) => e.toJson()).toList(),
+    'service': service.toJson(),
+    'discount': discount,
+    'totalCost': totalCost,
+    'totalSellingPrice': totalSellingPrice,
+    'discountAmount': discountAmount,
+    'finalTotal': finalTotal,
+    'status': status,
+    'quotationNumber': quotationNumber,
+    'createdAt': createdAt.toIso8601String(),
+    'updatedAt': updatedAt.toIso8601String(),
+  };
 }
 
 class Service {
@@ -145,11 +147,11 @@ class Service {
   }
 
   Map<String, dynamic> toJson() => {
-        'product': product,
-        'quantity': quantity,
-        'discount': discount,
-        'totalPrice': totalPrice,
-      };
+    'product': product,
+    'quantity': quantity,
+    'discount': discount,
+    'totalPrice': totalPrice,
+  };
 }
 
 class QuotationItem {
@@ -205,21 +207,21 @@ class QuotationItem {
   }
 
   Map<String, dynamic> toJson() => {
-        '_id': id,
-        'woodType': woodType,
-        'foamType': foamType,
-        'width': width,
-        'height': height,
-        'length': length,
-        'thickness': thickness,
-        'unit': unit,
-        'squareMeter': squareMeter,
-        'quantity': quantity,
-        'costPrice': costPrice,
-        'sellingPrice': sellingPrice,
-        'description': description,
-        'image': image,
-      };
+    '_id': id,
+    'woodType': woodType,
+    'foamType': foamType,
+    'width': width,
+    'height': height,
+    'length': length,
+    'thickness': thickness,
+    'unit': unit,
+    'squareMeter': squareMeter,
+    'quantity': quantity,
+    'costPrice': costPrice,
+    'sellingPrice': sellingPrice,
+    'description': description,
+    'image': image,
+  };
 }
 
 class Pagination {
@@ -245,9 +247,9 @@ class Pagination {
   }
 
   Map<String, dynamic> toJson() => {
-        'page': page,
-        'limit': limit,
-        'total': total,
-        'pages': pages,
-      };
+    'page': page,
+    'limit': limit,
+    'total': total,
+    'pages': pages,
+  };
 }

@@ -78,7 +78,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: widget.isDropdown ? _buildDropdownField() : _buildTextField(),
+            child: widget.isDropdown
+                ? _buildDropdownField()
+                : _buildTextField(),
           ),
         ),
       ],
@@ -160,10 +162,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           color: const Color(0xFF7B7B7B),
         ),
         border: InputBorder.none,
-        suffixIcon: const Icon(
-          Icons.arrow_drop_down,
-          color: Color(0xFF7B7B7B),
-        ),
+        suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7B7B7B)),
       ),
     );
   }

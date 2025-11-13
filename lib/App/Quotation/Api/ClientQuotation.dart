@@ -1,11 +1,7 @@
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
-
-
-
 
 class ClientQuotationService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -19,7 +15,9 @@ class ClientQuotationService {
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
+          debugPrint(
+            "✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
           debugPrint("📥 [DATA] => ${response.data}");
           return handler.next(response);
         },
@@ -35,9 +33,8 @@ class ClientQuotationService {
     );
   }
 
-
   /// GET {{live}}/api/quotation
-  /// 
+  ///
   Future<Map<String, dynamic>> getAllQuotations() async {
     try {
       final prefs = await SharedPreferences.getInstance();

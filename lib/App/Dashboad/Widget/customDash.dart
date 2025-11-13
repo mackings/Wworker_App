@@ -1,14 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
 class CustomDashboard extends StatelessWidget {
   final List<DashboardIcon> dashboardIcons;
 
-  const CustomDashboard({
-    super.key,
-    required this.dashboardIcons,
-  });
+  const CustomDashboard({super.key, required this.dashboardIcons});
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +26,7 @@ class CustomDashboard extends StatelessWidget {
       children: [
         const Padding(
           padding: EdgeInsets.only(bottom: 16),
-          child: CustomText(
-            title: "Quick Actions",
-            titleFontSize: 16,
-          ),
+          child: CustomText(title: "Quick Actions", titleFontSize: 16),
         ),
 
         // Wrap GridView in LayoutBuilder for better responsiveness
@@ -70,11 +63,7 @@ class _DashboardItem extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onTap;
 
-  const _DashboardItem({
-    required this.title,
-    required this.icon,
-    this.onTap,
-  });
+  const _DashboardItem({required this.title, required this.icon, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -90,11 +79,7 @@ class _DashboardItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
-              child: Icon(
-                icon,
-                color: const Color(0xFF8B4513),
-                size: 30,
-              ),
+              child: Icon(icon, color: const Color(0xFF8B4513), size: 30),
             ),
           ),
           const SizedBox(height: 6),
@@ -110,9 +95,5 @@ class DashboardIcon {
   final IconData icon;
   final VoidCallback? onTap;
 
-  DashboardIcon({
-    required this.title,
-    required this.icon,
-    this.onTap,
-  });
+  DashboardIcon({required this.title, required this.icon, this.onTap});
 }

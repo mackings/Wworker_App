@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Auth/View/Onboarding.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
-
 void main() {
   runApp(ProviderScope(child: const MyApp()));
 }
@@ -13,8 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-          navigatorKey:
-    Nav.navigatorKey,
+      navigatorKey: Nav.navigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
@@ -23,4 +21,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-

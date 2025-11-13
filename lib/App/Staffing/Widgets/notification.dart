@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
 class NotificationsWidget extends StatefulWidget {
   const NotificationsWidget({super.key});
 
@@ -25,10 +24,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
           padding: const EdgeInsets.all(16),
           decoration: ShapeDecoration(
             shape: RoundedRectangleBorder(
-              side: const BorderSide(
-                width: 1,
-                color: Color(0xFFD3D3D3),
-              ),
+              side: const BorderSide(width: 1, color: Color(0xFFD3D3D3)),
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -141,9 +137,7 @@ class _NotificationsWidgetState extends State<NotificationsWidget> {
       width: double.infinity,
       padding: const EdgeInsets.all(8),
       decoration: ShapeDecoration(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(4),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

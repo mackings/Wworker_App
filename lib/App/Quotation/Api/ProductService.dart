@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
 class ProductService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -11,11 +10,15 @@ class ProductService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          debugPrint("📤 [PRODUCT REQUEST] => ${options.method} ${options.uri}");
+          debugPrint(
+            "📤 [PRODUCT REQUEST] => ${options.method} ${options.uri}",
+          );
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint("✅ [PRODUCT RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
+          debugPrint(
+            "✅ [PRODUCT RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
           return handler.next(response);
         },
         onError: (DioException e, handler) {
@@ -43,7 +46,9 @@ class ProductService {
 
       return response.data;
     } on DioException catch (e) {
-      debugPrint("⚠️ [HANDLE PRODUCT ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [HANDLE PRODUCT ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         "success": false,
         "message": e.response?.data?["message"] ?? e.message,

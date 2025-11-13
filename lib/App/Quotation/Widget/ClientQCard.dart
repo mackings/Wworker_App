@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
 class ClientQuotationCard extends StatelessWidget {
   final Map<String, dynamic> quotation;
   final VoidCallback? onDelete;
@@ -68,88 +66,86 @@ class ClientQuotationCard extends StatelessWidget {
         children: [
           // LEFT SIDE
 
-
-// LEFT SIDE
-Expanded(
-  flex: 2,
-  child: Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Image + Client Info
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              image: DecorationImage(
-                image: NetworkImage(imageUrl),
-                fit: BoxFit.cover,
-              ),
+          // LEFT SIDE
+          Expanded(
+            flex: 2,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image + Client Info
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Image
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(6),
+                        image: DecorationImage(
+                          image: NetworkImage(imageUrl),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    // Client Name & Phone under the image
+                    CustomText(
+                      title: clientName,
+                      titleFontSize: 13,
+                      titleFontWeight: FontWeight.w600,
+                      textAlign: TextAlign.left,
+                    ),
+                    const SizedBox(height: 2),
+                    CustomText(
+                      title: phoneNumber,
+                      titleFontSize: 12,
+                      titleFontWeight: FontWeight.w400,
+                      titleColor: const Color(0xFF7B7B7B),
+                      textAlign: TextAlign.left,
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 12),
+                // Description & Details
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomText(
+                        title: description,
+                        titleFontSize: 12,
+                        titleFontWeight: FontWeight.w500,
+                        textAlign: TextAlign.left,
+                      ),
+                      const SizedBox(height: 4),
+                      CustomText(
+                        title: quotationNumber,
+                        titleFontSize: 11,
+                        titleFontWeight: FontWeight.w700,
+                        textAlign: TextAlign.left,
+                      ),
+                      const SizedBox(height: 10),
+                      CustomText(
+                        title: category,
+                        titleFontSize: 11,
+                        titleFontWeight: FontWeight.w400,
+                        textAlign: TextAlign.left,
+                      ),
+                      const SizedBox(height: 4),
+                      CustomText(
+                        title: date,
+                        titleFontSize: 11,
+                        titleFontWeight: FontWeight.w400,
+                        titleColor: const Color(0xFF7B7B7B),
+                        textAlign: TextAlign.left,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 6),
-          // Client Name & Phone under the image
-          CustomText(
-            title: clientName,
-            titleFontSize: 13,
-            titleFontWeight: FontWeight.w600,
-            textAlign: TextAlign.left,
-          ),
-          const SizedBox(height: 2),
-          CustomText(
-            title: phoneNumber,
-            titleFontSize: 12,
-            titleFontWeight: FontWeight.w400,
-            titleColor: const Color(0xFF7B7B7B),
-            textAlign: TextAlign.left,
-          ),
-        ],
-      ),
-      const SizedBox(width: 12),
-      // Description & Details
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CustomText(
-              title: description,
-              titleFontSize: 12,
-              titleFontWeight: FontWeight.w500,
-              textAlign: TextAlign.left,
-            ),
-            const SizedBox(height: 4),
-            CustomText(
-              title: quotationNumber,
-              titleFontSize: 11,
-              titleFontWeight: FontWeight.w700,
-              textAlign: TextAlign.left,
-            ),
-            const SizedBox(height: 10),
-            CustomText(
-              title: category,
-              titleFontSize: 11,
-              titleFontWeight: FontWeight.w400,
-              textAlign: TextAlign.left,
-            ),
-            const SizedBox(height: 4),
-            CustomText(
-              title: date,
-              titleFontSize: 11,
-              titleFontWeight: FontWeight.w400,
-              titleColor: const Color(0xFF7B7B7B),
-              textAlign: TextAlign.left,
-            ),
-          ],
-        ),
-      ),
-    ],
-  ),
-),
-
 
           const SizedBox(width: 16),
 
@@ -167,10 +163,9 @@ Expanded(
                 ),
                 const SizedBox(height: 8),
 
-                
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6,),
+                  padding: const EdgeInsets.symmetric(vertical: 6),
                   decoration: ShapeDecoration(
                     color: const Color(0xFFEBF1E5),
                     shape: RoundedRectangleBorder(
@@ -186,7 +181,6 @@ Expanded(
                     ),
                   ),
                 ),
-
 
                 const SizedBox(height: 12),
                 GestureDetector(

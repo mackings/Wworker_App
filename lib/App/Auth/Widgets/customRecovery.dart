@@ -29,8 +29,7 @@ class CustomRecoveryOption extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(
-              color:
-                  isSelected ? const Color(0xFFA16438) : Colors.transparent,
+              color: isSelected ? const Color(0xFFA16438) : Colors.transparent,
               width: 1,
             ),
           ),
@@ -91,8 +90,9 @@ class CustomRecoveryOption extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.rectangle,
                 border: Border.all(
-                  color:
-                      isSelected ? const Color(0xFFA16438) : const Color(0xFFD3D3D3),
+                  color: isSelected
+                      ? const Color(0xFFA16438)
+                      : const Color(0xFFD3D3D3),
                   width: 2,
                 ),
               ),
@@ -103,17 +103,15 @@ class CustomRecoveryOption extends StatelessWidget {
                         height: 10,
                         decoration: const BoxDecoration(
                           color: Color(0xFFA16438),
-                          shape: BoxShape.rectangle
+                          shape: BoxShape.rectangle,
                         ),
                       ),
                     )
                   : null,
             ),
-            
           ],
         ),
       ),
     );
   }
 }
-

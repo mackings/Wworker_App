@@ -18,31 +18,30 @@ class _SettingsState extends ConsumerState<Settings> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: CustomText(title: "Settings",),
+        title: CustomText(title: "Settings"),
       ),
-      body: SafeArea(child: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15,vertical: 15),
-          child: Column(
-            children: [
-          
-              DatabaseWidget(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 15),
+            child: Column(
+              children: [
+                DatabaseWidget(),
 
-              SizedBox(height: 30,),
+                SizedBox(height: 30),
 
-              NotificationsWidget(),
+                NotificationsWidget(),
 
-               SizedBox(height: 30,),
+                SizedBox(height: 30),
 
-              StaffAccessWidget(),
-              
-                SizedBox(height: 30,),
-          
-          
-            ],
+                StaffAccessWidget(),
+
+                SizedBox(height: 30),
+              ],
+            ),
           ),
         ),
-      )),
+      ),
     );
   }
 }

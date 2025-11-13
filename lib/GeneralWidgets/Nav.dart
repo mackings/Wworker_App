@@ -10,13 +10,11 @@ class Nav {
     );
   }
 
-
   static Future<dynamic>? pushReplacement(Widget page) {
     return navigatorKey.currentState?.pushReplacement(
       MaterialPageRoute(builder: (_) => page),
     );
   }
-
 
   static Future<dynamic>? offAll(Widget page) {
     return navigatorKey.currentState?.pushAndRemoveUntil(

@@ -17,10 +17,6 @@ import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
-
-
-
 class AddMaterial extends ConsumerStatefulWidget {
   const AddMaterial({super.key});
 
@@ -232,123 +228,137 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
               SizedBox(height: 20),
 
+              CustomButton(
+                text: (materials.isEmpty && additionalCosts.isEmpty)
+                    ? "Create New BOM"
+                    : "Continue",
+                outlined: (materials.isEmpty && additionalCosts.isEmpty),
+                onPressed: () {
+                  if (materials.isEmpty && additionalCosts.isEmpty) {
+                    setState(() {
+                      isExpanded = true;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Add at least one material or additional cost to continue",
+                        ),
+                      ),
+                    );
+                  } else {
+                    showModalBottomSheet(
+                      context: context,
+                      backgroundColor: Colors.transparent,
+                      isScrollControlled: true,
+                      builder: (context) => SelectOptionSheet(
+                        title: "Select Product",
+                        options: [
+                          OptionItem(
+                            label: "Create New Product",
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AddProduct(),
+                                ),
+                              );
+                            },
+                          ),
+                          OptionItem(
+                            label: "Select Existing Products",
+                            onTap: () async {
+                              Navigator.pop(context);
+                              final selectedProduct = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const SelectExistingProductScreen(),
+                                ),
+                              );
 
-CustomButton(
-  text: (materials.isEmpty && additionalCosts.isEmpty)
-      ? "Create New BOM"
-      : "Continue",
-  outlined: (materials.isEmpty && additionalCosts.isEmpty),
-  onPressed: () {
-    if (materials.isEmpty && additionalCosts.isEmpty) {
-      setState(() {
-        isExpanded = true;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Add at least one material or additional cost to continue",
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (context) => SelectOptionSheet(
-          title: "Select Product",
-          options: [
-            OptionItem(
-              label: "Create New Product",
-              onTap: () {
+                              if (selectedProduct != null) {
+                                final productData = selectedProduct.toJson();
 
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddProduct(),
-                  ),
-                );
-              },
-            ),
-OptionItem(
-  label: "Select Existing Products",
-  onTap: () async {
-    Navigator.pop(context);
-    final selectedProduct = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SelectExistingProductScreen()),
-    );
+                                final quotationNotifier = ref.read(
+                                  quotationSummaryProvider.notifier,
+                                );
+                                final materialNotifier = ref.read(
+                                  materialProvider.notifier,
+                                );
 
-    if (selectedProduct != null) {
-      final productData = selectedProduct.toJson();
+                                final materials =
+                                    List<Map<String, dynamic>>.from(
+                                      materialNotifier.state["materials"] ?? [],
+                                    );
+                                final additionalCosts =
+                                    List<Map<String, dynamic>>.from(
+                                      materialNotifier
+                                              .state["additionalCosts"] ??
+                                          [],
+                                    );
 
-      final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-      final materialNotifier = ref.read(materialProvider.notifier);
+                                final updatedMaterials = materials
+                                    .map(
+                                      (m) => {
+                                        ...m,
+                                        "Product": productData["name"],
+                                      },
+                                    )
+                                    .toList();
 
-      final materials = List<Map<String, dynamic>>.from(
-        materialNotifier.state["materials"] ?? [],
-      );
-      final additionalCosts = List<Map<String, dynamic>>.from(
-        materialNotifier.state["additionalCosts"] ?? [],
-      );
+                                final newQuotation = {
+                                  "product": productData,
+                                  "materials": updatedMaterials,
+                                  "additionalCosts": additionalCosts,
+                                };
 
-      final updatedMaterials = materials.map((m) => {
-            ...m,
-            "Product": productData["name"],
-          }).toList();
+                                await quotationNotifier.addNewQuotation(
+                                  newQuotation,
+                                );
 
-      final newQuotation = {
-        "product": productData,
-        "materials": updatedMaterials,
-        "additionalCosts": additionalCosts,
-      };
+                                if (mounted) {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const QuotationSummary(),
+                                    ),
+                                  );
 
-      await quotationNotifier.addNewQuotation(newQuotation);
+                                  //  Navigator.push(
+                                  //     context,
+                                  //     MaterialPageRoute(builder: (context) => const BOMSummary()),
+                                  //   );
+                                }
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
 
-      if (mounted) {
-        
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const QuotationSummary()),
-        );
+              const SizedBox(height: 12),
 
-      //  Navigator.push(
-      //     context,
-      //     MaterialPageRoute(builder: (context) => const BOMSummary()),
-      //   );
-      }
-    }
-  },
-),
-
-          ],
-        ),
-      );
-    }
-  },
-),
-
- const SizedBox(height: 12),
-
-
-                  CustomButton(
-                    text: "Add item from BOM List",
-                    outlined: true,
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(BOMList());
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    text: "Add item from Quotation",
-                    outlined: true,
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(AllClientQuotations());
-                    },
-                  ),
-
+              CustomButton(
+                text: "Add item from BOM List",
+                outlined: true,
+                icon: Icons.add,
+                onPressed: () {
+                  Nav.push(BOMList());
+                },
+              ),
+              const SizedBox(height: 12),
+              CustomButton(
+                text: "Add item from Quotation",
+                outlined: true,
+                icon: Icons.add,
+                onPressed: () {
+                  Nav.push(AllClientQuotations());
+                },
+              ),
 
               const SizedBox(height: 100),
             ],

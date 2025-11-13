@@ -7,7 +7,6 @@ import 'package:wworker/App/Staffing/Widgets/staffList.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
 class StaffManagement extends ConsumerStatefulWidget {
   const StaffManagement({super.key});
 
@@ -77,10 +76,12 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
         filteredStaffList = staffList;
       } else {
         filteredStaffList = staffList
-            .where((staff) =>
-                staff.fullname.toLowerCase().contains(query.toLowerCase()) ||
-                staff.email.toLowerCase().contains(query.toLowerCase()) ||
-                staff.position.toLowerCase().contains(query.toLowerCase()))
+            .where(
+              (staff) =>
+                  staff.fullname.toLowerCase().contains(query.toLowerCase()) ||
+                  staff.email.toLowerCase().contains(query.toLowerCase()) ||
+                  staff.position.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -114,10 +115,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.redAccent,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.redAccent),
       );
     }
   }
@@ -265,76 +263,75 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : filteredStaffList.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.people_outline,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
-                              const SizedBox(height: 16),
-                              CustomText(
-                                title: searchController.text.isEmpty
-                                    ? 'No staff members yet'
-                                    : 'No results found',
-                                titleColor: Colors.grey.shade600,
-                              ),
-                              const SizedBox(height: 8),
-                              if (searchController.text.isEmpty)
-                                TextButton(
-                                  onPressed: () async {
-                                    await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const AddStaff(),
-                                      ),
-                                    );
-                                    _loadStaff();
-                                  },
-                                  child: const Text('Add First Staff Member'),
-                                ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFFFCFCFC),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                // Table Header
-                                _buildTableHeader(),
-                                const SizedBox(height: 16),
-
-                                // Staff List Items
-                                Expanded(
-                                  child: ListView.separated(
-                                    itemCount: filteredStaffList.length,
-                                    separatorBuilder: (context, index) =>
-                                        const SizedBox(height: 16),
-                                    itemBuilder: (context, index) {
-                                      final staff = filteredStaffList[index];
-                                      return StaffListItem(
-                                        staff: staff,
-                                        onToggleAccess: () =>
-                                            _toggleAccess(staff),
-                                        onDelete: () => _deleteStaff(staff),
-                                      );
-                                    },
+                          const SizedBox(height: 16),
+                          CustomText(
+                            title: searchController.text.isEmpty
+                                ? 'No staff members yet'
+                                : 'No results found',
+                            titleColor: Colors.grey.shade600,
+                          ),
+                          const SizedBox(height: 8),
+                          if (searchController.text.isEmpty)
+                            TextButton(
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const AddStaff(),
                                   ),
-                                ),
-                              ],
+                                );
+                                _loadStaff();
+                              },
+                              child: const Text('Add First Staff Member'),
                             ),
+                        ],
+                      ),
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: ShapeDecoration(
+                          color: const Color(0xFFFCFCFC),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
                         ),
+                        child: Column(
+                          children: [
+                            // Table Header
+                            _buildTableHeader(),
+                            const SizedBox(height: 16),
+
+                            // Staff List Items
+                            Expanded(
+                              child: ListView.separated(
+                                itemCount: filteredStaffList.length,
+                                separatorBuilder: (context, index) =>
+                                    const SizedBox(height: 16),
+                                itemBuilder: (context, index) {
+                                  final staff = filteredStaffList[index];
+                                  return StaffListItem(
+                                    staff: staff,
+                                    onToggleAccess: () => _toggleAccess(staff),
+                                    onDelete: () => _deleteStaff(staff),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
             ),
           ],
         ),
@@ -348,10 +345,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       decoration: ShapeDecoration(
         color: const Color(0xFFF5F8F2),
         shape: RoundedRectangleBorder(
-          side: const BorderSide(
-            width: 1,
-            color: Color(0xFF8B4513),
-          ),
+          side: const BorderSide(width: 1, color: Color(0xFF8B4513)),
           borderRadius: BorderRadius.circular(4),
         ),
       ),

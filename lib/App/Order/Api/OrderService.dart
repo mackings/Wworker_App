@@ -3,49 +3,48 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
-
 class OrderService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
-OrderService() {
-  _dio.interceptors.add(InterceptorsWrapper(
-    onRequest: (options, handler) {
-      debugPrint("📤 [ORDER REQUEST]");
-      debugPrint("➡️ URL: ${options.uri}");
-      debugPrint("🧾 METHOD: ${options.method}");
-      debugPrint("📋 HEADERS: ${options.headers}");
-      if (options.queryParameters.isNotEmpty) {
-        debugPrint("🔍 QUERY PARAMS: ${options.queryParameters}");
-      }
-      if (options.data != null) {
-        debugPrint("📦 BODY: ${options.data}");
-      }
-      return handler.next(options);
-    },
-    onResponse: (response, handler) {
-      debugPrint("✅ [ORDER RESPONSE]");
-      debugPrint("🔢 STATUS CODE: ${response.statusCode}");
-      debugPrint("📍 URL: ${response.requestOptions.uri}");
-      debugPrint("📄 DATA: ${response.data}");
-      return handler.next(response);
-    },
-    onError: (DioException e, handler) {
-      debugPrint("❌ [ORDER ERROR]");
-      debugPrint("📍 URL: ${e.requestOptions.uri}");
-      debugPrint("📛 MESSAGE: ${e.message}");
-      if (e.response != null) {
-        debugPrint("🔢 STATUS CODE: ${e.response?.statusCode}");
-        debugPrint("📄 RESPONSE DATA: ${e.response?.data}");
-      }
-      if (e.requestOptions.data != null) {
-        debugPrint("📦 REQUEST BODY: ${e.requestOptions.data}");
-      }
-      return handler.next(e);
-    },
-  ));
-}
-
+  OrderService() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint("📤 [ORDER REQUEST]");
+          debugPrint("➡️ URL: ${options.uri}");
+          debugPrint("🧾 METHOD: ${options.method}");
+          debugPrint("📋 HEADERS: ${options.headers}");
+          if (options.queryParameters.isNotEmpty) {
+            debugPrint("🔍 QUERY PARAMS: ${options.queryParameters}");
+          }
+          if (options.data != null) {
+            debugPrint("📦 BODY: ${options.data}");
+          }
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint("✅ [ORDER RESPONSE]");
+          debugPrint("🔢 STATUS CODE: ${response.statusCode}");
+          debugPrint("📍 URL: ${response.requestOptions.uri}");
+          debugPrint("📄 DATA: ${response.data}");
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          debugPrint("❌ [ORDER ERROR]");
+          debugPrint("📍 URL: ${e.requestOptions.uri}");
+          debugPrint("📛 MESSAGE: ${e.message}");
+          if (e.response != null) {
+            debugPrint("🔢 STATUS CODE: ${e.response?.statusCode}");
+            debugPrint("📄 RESPONSE DATA: ${e.response?.data}");
+          }
+          if (e.requestOptions.data != null) {
+            debugPrint("📦 REQUEST BODY: ${e.requestOptions.data}");
+          }
+          return handler.next(e);
+        },
+      ),
+    );
+  }
 
   // 🟢 CREATE ORDER FROM QUOTATION
   Future<Map<String, dynamic>> createOrderFromQuotation({
@@ -63,7 +62,9 @@ OrderService() {
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/sales/orders/create");
+      debugPrint(
+        "📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/sales/orders/create",
+      );
 
       final response = await _dio.post(
         "/api/sales/orders/create",
@@ -74,9 +75,7 @@ OrderService() {
           if (notes != null) "notes": notes,
           "amountPaid": amountPaid,
         },
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [CREATE ORDER SUCCESS] => ${response.data}");
@@ -119,9 +118,7 @@ OrderService() {
       final response = await _dio.get(
         "/api/sales/orders",
         queryParameters: queryParams,
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [GET ORDERS SUCCESS] => ${response.data}");
@@ -146,13 +143,13 @@ OrderService() {
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [GET ORDER] => GET ${Urls.baseUrl}/api/sales/orders/$orderId");
+      debugPrint(
+        "📤 [GET ORDER] => GET ${Urls.baseUrl}/api/sales/orders/$orderId",
+      );
 
       final response = await _dio.get(
         "/api/sales/orders/$orderId",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [GET ORDER SUCCESS] => ${response.data}");
@@ -165,54 +162,53 @@ OrderService() {
       };
     }
   }
-// 🟢 ADD PAYMENT TO ORDER
-Future<Map<String, dynamic>> addPayment({
-  required String orderId,
-  required double amount,
-  required String paymentMethod,
-  String? reference,
-  String? notes,
-  String? paymentDate,
-}) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
 
-    if (token == null) {
-      throw Exception("No auth token found");
+  // 🟢 ADD PAYMENT TO ORDER
+  Future<Map<String, dynamic>> addPayment({
+    required String orderId,
+    required double amount,
+    required String paymentMethod,
+    String? reference,
+    String? notes,
+    String? paymentDate,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        throw Exception("No auth token found");
+      }
+
+      // 👇 Convert 100.0 → 100 if it has no decimal part
+      final dynamic formattedAmount = amount % 1 == 0 ? amount.toInt() : amount;
+
+      debugPrint(
+        "📤 [ADD PAYMENT] => POST ${Urls.baseUrl}/api/orders/orders/$orderId/payment",
+      );
+
+      final response = await _dio.post(
+        "/api/orders/orders/$orderId/payment",
+        data: {
+          "amount": formattedAmount,
+          "paymentMethod": paymentMethod,
+          if (reference != null) "reference": reference,
+          if (notes != null) "notes": notes,
+          if (paymentDate != null) "paymentDate": paymentDate,
+        },
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [ADD PAYMENT SUCCESS] => ${response.data}");
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [ADD PAYMENT ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        "success": false,
+        "message": e.response?.data?["message"] ?? "Failed to add payment",
+      };
     }
-
-    // 👇 Convert 100.0 → 100 if it has no decimal part
-    final dynamic formattedAmount =
-        amount % 1 == 0 ? amount.toInt() : amount;
-
-    debugPrint("📤 [ADD PAYMENT] => POST ${Urls.baseUrl}/api/orders/orders/$orderId/payment");
-
-    final response = await _dio.post(
-      "/api/orders/orders/$orderId/payment",
-      data: {
-        "amount": formattedAmount,
-        "paymentMethod": paymentMethod,
-        if (reference != null) "reference": reference,
-        if (notes != null) "notes": notes,
-        if (paymentDate != null) "paymentDate": paymentDate,
-      },
-      options: Options(
-        headers: {"Authorization": "Bearer $token"},
-      ),
-    );
-
-    debugPrint("✅ [ADD PAYMENT SUCCESS] => ${response.data}");
-    return response.data;
-  } on DioException catch (e) {
-    debugPrint("⚠️ [ADD PAYMENT ERROR] => ${e.response?.data ?? e.message}");
-    return {
-      "success": false,
-      "message": e.response?.data?["message"] ?? "Failed to add payment",
-    };
   }
-}
-
 
   // 🟢 UPDATE ORDER STATUS
   Future<Map<String, dynamic>> updateOrderStatus({
@@ -227,23 +223,26 @@ Future<Map<String, dynamic>> addPayment({
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [UPDATE STATUS] => PATCH ${Urls.baseUrl}/api/sales/orders/$orderId/status");
+      debugPrint(
+        "📤 [UPDATE STATUS] => PATCH ${Urls.baseUrl}/api/sales/orders/$orderId/status",
+      );
 
       final response = await _dio.patch(
         "/api/sales/orders/$orderId/status",
         data: {"status": status},
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [UPDATE STATUS SUCCESS] => ${response.data}");
       return response.data;
     } on DioException catch (e) {
-      debugPrint("⚠️ [UPDATE STATUS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [UPDATE STATUS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         "success": false,
-        "message": e.response?.data?["message"] ?? "Failed to update order status",
+        "message":
+            e.response?.data?["message"] ?? "Failed to update order status",
       };
     }
   }
@@ -258,13 +257,13 @@ Future<Map<String, dynamic>> addPayment({
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [GET RECEIPT] => GET ${Urls.baseUrl}/api/sales/orders/$orderId/receipt");
+      debugPrint(
+        "📤 [GET RECEIPT] => GET ${Urls.baseUrl}/api/sales/orders/$orderId/receipt",
+      );
 
       final response = await _dio.get(
         "/api/sales/orders/$orderId/receipt",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [GET RECEIPT SUCCESS] => ${response.data}");
@@ -288,13 +287,13 @@ Future<Map<String, dynamic>> addPayment({
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [DELETE ORDER] => DELETE ${Urls.baseUrl}/api/sales/orders/$orderId");
+      debugPrint(
+        "📤 [DELETE ORDER] => DELETE ${Urls.baseUrl}/api/sales/orders/$orderId",
+      );
 
       final response = await _dio.delete(
         "/api/sales/orders/$orderId",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [DELETE ORDER SUCCESS] => ${response.data}");
@@ -318,13 +317,13 @@ Future<Map<String, dynamic>> addPayment({
         throw Exception("No auth token found");
       }
 
-      debugPrint("📤 [GET STATS] => GET ${Urls.baseUrl}/api/sales/orders/stats");
+      debugPrint(
+        "📤 [GET STATS] => GET ${Urls.baseUrl}/api/sales/orders/stats",
+      );
 
       final response = await _dio.get(
         "/api/sales/orders/stats",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [GET STATS SUCCESS] => ${response.data}");

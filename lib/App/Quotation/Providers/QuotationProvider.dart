@@ -4,12 +4,10 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:wworker/App/Quotation/Api/ClientQuotation.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 
-
-
 final quotationProvider =
     StateNotifierProvider<QuotationNotifier, AsyncValue<List<Quotation>>>(
-  (ref) => QuotationNotifier(ref),
-);
+      (ref) => QuotationNotifier(ref),
+    );
 
 class QuotationNotifier extends StateNotifier<AsyncValue<List<Quotation>>> {
   final Ref ref;
@@ -46,7 +44,6 @@ class QuotationNotifier extends StateNotifier<AsyncValue<List<Quotation>>> {
       state = AsyncError(e, st);
     }
   }
-
 
   void deleteQuotation(String id) {
     debugPrint("❌ Quotation deletion is disabled.");

@@ -4,11 +4,7 @@ class TermsCheckbox extends StatefulWidget {
   final Function(bool)? onChanged;
   final bool initialValue;
 
-  const TermsCheckbox({
-    super.key,
-    this.onChanged,
-    this.initialValue = false,
-  });
+  const TermsCheckbox({super.key, this.onChanged, this.initialValue = false});
 
   @override
   State<TermsCheckbox> createState() => _TermsCheckboxState();
@@ -72,9 +68,7 @@ class _TermsCheckboxState extends State<TermsCheckbox> {
                   ),
                   const TextSpan(
                     text: 'and ',
-                    style: TextStyle(
-                      color: Color(0xFF7B7B7B),
-                    ),
+                    style: TextStyle(color: Color(0xFF7B7B7B)),
                   ),
                   TextSpan(
                     text: 'Privacy Policy',
