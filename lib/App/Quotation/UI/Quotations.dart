@@ -123,7 +123,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: CustomText(title: "Quotations"),
+        title: CustomText(title: "Quotationss"),
       ),
       body: SafeArea(
         child: Column(

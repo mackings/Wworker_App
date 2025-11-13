@@ -40,7 +40,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Each quotation as a summary
+
     List<QuotationItem> allItems = [];
 
     for (var quotation in widget.selectedQuotations) {
@@ -150,69 +150,74 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     );
   }
 
-  Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async {
-    setState(() => isLoading = true);
 
-    final bomService = BOMService();
+Future<void> _saveQuotation(List<QuotationItem> allItems, double totalSum) async {
+  setState(() => isLoading = true);
 
-    // Flatten materials for backend
-    final items = widget.selectedQuotations.map((quotation) {
-      final quotationId = quotation["id"] as String;
-      final quantity = widget.quotationQuantities[quotationId] ?? 1;
-      final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
+  final bomService = BOMService();
 
-      return materials.map((m) {
-        final materialQty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-        final price = double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
+  // Flatten materials for backend
+  final items = widget.selectedQuotations.map((quotation) {
+    final quotationId = quotation["id"] as String;
+    final quantity = widget.quotationQuantities[quotationId] ?? 1;
+    final materials = List<Map<String, dynamic>>.from(quotation["materials"] ?? []);
+    final product = quotation["product"] ?? {};
+    final productImage = product["image"] ?? ""; // ✅ Get image from product level
 
-        return {
-          "woodType": m["Product"] ?? "",
-          "foamType": null,
-          "width": double.tryParse(m["Width"]?.toString() ?? "0") ?? 0,
-          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-          "length": double.tryParse(m["Length"]?.toString() ?? "0") ?? 0,
-          "thickness": double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
-          "unit": m["Unit"] ?? "cm",
-          "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
-          "quantity": materialQty * quantity,
-          "costPrice": price,
-          "sellingPrice": price,
-          "description": m["Materialname"] ?? "",
-          "image": "",
-        };
-      }).toList();
-    }).expand((e) => e).toList();
+    return materials.map((m) {
+      final materialQty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
+      final price = double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
 
-    final service = {
-      "product": "Materials Service",
-      "quantity": 1,
-      "discount": 0,
-      "totalPrice": totalSum,
-    };
+      return {
+        "woodType": m["Product"] ?? "",
+        "foamType": null,
+        "width": double.tryParse(m["Width"]?.toString() ?? "0") ?? 0,
+        "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
+        "length": double.tryParse(m["Length"]?.toString() ?? "0") ?? 0,
+        "thickness": double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
+        "unit": m["Unit"] ?? "cm",
+        "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
+        "quantity": materialQty * quantity,
+        "costPrice": price,
+        "sellingPrice": price,
+        "description": m["Materialname"] ?? "",
+        "image": productImage, // ✅ Use image from product level
+      };
+    }).toList();
+  }).expand((e) => e).toList();
 
-    final response = await bomService.createQuotation(
-      clientName: widget.name,
-      clientAddress: widget.address,
-      nearestBusStop: widget.nearestBusStop,
-      phoneNumber: widget.phone,
-      email: widget.email,
-      description: widget.description,
-      items: items,
-      service: service,
-      discount: 0.0,
+  final service = {
+    "product": "Materials Service",
+    "quantity": 1,
+    "discount": 0,
+    "totalPrice": totalSum,
+  };
+
+
+
+  final response = await bomService.createQuotation(
+    clientName: widget.name,
+    clientAddress: widget.address,
+    nearestBusStop: widget.nearestBusStop,
+    phoneNumber: widget.phone,
+    email: widget.email,
+    description: widget.description,
+    items: items,
+    service: service,
+    discount: 0.0,
+  );
+
+  setState(() => isLoading = false);
+
+  if (response["success"] == true) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("✅ Quotation created successfully")),
     );
-
-    setState(() => isLoading = false);
-
-    if (response["success"] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Quotation created successfully")),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
-      );
-    }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
+    );
   }
+}
 }
 
