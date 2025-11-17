@@ -119,7 +119,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
-        title: CustomText(title: "Quotationss"),
+        title: CustomText(title: "Quotations"),
       ),
       body: SafeArea(
         child: Column(
@@ -129,10 +129,13 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   ? const Center(child: CircularProgressIndicator())
                   : allQuotations.isEmpty
                   ? const Center(
-                      child: CustomEmptyQuotes(
-                        title: "Quotation",
-                        buttonText: "",
-                        emptyMessage: "No Quotations Found",
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 20,right: 20),
+                        child: CustomEmptyQuotes(
+                          title: "",
+                          buttonText: "",
+                          emptyMessage: "No Quotations Found",
+                        ),
                       ),
                     )
                   : RefreshIndicator(
