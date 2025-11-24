@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wworker/App/OverHead/View/AddOverhead.dart';
 import 'package:wworker/App/Staffing/Widgets/database.dart';
 import 'package:wworker/App/Staffing/Widgets/notification.dart';
 import 'package:wworker/App/Staffing/Widgets/staffaccess.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 class Settings extends ConsumerStatefulWidget {
@@ -35,6 +38,15 @@ class _SettingsState extends ConsumerState<Settings> {
                 SizedBox(height: 30),
 
                 StaffAccessWidget(),
+
+                SizedBox(height: 30),
+
+                CustomButton(
+                  text: "Add Overhead",
+                  onPressed: () {
+                    Nav.push(AddOverheadCostCard());
+                  },
+                ),
 
                 SizedBox(height: 30),
               ],

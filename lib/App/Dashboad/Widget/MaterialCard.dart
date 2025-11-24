@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Dashboad/Widget/Calculation_helper.dart';
 import 'package:wworker/App/Quotation/Api/materialService.dart';
+import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
 import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
@@ -41,20 +42,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   // Project/Required dimensions
   String? width, length, thickness, unit;
 
-  // Standard material dimensions
-  String? standardWidth, standardLength, standardUnit;
-
-  // Calculated values
-  double? projectAreaSqm;
-  double? standardAreaSqm;
-  double? pricePerSqm;
-  double? totalBoardPrice;
-  double? projectCost;
-  int? minimumUnits;
-  double wasteThreshold = 0.75;
+  // API calculation result
+  MaterialCostModel? _costCalculation;
+  bool _isCalculating = false;
 
   final TextEditingController materialTypeController = TextEditingController();
-  final TextEditingController pricePerUnitController = TextEditingController();
 
   @override
   void initState() {
@@ -65,7 +57,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   @override
   void dispose() {
     materialTypeController.dispose();
-    pricePerUnitController.dispose();
     super.dispose();
   }
 
@@ -93,24 +84,19 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     if (materialUnit.contains('length') || 
         materialUnit.contains('sheet') || 
         materialUnit.contains('width')) {
-      // For length/sheet/width materials, default to cm
       defaultUnit = 'cm';
     } else if (materialUnit.contains('square meter') || 
                materialUnit.contains('sqm') ||
                materialUnit.contains('m²')) {
-      // For area-based materials, default to m
       defaultUnit = 'm';
     } else if (materialUnit.contains('yard')) {
-      // For fabrics (per yard), default to in or cm
       defaultUnit = 'in';
     } else {
-      // Default fallback
       defaultUnit = 'cm';
     }
     
     setState(() {
       unit = defaultUnit;
-      standardUnit = defaultUnit;
     });
   }
 
@@ -119,6 +105,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       _selectedMaterial = material;
       _selectedMaterialType = null;
       _isCustomType = false;
+      _costCalculation = null;
       materialTypeController.clear();
       
       // Auto-set units based on material type
@@ -140,70 +127,55 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     });
   }
 
-  /// Calculate project area from width × length
-  void _calculateProjectArea() {
-    if (width != null && length != null && unit != null) {
-      final w = double.tryParse(width!);
-      final l = double.tryParse(length!);
-
-      if (w != null && l != null) {
-        setState(() {
-          projectAreaSqm = MaterialCalculationHelper.calculateArea(
-            width: w,
-            length: l,
-            unit: unit!,
-          );
-          _calculateAllCosts();
-        });
-      }
+  /// Calculate costs via API (auto-triggered)
+  Future<void> _calculateCosts() async {
+    if (_selectedMaterial == null || 
+        width == null || 
+        length == null || 
+        unit == null) {
+      return;
     }
-  }
 
-  /// Calculate standard material area
-  void _calculateStandardArea() {
-    if (standardWidth != null &&
-        standardLength != null &&
-        standardUnit != null) {
-      final w = double.tryParse(standardWidth!);
-      final l = double.tryParse(standardLength!);
+    final w = double.tryParse(width!);
+    final l = double.tryParse(length!);
 
-      if (w != null && l != null) {
+    if (w == null || l == null) return;
+
+    setState(() => _isCalculating = true);
+
+    try {
+      final result = await _materialService.calculateMaterialCost(
+        materialId: _selectedMaterial!.id,
+        requiredWidth: w,
+        requiredLength: l,
+        requiredUnit: unit!,
+        materialType: _selectedMaterialType,
+      );
+
+      if (mounted) {
         setState(() {
-          standardAreaSqm = MaterialCalculationHelper.calculateArea(
-            width: w,
-            length: l,
-            unit: standardUnit!,
-          );
-          _calculateAllCosts();
+          _costCalculation = result;
+          _isCalculating = false;
         });
+
+        if (result == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Failed to calculate costs. Please try again."),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-    }
-  }
-
-  /// Calculate all costs and minimum units
-  void _calculateAllCosts() {
-    if (standardAreaSqm != null &&
-        pricePerUnitController.text.isNotEmpty &&
-        projectAreaSqm != null) {
-      final pricePerUnit = double.tryParse(pricePerUnitController.text.trim());
-
-      if (pricePerUnit != null && standardAreaSqm! > 0) {
-        setState(() {
-          pricePerSqm = pricePerUnit;
-          totalBoardPrice = MaterialCalculationHelper.calculateTotalBoardPrice(
-            totalAreaSqm: standardAreaSqm!,
-            pricePerSqm: pricePerUnit,
-          );
-          projectCost = MaterialCalculationHelper.calculateProjectCost(
-            requiredAreaSqm: projectAreaSqm!,
-            pricePerSqm: pricePerUnit,
-          );
-          minimumUnits = MaterialCalculationHelper.calculateMinimumUnits(
-            requiredArea: projectAreaSqm!,
-            unitArea: standardAreaSqm!,
-            wasteThreshold: wasteThreshold,
-          );
-        });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isCalculating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: ${e.toString()}"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
       }
     }
   }
@@ -216,43 +188,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         length == null ||
         thickness == null ||
         unit == null ||
-        standardWidth == null ||
-        standardLength == null ||
-        standardUnit == null ||
-        pricePerUnitController.text.trim().isEmpty) {
+        _costCalculation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Please fill in all fields before adding."),
+          content: Text("Please fill in all fields and calculate costs before adding."),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
-    // Ensure calculations are done
-    if (projectAreaSqm == null ||
-        standardAreaSqm == null ||
-        pricePerSqm == null ||
-        totalBoardPrice == null ||
-        projectCost == null ||
-        minimumUnits == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please wait for calculations to complete."),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    // Calculate waste information
-    final wasteInfo = MaterialCalculationHelper.calculateWasteInfo(
-      requiredArea: projectAreaSqm!,
-      unitArea: standardAreaSqm!,
-      unitsUsed: minimumUnits!,
-    );
-
-    // Create item
+    // Create item with API calculation results
     final item = {
       "Product": _selectedMaterial!.name,
       "Materialname": materialTypeController.text.trim(),
@@ -260,9 +206,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "Length": length,
       "Thickness": thickness,
       "Unit": unit,
-      "Sqm": projectAreaSqm!.toStringAsFixed(2),
-      "Price": projectCost!.toStringAsFixed(2),
-      "quantity": minimumUnits.toString(),
+      "Sqm": _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
+      "Price": _costCalculation!.pricing.projectCost.toStringAsFixed(2),
+      "quantity": _costCalculation!.quantity.minimumUnits.toString(),
     };
 
     widget.onAddItem?.call(item);
@@ -274,19 +220,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       width = null;
       length = null;
       thickness = null;
-      // Keep unit values from material
-      standardWidth = null;
-      standardLength = null;
-      projectAreaSqm = null;
-      standardAreaSqm = null;
-      pricePerSqm = null;
-      totalBoardPrice = null;
-      projectCost = null;
-      minimumUnits = null;
+      _costCalculation = null;
     });
 
     materialTypeController.clear();
-    pricePerUnitController.clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -410,82 +347,35 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
           const SizedBox(height: 20),
 
-          // Section 1: Standard Material Size
-          _buildSectionHeader("Standard Material Size (from supplier)"),
-          const SizedBox(height: 12),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildDropdown("Length (longer)", numbers, standardLength, (v) {
-                setState(() => standardLength = v);
-                _calculateStandardArea();
-              }),
-              _buildDropdown("Width (shorter)", numbers, standardWidth, (v) {
-                setState(() => standardWidth = v);
-                _calculateStandardArea();
-              }),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildDropdown("Unit", linearUnits, standardUnit, (v) {
-                setState(() => standardUnit = v);
-                _calculateStandardArea();
-              }),
-              SizedBox(
-                width: (MediaQuery.of(context).size.width - 95) / 2,
-                child: _buildInput(
-                  "Price per sq m",
-                  controller: pricePerUnitController,
-                  hint: "₦ per sq m",
-                  onChanged: (_) => _calculateAllCosts(),
-                ),
+          // Display standard material info (read-only from API)
+          if (_selectedMaterial != null) ...[
+          //  _buildSectionHeader("Standard Material Size (from supplier)"),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
-          ),
-
-          // Display standard area and total board price
-          if (standardAreaSqm != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Standard Area: ${MaterialCalculationHelper.formatArea(standardAreaSqm!)}",
-                      style: GoogleFonts.openSans(
-                        fontSize: 13,
-                        color: const Color(0xFF7B7B7B),
-                      ),
-                    ),
-                    if (totalBoardPrice != null)
-                      Text(
-                        "Full Board Price: ${MaterialCalculationHelper.formatCurrency(totalBoardPrice!)}",
-                        style: GoogleFonts.openSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFA16438),
-                        ),
-                      ),
-                  ],
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildInfoRow(
+                    "Dimensions:",
+                    "${_selectedMaterial!.standardWidth} × ${_selectedMaterial!.standardLength} ${_selectedMaterial!.standardUnit}",
+                  ),
+                  const SizedBox(height: 4),
+                  _buildInfoRow(
+                    "Price per sq m:",
+                    "₦${_selectedMaterial!.pricePerSqm.toStringAsFixed(2)}",
+                  ),
+                ],
               ),
             ),
+            const SizedBox(height: 20),
+          ],
 
-          const SizedBox(height: 20),
-
-          // Section 2: Project/Required Size
+          // Project/Required Size
           _buildSectionHeader("Project Size (what you need)"),
           const SizedBox(height: 12),
 
@@ -495,11 +385,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             children: [
               _buildDropdown("Length (longer)", numbers, length, (v) {
                 setState(() => length = v);
-                _calculateProjectArea();
+                _calculateCosts();
               }),
               _buildDropdown("Width (shorter)", numbers, width, (v) {
                 setState(() => width = v);
-                _calculateProjectArea();
+                _calculateCosts();
               }),
             ],
           ),
@@ -518,7 +408,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ),
               _buildDropdown("Unit", linearUnits, unit, (v) {
                 setState(() => unit = v);
-                _calculateProjectArea();
+                _calculateCosts();
               }),
             ],
           ),
@@ -536,80 +426,38 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             ),
           ),
 
-          // Display project area
-          if (projectAreaSqm != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  "Project Area: ${MaterialCalculationHelper.formatArea(projectAreaSqm!)}",
-                  style: GoogleFonts.openSans(
-                    fontSize: 13,
-                    color: const Color(0xFF7B7B7B),
+          const SizedBox(height: 20),
+
+          // Calculating indicator
+          if (_isCalculating)
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F5F5),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
-                ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "Calculating costs...",
+                    style: GoogleFonts.openSans(
+                      fontSize: 13,
+                      color: const Color(0xFF7B7B7B),
+                    ),
+                  ),
+                ],
               ),
             ),
 
-          const SizedBox(height: 20),
-
-          // Waste Threshold Slider
-          _buildSectionHeader(
-            "Waste Threshold (round up when remainder exceeds)",
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: Slider(
-                  value: wasteThreshold,
-                  min: 0.5,
-                  max: 1.0,
-                  divisions: 10,
-                  label: "${(wasteThreshold * 100).toInt()}%",
-                  activeColor: const Color(0xFFA16438),
-                  inactiveColor: const Color(0xFFCCA183),
-                  onChanged: (value) {
-                    setState(() {
-                      wasteThreshold = value;
-                      _calculateAllCosts();
-                    });
-                  },
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  "${(wasteThreshold * 100).toInt()}%",
-                  style: GoogleFonts.openSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFA16438),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          // Section 3: Calculated Results
-          if (pricePerSqm != null &&
-              totalBoardPrice != null &&
-              projectCost != null &&
-              minimumUnits != null)
+          // Calculated Results
+          if (_costCalculation != null)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -630,46 +478,40 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                   ),
                   const SizedBox(height: 8),
                   _buildResultRow(
+                    "Project Area:",
+                    "${_costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2)} sq m",
+                  ),
+                  _buildResultRow(
+                    "Standard Area:",
+                    "${_costCalculation!.dimensions.standardAreaSqm.toStringAsFixed(2)} sq m",
+                  ),
+                  const Divider(color: Color(0xFFCCA183)),
+                  _buildResultRow(
                     "Price per sq m:",
-                    MaterialCalculationHelper.formatCurrency(pricePerSqm!),
+                    "₦${_costCalculation!.pricing.pricePerSqm.toStringAsFixed(2)}",
                   ),
                   _buildResultRow(
                     "Full Board Price:",
-                    MaterialCalculationHelper.formatCurrency(totalBoardPrice!),
+                    "₦${_costCalculation!.pricing.totalBoardPrice.toStringAsFixed(2)}",
                   ),
                   const Divider(color: Color(0xFFCCA183)),
                   _buildResultRow(
                     "Project Cost:",
-                    MaterialCalculationHelper.formatCurrency(projectCost!),
+                    "₦${_costCalculation!.pricing.projectCost.toStringAsFixed(2)}",
                   ),
-                  _buildResultRow("Minimum Boards:", "$minimumUnits board(s)"),
-                  // Show waste information
-                  if (standardAreaSqm != null && projectAreaSqm != null)
-                    Builder(
-                      builder: (context) {
-                        final wasteInfo =
-                            MaterialCalculationHelper.calculateWasteInfo(
-                          requiredArea: projectAreaSqm!,
-                          unitArea: standardAreaSqm!,
-                          unitsUsed: minimumUnits!,
-                        );
-                        return Column(
-                          children: [
-                            const Divider(color: Color(0xFFCCA183)),
-                            _buildResultRow(
-                              "Total Area Used:",
-                              MaterialCalculationHelper.formatArea(
-                                wasteInfo['totalAreaUsed'],
-                              ),
-                            ),
-                            _buildResultRow(
-                              "Waste:",
-                              "${MaterialCalculationHelper.formatArea(wasteInfo['wasteArea'])} (${wasteInfo['wastePercentage'].toStringAsFixed(1)}%)",
-                            ),
-                          ],
-                        );
-                      },
-                    ),
+                  _buildResultRow(
+                    "Minimum Boards:",
+                    "${_costCalculation!.quantity.minimumUnits} board(s)",
+                  ),
+                  const Divider(color: Color(0xFFCCA183)),
+                  _buildResultRow(
+                    "Total Area Used:",
+                    "${_costCalculation!.waste.totalAreaUsed.toStringAsFixed(2)} sq m",
+                  ),
+                  _buildResultRow(
+                    "Waste:",
+                    "${_costCalculation!.waste.wasteArea.toStringAsFixed(2)} sq m (${_costCalculation!.waste.wastePercentage.toStringAsFixed(1)}%)",
+                  ),
                 ],
               ),
             ),
@@ -697,7 +539,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         const SizedBox(height: 6),
         
         if (hasTypes && !_isCustomType)
-          // Show dropdown when types exist
           DropdownButtonFormField<String>(
             value: _selectedMaterialType,
             decoration: InputDecoration(
@@ -735,7 +576,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             onChanged: _onMaterialTypeSelected,
           )
         else
-          // Show text field for custom input or when no types exist
           Row(
             children: [
               Expanded(
@@ -790,6 +630,29 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     );
   }
 
+  Widget _buildInfoRow(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.openSans(
+            fontSize: 13,
+            color: const Color(0xFF7B7B7B),
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.openSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF302E2E),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildResultRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -815,39 +678,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       ),
     );
   }
-
-  Widget _buildInput(
-    String label, {
-    TextEditingController? controller,
-    String? hint,
-    void Function(String)? onChanged,
-  }) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: GoogleFonts.openSans(
-          fontSize: 14,
-          color: const Color(0xFF7B7B7B),
-        ),
-      ),
-      const SizedBox(height: 6),
-      TextField(
-        controller: controller,
-        onChanged: onChanged,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.all(12),
-          hintText: hint,
-          hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-          ),
-        ),
-      ),
-    ],
-  );
 
   Widget _buildDropdown(
     String label,

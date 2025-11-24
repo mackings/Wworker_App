@@ -5,10 +5,14 @@ import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
-import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+
+
+
+
+
 
 class BOMSummary extends ConsumerStatefulWidget {
   const BOMSummary({super.key});
@@ -16,6 +20,7 @@ class BOMSummary extends ConsumerStatefulWidget {
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _BOMSummaryState();
 }
+
 
 class _BOMSummaryState extends ConsumerState<BOMSummary> {
   final BOMService _bomService = BOMService();
@@ -164,6 +169,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+
+
               const CustomText(title: "Summary"),
               const SizedBox(height: 20),
 
@@ -204,6 +211,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                 loading: isLoading,
                 onPressed: () => _addBOMToServer(materials, additionalCosts),
               ),
+
               const SizedBox(height: 20),
               CustomButton(
                 text: "Continue",
@@ -226,6 +234,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
+
+
+
   // ✅ Material Card
   Widget _buildMaterialCard(Map<String, dynamic> item) {
     return Consumer(
@@ -241,32 +252,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           quantity = int.tryParse(q) ?? 1;
         }
 
-        void updateQuantity(int newQuantity) {
-          item["quantity"] = newQuantity.toString();
-
-          final state = ref.read(materialProvider.notifier).state;
-          final materials = List<Map<String, dynamic>>.from(state["materials"]);
-
-          final index = materials.indexWhere(
-            (m) =>
-                m["Materialname"] == item["Materialname"] &&
-                m["Product"] == item["Product"],
-          );
-
-          if (index != -1) {
-            materials[index] = item;
-          }
-
-          ref.read(materialProvider.notifier).state = {
-            ...state,
-            "materials": materials,
-          };
-        }
-
-        void increaseQuantity() => updateQuantity(quantity + 1);
-        void decreaseQuantity() {
-          if (quantity > 1) updateQuantity(quantity - 1);
-        }
 
         final double price =
             double.tryParse((item["Price"] ?? "0").toString()) ?? 0;
@@ -325,41 +310,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               buildRow('Square Meter', item["Sqm"]?.toString() ?? "-"),
               const SizedBox(height: 16),
 
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              //   children: [
-              //     const Text(
-              //       'Quantity',
-              //       style: TextStyle(
-              //         color: Color(0xFF302E2E),
-              //         fontSize: 16,
-              //         fontFamily: 'Open Sans',
-              //         fontWeight: FontWeight.w500,
-              //       ),
-              //     ),
-              //     // Row(
-              //     //   children: [
-              //     //     IconButton(
-              //     //       icon: const Icon(Icons.remove_circle_outline),
-              //     //       onPressed: decreaseQuantity,
-              //     //     ),
-              //     //     Text(
-              //     //       quantity.toString(),
-              //     //       style: const TextStyle(
-              //     //         fontSize: 16,
-              //     //         fontWeight: FontWeight.bold,
-              //     //       ),
-              //     //     ),
-              //     //     IconButton(
-              //     //       icon: const Icon(Icons.add_circle_outline),
-              //     //       onPressed: increaseQuantity,
-              //     //     ),
-              //     //   ],
-              //     // ),
-              //   ],
-              // ),
-              const SizedBox(height: 16),
-
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: ShapeDecoration(
@@ -399,6 +349,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       },
     );
   }
+
+
 
   // ✅ Additional Cost Card
   Widget _buildAdditionalCostCard(Map<String, dynamic> item) {
@@ -486,6 +438,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       ),
     );
   }
+
+
 
   Widget _buildTotalSection(
     List<Map<String, dynamic>> materials,
