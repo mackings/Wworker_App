@@ -13,6 +13,8 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
 class AllQuotations extends ConsumerStatefulWidget {
   const AllQuotations({super.key});
 
@@ -21,6 +23,7 @@ class AllQuotations extends ConsumerStatefulWidget {
 }
 
 class _AllQuotationsState extends ConsumerState<AllQuotations> {
+
   List<Map<String, dynamic>> allQuotations = [];
   Map<int, int> quantities = {};
   bool isLoading = true;
@@ -94,6 +97,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     );
   }
 
+
   double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
@@ -107,6 +111,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
         _calculateAdditionalCost(additionalCosts);
     return total * quantity;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -174,78 +179,94 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                     ),
             ),
 
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
-                    offset: const Offset(0, -2),
+Container(
+  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 20),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black26,
+        blurRadius: 10,
+        offset: const Offset(0, -2),
+      ),
+    ],
+  ),
+  child: SingleChildScrollView(
+    child: Column(
+      mainAxisSize: MainAxisSize.min, // Add this
+      children: [
+        // Full width continue button
+        if (allQuotations.isNotEmpty) ...[
+          CustomButton(
+            text: "Continue",
+            icon: Icons.arrow_forward,
+            onPressed: () {
+              final quotationQuantitiesMap = <String, int>{};
+              for (int i = 0; i < allQuotations.length; i++) {
+                final quotationId = allQuotations[i]["id"] as String;
+                quotationQuantitiesMap[quotationId] = quantities[i] ?? 1;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FirstQuote(
+                    selectedQuotations: allQuotations,
+                    quotationQuantities: quotationQuantitiesMap,
                   ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Show Continue button only when there are quotations
-                  if (allQuotations.isNotEmpty) ...[
-                    CustomButton(
-                      text: "Continue",
-                      icon: Icons.arrow_forward,
-                      onPressed: () {
-                        final quotationQuantitiesMap = <String, int>{};
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+        ],
 
-                        for (int i = 0; i < allQuotations.length; i++) {
-                          final quotationId = allQuotations[i]["id"] as String;
-                          quotationQuantitiesMap[quotationId] =
-                              quantities[i] ?? 1;
-                        }
-
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => FirstQuote(
-                              selectedQuotations: allQuotations,
-                              quotationQuantities: quotationQuantitiesMap,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-
-                  // Always show Create New BOM button
-                  CustomButton(
-                    text: "Create New BOM",
-                    outlined: allQuotations.isNotEmpty,
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(AddMaterial());
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    text: "Add item from BOM List",
-                    outlined: true,
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(BOMList());
-                    },
-                  ),
-                  const SizedBox(height: 12),
-                  CustomButton(
-                    text: "Add item from Quotation",
-                    outlined: true,
-                    icon: Icons.add,
-                    onPressed: () {
-                      Nav.push(AllClientQuotations());
-                    },
-                  ),
-                ],
+        /// 3 buttons in a single row
+        Row(
+          children: [
+            Expanded(
+              child: CustomButton(
+                textSize: 15,
+                text: "Create",
+                outlined: allQuotations.isNotEmpty,
+                icon: Icons.add,
+                onPressed: () {
+                  Nav.push(AddMaterial());
+                },
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomButton(
+                textSize: 15,
+                text: "View BOMs",
+                outlined: true,
+               // icon: Icons.add,
+                onPressed: () {
+                  Nav.push(BOMList());
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: CustomButton(
+                textSize: 15,
+                text: "Quotation",
+                outlined: true,
+                //icon: Icons.add,
+                onPressed: () {
+                  Nav.push(AllClientQuotations());
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
+)
+
+
+
           ],
         ),
       ),

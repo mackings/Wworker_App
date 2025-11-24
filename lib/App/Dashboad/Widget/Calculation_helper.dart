@@ -115,33 +115,4 @@ class MaterialCalculationHelper {
   }
 }
 
-/// Example usage:
-///
-/// // Calculate area
-/// double area = MaterialCalculationHelper.calculateArea(
-///   width: 4,
-///   length: 8,
-///   unit: 'ft',
-/// ); // Returns 2.9728 sq m (32 sq ft)
-///
-/// // Price per sq m is ₦10,087.50 per sq m (₦937.50 per sq ft)
-/// double pricePerSqm = 10087.50;
-///
-/// // Calculate total board price
-/// double boardPrice = MaterialCalculationHelper.calculateTotalBoardPrice(
-///   totalAreaSqm: 2.9728,
-///   pricePerSqm: 10087.50,
-/// ); // Returns ₦30,000
-///
-/// // Calculate project cost for 4ft × 4ft piece
-/// double projectCost = MaterialCalculationHelper.calculateProjectCost(
-///   requiredAreaSqm: 1.4864, // 16 sq ft
-///   pricePerSqm: 10087.50,
-/// ); // Returns ₦15,000
-///
-/// // Calculate minimum boards needed
-/// int boards = MaterialCalculationHelper.calculateMinimumUnits(
-///   requiredArea: 1.4864,
-///   unitArea: 2.9728,
-///   wasteThreshold: 0.75,
-/// ); // Returns 1 board
+
