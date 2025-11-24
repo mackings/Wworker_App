@@ -824,6 +824,6 @@ class OverheadCostManager {
   
   static Future<double> getTotalOverheadCost() async {
     final costs = await getOverheadCosts();
-    return costs.fold(0.0, (sum, cost) => sum + (cost['cost'] as num).toDouble());
+    return costs.fold<double>(0.0, (sum, cost) => sum + (cost['cost'] as num).toDouble());
   }
 }
