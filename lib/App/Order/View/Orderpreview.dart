@@ -3,6 +3,8 @@ import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/Constant/urls.dart';
 
+
+
 class OrderPreviewPage extends StatefulWidget {
   final Quotation quotation;
 
@@ -28,8 +30,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     return grandTotal - amountPaid;
   }
 
-  // Get first item's image for display
-  
   String get quotationImage {
     if (widget.quotation.items.isNotEmpty &&
         widget.quotation.items.first.image.isNotEmpty) {
@@ -42,6 +42,95 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   void dispose() {
     _amountPaidController.dispose();
     super.dispose();
+  }
+
+  /// Calculate end date based on expected duration
+  DateTime _calculateEndDate(DateTime start) {
+    final duration = widget.quotation.expectedDuration;
+    
+    if (duration == null || duration.value == null) {
+      // Default to 1 day if no duration specified
+      return start.add(const Duration(days: 1));
+    }
+
+    final value = duration.value!;
+    final unit = duration.unit.toLowerCase();
+
+    switch (unit) {
+      case 'day':
+      case 'days':
+        return start.add(Duration(days: value));
+      
+      case 'week':
+      case 'weeks':
+        return start.add(Duration(days: value * 7));
+      
+      case 'month':
+      case 'months':
+        // Approximate month as 30 days
+        return start.add(Duration(days: value * 30));
+      
+      default:
+        return start.add(Duration(days: value));
+    }
+  }
+
+  /// Handle start date selection
+  Future<void> _selectStartDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: startDate ?? DateTime.now(),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFA16438),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF302E2E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      setState(() {
+        startDate = picked;
+        // Auto-calculate end date based on expected duration
+        endDate = _calculateEndDate(picked);
+      });
+    }
+  }
+
+  /// Handle end date selection (user can override auto-calculated date)
+  Future<void> _selectEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: endDate ?? startDate ?? DateTime.now(),
+      firstDate: startDate ?? DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFA16438),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF302E2E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    
+    if (picked != null) {
+      setState(() {
+        endDate = picked;
+      });
+    }
   }
 
   @override
@@ -59,7 +148,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Company Avatar and Add More
               const SizedBox(height: 24),
 
               // Client Information
@@ -75,43 +163,13 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
               ),
               const SizedBox(height: 24),
 
-              // ✅ Quotation as single card (items are invisible/hidden)
+              // Quotation Card
               _buildQuotationCard(),
 
               const SizedBox(height: 24),
 
               // Financial Summary
               _buildFinancialSummary(),
-              const SizedBox(height: 32),
-
-              // Barcode
-              Container(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: Colors.grey[300]!, width: 2),
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Container(
-                        height: 80,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black, width: 2),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            "|||||||||||||||||||||||||||||||||||||||",
-                            style: TextStyle(fontSize: 24, letterSpacing: 2),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               const SizedBox(height: 32),
 
               // Action Buttons
@@ -146,26 +204,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    // Download receipt functionality
-                  },
-                  icon: const Icon(Icons.download, color: Color(0xFFA16438)),
-                  label: const Text(
-                    "Download Receipt",
-                    style: TextStyle(color: Color(0xFFA16438)),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: Color(0xFFA16438)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ),
@@ -227,7 +266,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     );
   }
 
-  // ✅ Show quotation as ONE card
   Widget _buildQuotationCard() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -278,9 +316,34 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                         color: Color(0xFF302E2E),
                       ),
                     ),
-                    Text(
-                      "Items: ${widget.quotation.items.length}",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    Row(
+                      children: [
+                        Text(
+                          "Items: ${widget.quotation.items.length}",
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                        if (widget.quotation.expectedDuration != null) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF3E0),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              widget.quotation.expectedDuration.toString(),
+                              style: const TextStyle(
+                                fontSize: 10,
+                                color: Color(0xFFA16438),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -305,24 +368,15 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
             ],
           ),
           const SizedBox(height: 16),
-          // Date Pickers for the quotation
+          
+          // Date Pickers with auto-calculation
           Row(
             children: [
               Expanded(
                 child: _buildDatePicker(
                   label: "Start Date",
                   date: startDate,
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: startDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setState(() => startDate = picked);
-                    }
-                  },
+                  onTap: _selectStartDate,
                 ),
               ),
               const SizedBox(width: 16),
@@ -330,21 +384,38 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 child: _buildDatePicker(
                   label: "End Date",
                   date: endDate,
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: endDate ?? DateTime.now(),
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime(2030),
-                    );
-                    if (picked != null) {
-                      setState(() => endDate = picked);
-                    }
-                  },
+                  onTap: _selectEndDate,
+                  isAutoCalculated: startDate != null && endDate != null,
                 ),
               ),
             ],
           ),
+          
+          // Show hint about auto-calculation
+          if (startDate != null && endDate != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      "End date auto-calculated based on expected duration. Tap to edit.",
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey[600],
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -354,17 +425,40 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     required String label,
     required DateTime? date,
     required VoidCallback onTap,
+    bool isAutoCalculated = false,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-            fontWeight: FontWeight.w500,
-          ),
+        Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            if (isAutoCalculated) ...[
+              const SizedBox(width: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: const Text(
+                  "Auto",
+                  style: TextStyle(
+                    fontSize: 9,
+                    color: Color(0xFFA16438),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
         const SizedBox(height: 8),
         GestureDetector(
@@ -374,22 +468,28 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
             decoration: BoxDecoration(
               color: const Color(0xFFF5F8F2),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
+              border: Border.all(
+                color: isAutoCalculated
+                    ? const Color(0xFFA16438).withOpacity(0.3)
+                    : Colors.grey[300]!,
+              ),
             ),
             child: Row(
               children: [
                 Icon(Icons.calendar_today, size: 16, color: Colors.grey[600]),
                 const SizedBox(width: 8),
-                Text(
-                  date != null
-                      ? "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}"
-                      : "Select Date",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: date != null
-                        ? const Color(0xFF302E2E)
-                        : Colors.grey[600],
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    date != null
+                        ? "${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}"
+                        : "Select Date",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: date != null
+                          ? const Color(0xFF302E2E)
+                          : Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

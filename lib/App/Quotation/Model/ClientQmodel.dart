@@ -12,8 +12,7 @@ class QuotationResponse {
   factory QuotationResponse.fromJson(Map<String, dynamic> json) {
     return QuotationResponse(
       success: json['success'] ?? false,
-      data:
-          (json['data'] as List<dynamic>?)
+      data: (json['data'] as List<dynamic>?)
               ?.map((e) => Quotation.fromJson(e))
               .toList() ??
           [],
@@ -24,10 +23,10 @@ class QuotationResponse {
   }
 
   Map<String, dynamic> toJson() => {
-    'success': success,
-    'data': data.map((e) => e.toJson()).toList(),
-    'pagination': pagination?.toJson(),
-  };
+        'success': success,
+        'data': data.map((e) => e.toJson()).toList(),
+        'pagination': pagination?.toJson(),
+      };
 }
 
 class Quotation {
@@ -41,6 +40,9 @@ class Quotation {
   final String description;
   final List<QuotationItem> items;
   final Service service;
+  final ExpectedDuration? expectedDuration;
+  final double costPrice;
+  final double overheadCost;
   final double discount;
   final double totalCost;
   final double totalSellingPrice;
@@ -62,6 +64,9 @@ class Quotation {
     required this.description,
     required this.items,
     required this.service,
+    this.expectedDuration,
+    required this.costPrice,
+    required this.overheadCost,
     required this.discount,
     required this.totalCost,
     required this.totalSellingPrice,
@@ -83,12 +88,16 @@ class Quotation {
       phoneNumber: json['phoneNumber'] ?? '',
       email: json['email'] ?? '',
       description: json['description'] ?? '',
-      items:
-          (json['items'] as List<dynamic>?)
+      items: (json['items'] as List<dynamic>?)
               ?.map((e) => QuotationItem.fromJson(e))
               .toList() ??
           [],
       service: Service.fromJson(json['service'] ?? {}),
+      expectedDuration: json['expectedDuration'] != null
+          ? ExpectedDuration.fromJson(json['expectedDuration'])
+          : null,
+      costPrice: (json['costPrice'] ?? 0).toDouble(),
+      overheadCost: (json['overheadCost'] ?? 0).toDouble(),
       discount: (json['discount'] ?? 0).toDouble(),
       totalCost: (json['totalCost'] ?? 0).toDouble(),
       totalSellingPrice: (json['totalSellingPrice'] ?? 0).toDouble(),
@@ -102,26 +111,59 @@ class Quotation {
   }
 
   Map<String, dynamic> toJson() => {
-    '_id': id,
-    'userId': userId,
-    'clientName': clientName,
-    'clientAddress': clientAddress,
-    'nearestBusStop': nearestBusStop,
-    'phoneNumber': phoneNumber,
-    'email': email,
-    'description': description,
-    'items': items.map((e) => e.toJson()).toList(),
-    'service': service.toJson(),
-    'discount': discount,
-    'totalCost': totalCost,
-    'totalSellingPrice': totalSellingPrice,
-    'discountAmount': discountAmount,
-    'finalTotal': finalTotal,
-    'status': status,
-    'quotationNumber': quotationNumber,
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
-  };
+        '_id': id,
+        'userId': userId,
+        'clientName': clientName,
+        'clientAddress': clientAddress,
+        'nearestBusStop': nearestBusStop,
+        'phoneNumber': phoneNumber,
+        'email': email,
+        'description': description,
+        'items': items.map((e) => e.toJson()).toList(),
+        'service': service.toJson(),
+        'expectedDuration': expectedDuration?.toJson(),
+        'costPrice': costPrice,
+        'overheadCost': overheadCost,
+        'discount': discount,
+        'totalCost': totalCost,
+        'totalSellingPrice': totalSellingPrice,
+        'discountAmount': discountAmount,
+        'finalTotal': finalTotal,
+        'status': status,
+        'quotationNumber': quotationNumber,
+        'createdAt': createdAt.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
+      };
+}
+
+class ExpectedDuration {
+  final int? value;
+  final String unit; // "Day", "Week", "Month"
+
+  ExpectedDuration({
+    this.value,
+    required this.unit,
+  });
+
+  factory ExpectedDuration.fromJson(Map<String, dynamic> json) {
+    return ExpectedDuration(
+      value: json['value'],
+      unit: json['unit'] ?? 'Day',
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        if (value != null) 'value': value,
+        'unit': unit,
+      };
+
+  @override
+  String toString() {
+    if (value != null) {
+      return '$value $unit${value! > 1 ? 's' : ''}';
+    }
+    return unit;
+  }
 }
 
 class Service {
@@ -147,11 +189,11 @@ class Service {
   }
 
   Map<String, dynamic> toJson() => {
-    'product': product,
-    'quantity': quantity,
-    'discount': discount,
-    'totalPrice': totalPrice,
-  };
+        'product': product,
+        'quantity': quantity,
+        'discount': discount,
+        'totalPrice': totalPrice,
+      };
 }
 
 class QuotationItem {
@@ -207,21 +249,21 @@ class QuotationItem {
   }
 
   Map<String, dynamic> toJson() => {
-    '_id': id,
-    'woodType': woodType,
-    'foamType': foamType,
-    'width': width,
-    'height': height,
-    'length': length,
-    'thickness': thickness,
-    'unit': unit,
-    'squareMeter': squareMeter,
-    'quantity': quantity,
-    'costPrice': costPrice,
-    'sellingPrice': sellingPrice,
-    'description': description,
-    'image': image,
-  };
+        '_id': id,
+        'woodType': woodType,
+        'foamType': foamType,
+        'width': width,
+        'height': height,
+        'length': length,
+        'thickness': thickness,
+        'unit': unit,
+        'squareMeter': squareMeter,
+        'quantity': quantity,
+        'costPrice': costPrice,
+        'sellingPrice': sellingPrice,
+        'description': description,
+        'image': image,
+      };
 }
 
 class Pagination {
@@ -247,9 +289,9 @@ class Pagination {
   }
 
   Map<String, dynamic> toJson() => {
-    'page': page,
-    'limit': limit,
-    'total': total,
-    'pages': pages,
-  };
+        'page': page,
+        'limit': limit,
+        'total': total,
+        'pages': pages,
+      };
 }

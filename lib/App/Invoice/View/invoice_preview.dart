@@ -4,6 +4,9 @@ import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
+
+
+
 class InvoicePreview extends StatefulWidget {
   final Quotation? quotation;
   final InvoiceModel? invoice;
@@ -49,46 +52,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
     }
   }
 
-  // Get service based on whether it's a quotation or invoice
-  dynamic get service {
-    if (widget.quotation != null) {
-      return widget.quotation!.service;
-    } else {
-      return widget.invoice!.service;
-    }
-  }
-
-  double get subtotal {
-    if (widget.quotation != null) {
-      return widget.quotation!.items.fold<double>(
-        0,
-        (sum, item) => sum + (item.sellingPrice * item.quantity),
-      );
-    } else {
-      // For invoice, calculate from invoice items
-      return widget.invoice!.items.fold<double>(
-        0,
-        (sum, item) => sum + (item.sellingPrice * item.quantity),
-      );
-    }
-  }
-
-  double get serviceTotal {
-    if (widget.quotation != null) {
-      return widget.quotation!.service.totalPrice.toDouble();
-    } else {
-      return widget.invoice!.service.totalPrice;
-    }
-  }
-
-  double get discount {
-    if (widget.quotation != null) {
-      return widget.quotation!.discountAmount.toDouble();
-    } else {
-      return widget.invoice!.discountAmount;
-    }
-  }
-
+  // ✅ Grand total from quotation/invoice (already includes everything)
   double get grandTotal {
     return widget.quotation?.finalTotal.toDouble() ??
         widget.invoice!.finalTotal;
@@ -145,11 +109,11 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                 const SizedBox(height: 24),
               ],
 
-              // Items Table - Now works for both quotations and invoices
+              // Items Table (Products only - no service row)
               _buildItemsTable(),
               const SizedBox(height: 24),
 
-              // Financial Summary
+              // Financial Summary (Grand Total only)
               _buildFinancialSummary(),
               const SizedBox(height: 32),
 
@@ -542,7 +506,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               ],
             ),
           ),
-          // Items
+          // Items (Products only - NO service row)
           ...items.map((item) {
             final invoiceItem = item as dynamic;
             return Container(
@@ -600,7 +564,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      "₦${(invoiceItem.sellingPrice * invoiceItem.quantity).toStringAsFixed(2)}",
+                      "₦${grandTotal.toStringAsFixed(2)}",
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 14,
@@ -613,52 +577,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               ),
             );
           }).toList(),
-          // Service Row (if applicable)
-          if (service.product?.isNotEmpty ?? false)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Text(
-                      service.product,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF302E2E),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      "${service.quantity}",
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      "₦${service.totalPrice.toStringAsFixed(2)}",
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF302E2E),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // ❌ REMOVED: Service row completely
         ],
       ),
     );
@@ -674,19 +593,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       ),
       child: Column(
         children: [
-          // Show detailed breakdown for both quotations and invoices
-          _buildSummaryRow("Sub-total", "₦${subtotal.toStringAsFixed(2)}"),
-          if (serviceTotal > 0)
-            _buildSummaryRow("Service", "₦${serviceTotal.toStringAsFixed(2)}"),
-          if (discount > 0)
-            _buildSummaryRow(
-              "Discount",
-              "-₦${discount.toStringAsFixed(2)}",
-              isDiscount: true,
-            ),
-          const Divider(height: 24, thickness: 2),
-
-          // Grand total
+          // ✅ SIMPLIFIED: Only show Grand Total
           _buildSummaryRow(
             "Grand Total",
             "₦${grandTotal.toStringAsFixed(2)}",
@@ -696,14 +603,14 @@ class _InvoicePreviewState extends State<InvoicePreview> {
 
           // Show payment details for existing invoices
           if (isExistingInvoice) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            const Divider(height: 8, thickness: 2),
+            const SizedBox(height: 16),
             _buildSummaryRow(
               "Amount Paid",
               "₦${widget.invoice!.amountPaid.toStringAsFixed(2)}",
               isPaid: true,
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 8, thickness: 2),
             const SizedBox(height: 8),
             _buildSummaryRow(
               "Outstanding Balance",

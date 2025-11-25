@@ -9,6 +9,8 @@ class OrderCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onAddPayment;
   final VoidCallback? onUpdateStatus;
+  final VoidCallback? onViewReceipt; // Changed from onEmailBalance
+  final bool showFinancialInfo; // Parameter to control financial display
 
   const OrderCard({
     super.key,
@@ -17,6 +19,8 @@ class OrderCard extends StatelessWidget {
     this.onDelete,
     this.onAddPayment,
     this.onUpdateStatus,
+    this.onViewReceipt, // Changed from onEmailBalance
+    this.showFinancialInfo = true, // Default to true for backward compatibility
   });
 
   @override
@@ -130,73 +134,39 @@ class OrderCard extends StatelessWidget {
                         ? DateFormat('MMMM d, yyyy').format(order.endDate!)
                         : 'N/A',
                   ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    "Amount Paid:",
-                    "₦${_formatNumber(order.amountPaid)}",
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow("Email:", order.email),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    "Balance:",
-                    "₦${_formatNumber(order.balance)}",
-                    valueColor: AppColors.primary,
-                    valueBold: true,
-                  ),
+                  
+                  // Conditionally show financial information
+                  if (showFinancialInfo) ...[
+                    const SizedBox(height: 16),
+                    _buildDetailRow(
+                      "Amount Paid:",
+                      "₦${_formatNumber(order.amountPaid)}",
+                    ),
+                    const SizedBox(height: 16),
+                    _buildDetailRow("Email:", order.email),
+                    const SizedBox(height: 16),
+                    _buildDetailRow(
+                      "Balance:",
+                      "₦${_formatNumber(order.balance)}",
+                      valueColor: AppColors.primary,
+                      valueBold: true,
+                    ),
+                  ],
+                  
                   const SizedBox(height: 16),
                   _buildStatusRow("Status:", statusText, statusColor),
 
                   // Action Buttons
-                  if (onAddPayment != null || onUpdateStatus != null) ...[
+                  if (onAddPayment != null || onUpdateStatus != null || onViewReceipt != null) ...[
                     const SizedBox(height: 20),
                     const Divider(),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        if (onUpdateStatus != null)
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: onUpdateStatus,
-                              icon: const Icon(Icons.edit_outlined, size: 18),
-                              label: const Text("Update Status"),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.primary,
-                                side: BorderSide(color: AppColors.primary),
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                            ),
-                          ),
-                        if (onUpdateStatus != null && onAddPayment != null)
-                          const SizedBox(width: 12),
-                        if (onAddPayment != null)
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              onPressed: order.balance > 0
-                                  ? onAddPayment
-                                  : null,
-                              icon: const Icon(Icons.payment, size: 18),
-                              label: const Text("Add Payment"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 12,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                disabledBackgroundColor: Colors.grey[300],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    
+                    // Different button layouts based on showFinancialInfo
+                    if (showFinancialInfo)
+                      _buildFinancialActions()
+                    else
+                      _buildOrderManagementActions(),
                   ],
                 ],
               ),
@@ -204,6 +174,78 @@ class OrderCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  // Action buttons for Sales page (financial management)
+  Widget _buildFinancialActions() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            if (onAddPayment != null)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: order.balance > 0 ? onAddPayment : null,
+                  icon: const Icon(Icons.payment, size: 18),
+                  label: const Text("Add Payment"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    disabledBackgroundColor: Colors.grey[300],
+                  ),
+                ),
+              ),
+            if (onAddPayment != null && onViewReceipt != null)
+              const SizedBox(width: 12),
+            if (onViewReceipt != null)
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: order.amountPaid > 0 ? onViewReceipt : null,
+                  icon: const Icon(Icons.receipt_outlined, size: 18),
+                  label: const Text("View Receipt"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.info,
+                    side: BorderSide(color: AppColors.info),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    disabledForegroundColor: Colors.grey,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // Action buttons for All Orders page (order management)
+  Widget _buildOrderManagementActions() {
+    return Row(
+      children: [
+        if (onUpdateStatus != null)
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: onUpdateStatus,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text("Update Status"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 

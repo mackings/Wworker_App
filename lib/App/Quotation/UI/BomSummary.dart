@@ -10,10 +10,6 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
-
-
 class BOMSummary extends ConsumerStatefulWidget {
   const BOMSummary({super.key});
 
@@ -33,12 +29,15 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   String? selectedDuration = '24';
   String selectedPeriod = 'Day'; // Hour, Day, Week, Month
   final List<String> periodOptions = ['Hour', 'Day', 'Week', 'Month'];
-  
+
   // Duration options (1-365 for days/hours, 1-52 for weeks, 1-12 for months)
   List<String> get durationOptions {
     switch (selectedPeriod) {
       case 'Hour':
-        return List.generate(24 * 30, (index) => '${index + 1}'); // Up to 720 hours (30 days)
+        return List.generate(
+          24 * 30,
+          (index) => '${index + 1}',
+        ); // Up to 720 hours (30 days)
       case 'Day':
         return List.generate(365, (index) => '${index + 1}');
       case 'Week':
@@ -63,7 +62,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     try {
       // Replace with your actual API call
       final costs = await OverheadCostManager.getOverheadCosts();
-      
+
       setState(() {
         overheadCosts = costs;
         isLoadingOverhead = false;
@@ -94,7 +93,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       // Convert overhead cost to daily rate
       double dailyRate = 0.0;
-      
+
       switch (period.toLowerCase()) {
         case 'hourly':
           dailyRate = cost * 24; // 24 hours in a day
@@ -117,7 +116,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       // Convert user's selected duration to days
       double durationInDays = 0.0;
-      
+
       switch (selectedPeriod) {
         case 'Hour':
           durationInDays = duration / 24;
@@ -138,7 +137,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       totalOverhead += proportionalCost;
 
       debugPrint(
-        "📊 ${overhead['category']}: ₦$cost/${period} → ₦${dailyRate.toStringAsFixed(2)}/day × $durationInDays days = ₦${proportionalCost.toStringAsFixed(2)}"
+        "📊 ${overhead['category']}: ₦$cost/${period} → ₦${dailyRate.toStringAsFixed(2)}/day × $durationInDays days = ₦${proportionalCost.toStringAsFixed(2)}",
       );
     }
 
@@ -319,7 +318,10 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       await quotationNotifier.addNewQuotation(newQuotation);
 
-      debugPrint("✅ Quotation created with selling price: ₦${sellingPrice.toStringAsFixed(2)}");
+      debugPrint(
+        "✅ Quotation created with selling price: ₦${sellingPrice.toStringAsFixed(2)}",
+      );
+      debugPrint(newQuotation.toString());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -416,7 +418,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               const SizedBox(height: 20),
               CustomButton(
                 text: "Continue",
-                onPressed: () => _createQuotationAndContinue(materials, additionalCosts),
+                onPressed: () =>
+                    _createQuotationAndContinue(materials, additionalCosts),
               ),
             ],
           ),
@@ -446,7 +449,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
             ),
           ),
           const SizedBox(height: 10),
-          
+
           // Period Selector (Hour, Day, Week, Month)
           Row(
             children: [
@@ -471,10 +474,12 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                     ),
                   ),
                   items: periodOptions
-                      .map((period) => DropdownMenuItem(
-                            value: period,
-                            child: Text(period),
-                          ))
+                      .map(
+                        (period) => DropdownMenuItem(
+                          value: period,
+                          child: Text(period),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -485,7 +490,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                 ),
               ),
               const SizedBox(width: 12),
-              
+
               // Duration Number Selector
               Expanded(
                 flex: 3,
@@ -509,10 +514,14 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                   ),
                   hint: const Text("Select duration"),
                   items: durationOptions
-                      .map((duration) => DropdownMenuItem(
-                            value: duration,
-                            child: Text("$duration ${selectedPeriod.toLowerCase()}${duration != '1' ? 's' : ''}"),
-                          ))
+                      .map(
+                        (duration) => DropdownMenuItem(
+                          value: duration,
+                          child: Text(
+                            "$duration ${selectedPeriod.toLowerCase()}${duration != '1' ? 's' : ''}",
+                          ),
+                        ),
+                      )
                       .toList(),
                   onChanged: (value) {
                     setState(() {
@@ -561,7 +570,11 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         const SizedBox(height: 20),
         _buildCostRow("Cost Price", costPrice),
         const SizedBox(height: 12),
-        _buildCostRow("Overhead Cost", overheadCost, isLoading: isLoadingOverhead),
+        _buildCostRow(
+          "Overhead Cost",
+          overheadCost,
+          isLoading: isLoadingOverhead,
+        ),
         const SizedBox(height: 12),
         const Divider(),
         const SizedBox(height: 12),
@@ -570,7 +583,12 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-  Widget _buildCostRow(String label, double value, {bool isLoading = false, bool isBold = false}) {
+  Widget _buildCostRow(
+    String label,
+    double value, {
+    bool isLoading = false,
+    bool isBold = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [

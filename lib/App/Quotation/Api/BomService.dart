@@ -129,26 +129,28 @@ class BOMService {
   }
 
   // 🟢 4️⃣ CREATE QUOTATION
-  Future<Map<String, dynamic>> createQuotation({
-    required String clientName,
-    required String clientAddress,
-    required String nearestBusStop,
-    required String phoneNumber,
-    required String email,
-    required String description,
-    required List<Map<String, dynamic>> items,
-    required Map<String, dynamic> service,
-    required double discount,
-  }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
 
-      if (token == null) {
-        return {"success": false, "message": "No auth token found"};
-      }
+Future<Map<String, dynamic>> createQuotation({
+  required String clientName,
+  required String clientAddress,
+  required String nearestBusStop,
+  required String phoneNumber,
+  required String email,
+  required String description,
+  required List<Map<String, dynamic>> items,
+  required Map<String, dynamic> service,
+  required double discount,
+  Map<String, dynamic>? additionalData, // ✅ FIXED
+}) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
 
-      final body = {
+    if (token == null) throw Exception("No auth token found");
+
+    final response = await _dio.post(
+      "/api/quotation",
+      data: {
         "clientName": clientName,
         "clientAddress": clientAddress,
         "nearestBusStop": nearestBusStop,
@@ -158,19 +160,22 @@ class BOMService {
         "items": items,
         "service": service,
         "discount": discount,
-      };
+        if (additionalData != null) ...additionalData, // 👈 inject extra fields
+      },
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
 
-      final response = await _dio.post(
-        "/api/quotation",
-        data: body,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      return response.data;
-    } on DioException catch (e) {
-      return _handleError(e);
-    }
+    return response.data;
+  } on DioException catch (e) {
+    return {
+      "success": false,
+      "message": e.response?.data?["message"] ??
+          "Failed to create quotation",
+    };
   }
+}
+
+
 
   Map<String, dynamic> _handleError(DioException e) {
     debugPrint("⚠️ [HANDLE ERROR] => ${e.response?.data ?? e.message}");
@@ -180,3 +185,50 @@ class BOMService {
     };
   }
 }
+
+
+
+
+
+  // Future<Map<String, dynamic>> createQuotation({
+  //   required String clientName,
+  //   required String clientAddress,
+  //   required String nearestBusStop,
+  //   required String phoneNumber,
+  //   required String email,
+  //   required String description,
+  //   required List<Map<String, dynamic>> items,
+  //   required Map<String, dynamic> service,
+  //   required double discount,
+  // }) async {
+  //   try {
+  //     final prefs = await SharedPreferences.getInstance();
+  //     final token = prefs.getString("token");
+
+  //     if (token == null) {
+  //       return {"success": false, "message": "No auth token found"};
+  //     }
+
+  //     final body = {
+  //       "clientName": clientName,
+  //       "clientAddress": clientAddress,
+  //       "nearestBusStop": nearestBusStop,
+  //       "phoneNumber": phoneNumber,
+  //       "email": email,
+  //       "description": description,
+  //       "items": items,
+  //       "service": service,
+  //       "discount": discount,
+  //     };
+
+  //     final response = await _dio.post(
+  //       "/api/quotation",
+  //       data: body,
+  //       options: Options(headers: {"Authorization": "Bearer $token"}),
+  //     );
+
+  //     return response.data;
+  //   } on DioException catch (e) {
+  //     return _handleError(e);
+  //   }
+  // }

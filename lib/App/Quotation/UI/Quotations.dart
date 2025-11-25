@@ -261,7 +261,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         Expanded(
                           child: CustomButton(
                             textSize: 15,
-                            text: "View BOMs",
+                            text: "BOM",
                             outlined: true,
                             onPressed: () {
                               Nav.push(BOMList());
@@ -272,7 +272,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         Expanded(
                           child: CustomButton(
                             textSize: 15,
-                            text: "Quotation",
+                            text: "View all",
                             outlined: true,
                             onPressed: () {
                               Nav.push(AllClientQuotations());

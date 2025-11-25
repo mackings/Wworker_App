@@ -2,26 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
 import 'package:wworker/App/Order/Widget/Order_card.dart';
-import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
 import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
+import 'package:wworker/App/Sales/Views/PaymentRecipt.dart';
+import 'package:wworker/App/Sales/Widgets/emailBalHSheet.dart';
 
 
-
-
-class AllOrdersPage extends StatefulWidget {
-  const AllOrdersPage({super.key});
+class SalesPage extends StatefulWidget {
+  const SalesPage({super.key});
 
   @override
-  State<AllOrdersPage> createState() => _AllOrdersPageState();
+  State<SalesPage> createState() => _SalesPageState();
 }
 
-class _AllOrdersPageState extends State<AllOrdersPage> {
+class _SalesPageState extends State<SalesPage> {
   final OrderService _orderService = OrderService();
   List<OrderModel> orders = [];
   bool isLoading = true;
   String? errorMessage;
   int currentPage = 1;
   int totalPages = 1;
+
+  // Financial summary data
+  double totalRevenue = 0.0;
+  double totalPaid = 0.0;
+  double totalBalance = 0.0;
 
   @override
   void initState() {
@@ -46,6 +50,7 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
         setState(() {
           orders = ordersJson.map((e) => OrderModel.fromJson(e)).toList();
           totalPages = pagination['totalPages'] ?? 1;
+          _calculateFinancials();
           isLoading = false;
         });
       } else {
@@ -62,48 +67,38 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     }
   }
 
-  Future<void> _deleteOrder(OrderModel order) async {
-    // Show loading
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: Color(0xFFA16438)),
-      ),
-    );
+  void _calculateFinancials() {
+    totalRevenue = 0.0;
+    totalPaid = 0.0;
+    totalBalance = 0.0;
 
-    final result = await _orderService.deleteOrder(order.id);
-
-    Navigator.pop(context); // Close loading dialog
-
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Order deleted successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      _loadOrders(); // Reload orders
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Failed to delete order'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    for (var order in orders) {
+      totalRevenue += order.totalAmount ?? 0.0;
+      totalPaid += order.amountPaid ?? 0.0;
+      totalBalance += order.balance ?? 0.0;
     }
   }
 
-  void _showUpdateStatusSheet(OrderModel order) {
+  void _showAddPaymentSheet(OrderModel order) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => UpdateOrderStatusSheet(
+      isScrollControlled: true,
+      builder: (context) => AddPaymentSheet(
         order: order,
-        onStatusUpdated: () {
+        onPaymentAdded: () {
           Navigator.pop(context);
           _loadOrders();
         },
+      ),
+    );
+  }
+
+  void _navigateToReceipt(OrderModel order) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PaymentReceiptPage(order: order),
       ),
     );
   }
@@ -120,7 +115,7 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
-          "All Orders",
+          "Sales",
           style: TextStyle(
             color: Color(0xFF302E2E),
             fontWeight: FontWeight.w600,
@@ -146,7 +141,7 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
             const Icon(Icons.error_outline, size: 60, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Failed to load orders',
+              'Failed to load sales data',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -190,13 +185,13 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.shopping_cart_outlined,
+              Icons.attach_money_outlined,
               size: 80,
               color: Colors.grey[400],
             ),
             const SizedBox(height: 16),
             const Text(
-              'No orders found',
+              'No sales data found',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -211,25 +206,111 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     return RefreshIndicator(
       onRefresh: _loadOrders,
       color: const Color(0xFFA16438),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: orders.length,
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          return OrderCard(
-            order: order,
-            onTap: () {
-              // Navigate to order details if you have that page
-              debugPrint("View order: ${order.orderNumber}");
-            },
-            onDelete: order.status != 'completed'
-                ? () => _deleteOrder(order)
-                : null,
-            onUpdateStatus: () => _showUpdateStatusSheet(order),
-            showFinancialInfo: false, // Hide financial info in All Orders
-          );
-        },
+      child: Column(
+        children: [
+          // Financial Summary Card
+          _buildFinancialSummary(),
+          const SizedBox(height: 16),
+          // Orders List
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: orders.length,
+              itemBuilder: (context, index) {
+                final order = orders[index];
+                return OrderCard(
+                  order: order,
+                  onTap: () {
+                    // Navigate to order details if you have that page
+                    debugPrint("View order: ${order.orderNumber}");
+                  },
+                  onAddPayment: () => _showAddPaymentSheet(order),
+                  onViewReceipt: order.amountPaid > 0
+                      ? () => _navigateToReceipt(order)
+                      : null,
+                  showFinancialInfo: true, // Show financial info in Sales
+                );
+              },
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildFinancialSummary() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFA16438),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Text(
+            'Financial Summary',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSummaryItem(
+                'Total Revenue',
+                '₦${totalRevenue.toStringAsFixed(2)}',
+                Icons.trending_up,
+              ),
+              _buildSummaryItem(
+                'Amount Paid',
+                '₦${totalPaid.toStringAsFixed(2)}',
+                Icons.check_circle_outline,
+              ),
+              _buildSummaryItem(
+                'Balance',
+                '₦${totalBalance.toStringAsFixed(2)}',
+                Icons.account_balance_wallet_outlined,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, IconData icon) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 24),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
     );
   }
 }
