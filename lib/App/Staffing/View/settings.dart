@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/OverHead/View/AddOverhead.dart';
+import 'package:wworker/App/Settings/UI/Materials.dart';
 import 'package:wworker/App/Staffing/Widgets/database.dart';
 import 'package:wworker/App/Staffing/Widgets/notification.dart';
 import 'package:wworker/App/Staffing/Widgets/staffaccess.dart';
@@ -45,6 +46,16 @@ class _SettingsState extends ConsumerState<Settings> {
                   text: "Add Overhead",
                   onPressed: () {
                     Nav.push(AddOverheadCostCard());
+                  },
+                ),
+
+                 SizedBox(height: 30),
+
+              CustomButton(
+                outlined: true,
+                  text: "System Settings",
+                  onPressed: () {
+                    Nav.push(MaterialsPage());
                   },
                 ),
 
