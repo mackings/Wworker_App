@@ -1,9 +1,10 @@
 import 'package:wworker/App/Order/Api/OrderService.dart';
+import 'package:wworker/App/Order/Model/StaffModel.dart';
 
 class OrderModel {
   final String id;
   final String userId;
-  final String? quotationId; // Might be an object or string
+  final String? quotationId;
   final String orderNumber;
   final String quotationNumber;
   final String clientName;
@@ -12,7 +13,7 @@ class OrderModel {
   final String phoneNumber;
   final String email;
   final String description;
-  final List<Map<String, dynamic>> items; // ← just store them as a list of maps
+  final List<Map<String, dynamic>> items;
   final OrderService? service;
   final double discount;
   final double totalCost;
@@ -30,6 +31,12 @@ class OrderModel {
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
+  
+  // NEW: Staff Assignment Fields
+  final StaffModel? assignedTo;
+  final StaffModel? assignedBy;
+  final DateTime? assignedAt;
+  final String? assignmentNotes;
 
   OrderModel({
     required this.id,
@@ -61,13 +68,17 @@ class OrderModel {
     this.notes,
     required this.createdAt,
     required this.updatedAt,
+    // NEW fields
+    this.assignedTo,
+    this.assignedBy,
+    this.assignedAt,
+    this.assignmentNotes,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     final quotationIdData = json['quotationId'];
     String? quotationId;
 
-    // Handle case where quotationId might be an object
     if (quotationIdData is Map) {
       quotationId = quotationIdData['_id'];
     } else if (quotationIdData is String) {
@@ -108,6 +119,17 @@ class OrderModel {
       notes: json['notes'],
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
+      // NEW: Parse assignment fields
+      assignedTo: json['assignedTo'] != null
+          ? StaffModel.fromJson(json['assignedTo'])
+          : null,
+      assignedBy: json['assignedBy'] != null
+          ? StaffModel.fromJson(json['assignedBy'])
+          : null,
+      assignedAt: json['assignedAt'] != null
+          ? DateTime.parse(json['assignedAt'])
+          : null,
+      assignmentNotes: json['assignmentNotes'],
     );
   }
 
@@ -142,8 +164,16 @@ class OrderModel {
       'notes': notes,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+      // NEW fields
+      'assignedTo': assignedTo?.toJson(),
+      'assignedBy': assignedBy?.toJson(),
+      'assignedAt': assignedAt?.toIso8601String(),
+      'assignmentNotes': assignmentNotes,
     };
   }
+  
+  // Helper to check if order is assigned
+  bool get isAssigned => assignedTo != null;
 }
 
 class OrderService {

@@ -7,6 +7,8 @@ import 'package:wworker/App/Staffing/Widgets/staffList.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
 class StaffManagement extends ConsumerStatefulWidget {
   const StaffManagement({super.key});
 
@@ -183,10 +185,12 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Nav.pop(),
-        ),
+        title:                   CustomText(
+                    title: 'Staff List',
+                    titleFontSize: 16,
+                    titleFontWeight: FontWeight.w600,
+                    titleColor: const Color(0xFF302E2E),
+                  ),
         actions: [
           IconButton(
             icon: const Icon(Icons.add, color: Colors.black),
@@ -208,12 +212,6 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               child: Row(
                 children: [
-                  CustomText(
-                    title: 'Staff List',
-                    titleFontSize: 16,
-                    titleFontWeight: FontWeight.w600,
-                    titleColor: const Color(0xFF302E2E),
-                  ),
                 ],
               ),
             ),

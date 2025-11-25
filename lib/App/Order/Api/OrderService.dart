@@ -96,6 +96,8 @@ class OrderService {
     String? status,
     String? paymentStatus,
     String? search,
+    String? assignedTo,
+    bool showMyAssignments = false,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -111,6 +113,8 @@ class OrderService {
         if (status != null) 'status': status,
         if (paymentStatus != null) 'paymentStatus': paymentStatus,
         if (search != null) 'search': search,
+        if (assignedTo != null) 'assignedTo': assignedTo,
+        if (showMyAssignments) 'showMyAssignments': showMyAssignments,
       };
 
       debugPrint("📤 [GET ORDERS] => GET ${Urls.baseUrl}/api/sales/orders");
@@ -333,6 +337,111 @@ class OrderService {
       return {
         "success": false,
         "message": e.response?.data?["message"] ?? "Failed to fetch statistics",
+      };
+    }
+  }
+
+  // 🟢 GET AVAILABLE STAFF FOR ASSIGNMENT
+  Future<Map<String, dynamic>> getAvailableStaff() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        throw Exception("No auth token found");
+      }
+
+      debugPrint(
+        "📤 [GET AVAILABLE STAFF] => GET ${Urls.baseUrl}/api/staff/available",
+      );
+
+      final response = await _dio.get(
+        "/api/orders/staff/available",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [GET AVAILABLE STAFF SUCCESS] => ${response.data}");
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [GET AVAILABLE STAFF ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        "success": false,
+        "message": e.response?.data?["message"] ?? "Failed to fetch staff",
+        "data": [],
+      };
+    }
+  }
+
+  // 🟢 ASSIGN ORDER TO STAFF
+  Future<Map<String, dynamic>> assignOrderToStaff({
+    required String orderId,
+    required String staffId,
+    String? notes,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        throw Exception("No auth token found");
+      }
+
+      debugPrint(
+        "📤 [ASSIGN ORDER] => POST ${Urls.baseUrl}/api/sales/orders/$orderId/assign",
+      );
+
+      final response = await _dio.post(
+        "/api/orders/$orderId/assign",
+        data: {
+          "staffId": staffId,
+          if (notes != null) "notes": notes,
+        },
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [ASSIGN ORDER SUCCESS] => ${response.data}");
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [ASSIGN ORDER ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        "success": false,
+        "message": e.response?.data?["message"] ?? "Failed to assign order",
+      };
+    }
+  }
+
+  // 🟢 UNASSIGN ORDER FROM STAFF
+  Future<Map<String, dynamic>> unassignOrderFromStaff({
+    required String orderId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        throw Exception("No auth token found");
+      }
+
+      debugPrint(
+        "📤 [UNASSIGN ORDER] => POST ${Urls.baseUrl}/api/sales/orders/$orderId/unassign",
+      );
+
+      final response = await _dio.post(
+        "/api/orders/$orderId/unassign",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [UNASSIGN ORDER SUCCESS] => ${response.data}");
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [UNASSIGN ORDER ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        "success": false,
+        "message": e.response?.data?["message"] ?? "Failed to unassign order",
       };
     }
   }

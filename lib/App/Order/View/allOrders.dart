@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
+import 'package:wworker/App/Order/Widget/AssignStaffSheet.dart';
 import 'package:wworker/App/Order/Widget/Order_card.dart';
 import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
 import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
@@ -108,6 +109,22 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     );
   }
 
+  // NEW: Show Assign Staff Sheet
+  void _showAssignStaffSheet(OrderModel order) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => AssignStaffSheet(
+        order: order,
+        onAssigned: () {
+          Navigator.pop(context);
+          _loadOrders(); // Reload to show updated assignment
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -115,10 +132,6 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF302E2E)),
-          onPressed: () => Navigator.pop(context),
-        ),
         title: const Text(
           "All Orders",
           style: TextStyle(
@@ -226,6 +239,7 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
                 ? () => _deleteOrder(order)
                 : null,
             onUpdateStatus: () => _showUpdateStatusSheet(order),
+            onAssignStaff: () => _showAssignStaffSheet(order), // NEW
             showFinancialInfo: false, // Hide financial info in All Orders
           );
         },

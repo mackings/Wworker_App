@@ -14,7 +14,7 @@ class AddOverheadCostCard extends StatefulWidget {
 
   const AddOverheadCostCard({
     super.key,
-    this.title = "Manufacturing Overhead Cost",
+    this.title = "Overhead Cost",
     this.icon,
     this.color,
   });
@@ -305,22 +305,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
+      appBar: AppBar(
+        title: Text(
                       widget.title,
                       style: GoogleFonts.openSans(
                         fontSize: 20,
@@ -328,16 +314,23 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                         color: const Color(0xFFA16438),
                       ),
                     ),
-                  ),
-                  // Refresh button
-                  IconButton(
+
+                    actions: [
+                                        IconButton(
                     icon: const Icon(Icons.refresh),
                     onPressed: isFetchingItems ? null : _fetchOverheadCosts,
                     tooltip: "Refresh",
                   ),
-                ],
-              ),
-            ),
+                    ],
+      ),
+      backgroundColor: const Color(0xFFF5F5F5),
+      body: SafeArea(
+        child: Column(
+          children: [
+
+            SizedBox(height: 15,),
+            // Header
+
 
             // Scrollable content
             Expanded(

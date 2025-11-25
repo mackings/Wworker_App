@@ -3,14 +3,18 @@ import 'package:intl/intl.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
+
+
 class OrderCard extends StatelessWidget {
+  
   final OrderModel order;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onAddPayment;
   final VoidCallback? onUpdateStatus;
-  final VoidCallback? onViewReceipt; // Changed from onEmailBalance
-  final bool showFinancialInfo; // Parameter to control financial display
+  final VoidCallback? onViewReceipt;
+  final VoidCallback? onAssignStaff; // NEW
+  final bool showFinancialInfo;
 
   const OrderCard({
     super.key,
@@ -19,8 +23,9 @@ class OrderCard extends StatelessWidget {
     this.onDelete,
     this.onAddPayment,
     this.onUpdateStatus,
-    this.onViewReceipt, // Changed from onEmailBalance
-    this.showFinancialInfo = true, // Default to true for backward compatibility
+    this.onViewReceipt,
+    this.onAssignStaff, // NEW
+    this.showFinancialInfo = true,
   });
 
   @override
@@ -73,7 +78,7 @@ class OrderCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section with Delete Button
+            // Image Section with Delete Button & Assignment Badge
             Stack(
               children: [
                 ClipRRect(
@@ -96,6 +101,51 @@ class OrderCard extends StatelessWidget {
                     },
                   ),
                 ),
+                
+                // NEW: Assignment Badge (Top Left)
+                if (order.isAssigned)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.person,
+                            size: 14,
+                            color: Color(0xFFA16438),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            order.assignedTo!.displayName,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFFA16438),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                
+                // Delete Button (Top Right)
                 if (onDelete != null)
                   Positioned(
                     top: 8,
@@ -153,11 +203,79 @@ class OrderCard extends StatelessWidget {
                     ),
                   ],
                   
+                  // NEW: Show Assignment Info
+                  if (order.isAssigned) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFFA16438).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 16,
+                            color: Color(0xFFA16438),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Assigned to',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFFA16438),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                Text(
+                                  order.assignedTo!.displayName,
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF302E2E),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                if (order.assignedTo!.position.isNotEmpty)
+                                  Text(
+                                    order.assignedTo!.position,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          if (onAssignStaff != null)
+                            IconButton(
+                              onPressed: onAssignStaff,
+                              icon: const Icon(Icons.edit_outlined),
+                              iconSize: 18,
+                              color: const Color(0xFFA16438),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
                   const SizedBox(height: 16),
                   _buildStatusRow("Status:", statusText, statusColor),
 
                   // Action Buttons
-                  if (onAddPayment != null || onUpdateStatus != null || onViewReceipt != null) ...[
+                  if (onAddPayment != null || 
+                      onUpdateStatus != null || 
+                      onViewReceipt != null ||
+                      onAssignStaff != null) ...[
                     const SizedBox(height: 20),
                     const Divider(),
                     const SizedBox(height: 12),
@@ -227,24 +345,50 @@ class OrderCard extends StatelessWidget {
 
   // Action buttons for All Orders page (order management)
   Widget _buildOrderManagementActions() {
-    return Row(
+    return Column(
       children: [
-        if (onUpdateStatus != null)
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: onUpdateStatus,
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              label: const Text("Update Status"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+        Row(
+          children: [
+            if (onUpdateStatus != null)
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: onUpdateStatus,
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  label: const Text("Update Status"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
+            // NEW: Assign Staff Button
+            if (onUpdateStatus != null && onAssignStaff != null)
+              const SizedBox(width: 12),
+            if (onAssignStaff != null)
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onAssignStaff,
+                  icon: Icon(
+                    order.isAssigned ? Icons.person : Icons.person_add,
+                    size: 18,
+                  ),
+                  label: Text(order.isAssigned ? "Reassign" : "Assign Staff"),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }

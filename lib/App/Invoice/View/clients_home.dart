@@ -77,10 +77,6 @@ class _ClientsHomeState extends State<ClientsHome> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF302E2E)),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: SafeArea(
         child: FutureBuilder<List<ClientModel>>(
