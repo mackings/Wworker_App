@@ -6,6 +6,7 @@ class QuoteGlanceCard extends StatelessWidget {
   final String bomNo;
   final String description;
   final double costPrice;
+  final double sellingPrice;
   final int quantity;
   final VoidCallback onIncrease;
   final VoidCallback onDecrease;
@@ -18,6 +19,7 @@ class QuoteGlanceCard extends StatelessWidget {
     required this.bomNo,
     required this.description,
     required this.costPrice,
+    required this.sellingPrice,
     required this.quantity,
     required this.onIncrease,
     required this.onDecrease,
@@ -94,7 +96,7 @@ class QuoteGlanceCard extends StatelessWidget {
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // 👈 prevents extra blank space
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // 🖼️ Product image
                   ClipRRect(
@@ -106,6 +108,18 @@ class QuoteGlanceCard extends StatelessWidget {
                       height: 180,
                       width: double.infinity,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          height: 180,
+                          width: double.infinity,
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 50,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -114,10 +128,53 @@ class QuoteGlanceCard extends StatelessWidget {
                   _buildRow('Product Name', productName),
                   _buildRow('BOM NO', bomNo),
                   _buildRow('Description', description),
+                  
+                  const SizedBox(height: 8),
+                  
+                  // 💰 Cost Price
                   _buildRow(
                     'Cost Price',
                     "₦${costPrice.toStringAsFixed(2)}",
                     bold: true,
+                  ),
+                  
+                  // 💵 Selling Price (highlighted differently)
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF3E0),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(
+                        color: const Color(0xFFA16438),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Selling Price',
+                          style: TextStyle(
+                            color: Color(0xFF302E2E),
+                            fontSize: 13,
+                            fontFamily: 'Open Sans',
+                            fontWeight: FontWeight.w600,
+                            height: 1.33,
+                          ),
+                        ),
+                        Text(
+                          "₦${sellingPrice.toStringAsFixed(2)}",
+                          style: const TextStyle(
+                            color: Color(0xFFA16438),
+                            fontSize: 14,
+                            fontFamily: 'Open Sans',
+                            fontWeight: FontWeight.w700,
+                            height: 1.33,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   const SizedBox(height: 12),

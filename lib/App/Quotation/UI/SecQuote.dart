@@ -35,6 +35,43 @@ class SecQuote extends ConsumerStatefulWidget {
 class _SecQuoteState extends ConsumerState<SecQuote> {
   bool isLoading = false;
 
+  // ✅ Get cost price from quotation
+  double _getCostPrice(Map<String, dynamic> quotation) {
+    if (quotation.containsKey("costPrice")) {
+      return (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
+    }
+
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    double materialCost = materials.fold<double>(
+      0,
+      (sum, m) => sum + (double.tryParse(m["Price"]?.toString() ?? "0") ?? 0),
+    );
+
+    double additionalCost = additionalCosts.fold<double>(
+      0,
+      (sum, c) =>
+          sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
+    );
+
+    return materialCost + additionalCost;
+  }
+
+  // ✅ Get selling price from quotation (cost + overhead)
+  double _getSellingPrice(Map<String, dynamic> quotation) {
+    if (quotation.containsKey("sellingPrice")) {
+      return (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
+    }
+
+    // Fallback to cost price for backward compatibility
+    return _getCostPrice(quotation);
+  }
+
   @override
   Widget build(BuildContext context) {
     List<QuotationItem> allItems = [];
@@ -44,34 +81,17 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       final quantity = widget.quotationQuantities[quotationId] ?? 1;
       final product = quotation["product"] ?? {};
 
-      // Total cost of materials + additional costs
-      final materials = List<Map<String, dynamic>>.from(
-        quotation["materials"] ?? [],
-      );
-      final additionalCosts = List<Map<String, dynamic>>.from(
-        quotation["additionalCosts"] ?? [],
-      );
-
-      double materialCost = materials.fold<double>(
-        0,
-        (sum, m) => sum + (double.tryParse(m["Price"]?.toString() ?? "0") ?? 0),
-      );
-
-      double additionalCost = additionalCosts.fold<double>(
-        0,
-        (sum, c) =>
-            sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
-      );
-
-      double totalCostPerQuotation = (materialCost + additionalCost) * quantity;
+      // Get the selling price (includes overhead)
+      final sellingPricePerUnit = _getSellingPrice(quotation);
+      final totalSellingPrice = sellingPricePerUnit * quantity;
 
       allItems.add(
         QuotationItem(
           product: product["name"] ?? "Unknown Product",
           description: product["description"] ?? "",
           quantity: quantity,
-          unitPrice: "₦${(materialCost + additionalCost).toStringAsFixed(2)}",
-          total: "₦${totalCostPerQuotation.toStringAsFixed(2)}",
+          unitPrice: "₦${sellingPricePerUnit.toStringAsFixed(2)}",
+          total: "₦${totalSellingPrice.toStringAsFixed(2)}",
         ),
       );
     }
@@ -163,7 +183,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
     final bomService = BOMService();
 
-    // Flatten materials for backend
+    // Flatten materials for backend with selling prices
     final items = widget.selectedQuotations
         .map((quotation) {
           final quotationId = quotation["id"] as String;
@@ -173,6 +193,10 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
           );
           final product = quotation["product"] ?? {};
           final productImage = product["image"] ?? "";
+          
+          // Get selling price for this quotation
+          final sellingPricePerUnit = _getSellingPrice(quotation);
+          final costPricePerUnit = _getCostPrice(quotation);
 
           return materials.map((m) {
             final materialQty =
@@ -180,7 +204,13 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
             final unitPrice =
                 double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
             final totalQuantity = materialQty * quantity;
-            final totalPrice = unitPrice * totalQuantity;
+            
+            // Calculate proportional selling price for this material
+            // (material's share of total cost) × selling price
+            final materialCostShare = costPricePerUnit > 0 
+                ? unitPrice / costPricePerUnit 
+                : 0;
+            final materialSellingPrice = sellingPricePerUnit * materialCostShare * totalQuantity;
 
             return {
               "woodType": m["Product"] ?? "",
@@ -192,9 +222,9 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                   double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
               "unit": m["Unit"] ?? "cm",
               "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
-              "quantity": 1, // Set to 1 since we're sending total prices
-              "costPrice": totalPrice, // Send total cost price
-              "sellingPrice": totalPrice, // Send total selling price
+              "quantity": totalQuantity,
+              "costPrice": unitPrice * totalQuantity, // Total cost price
+              "sellingPrice": materialSellingPrice, // Total selling price (includes overhead share)
               "description": m["Materialname"] ?? "",
               "image": productImage,
             };
@@ -207,7 +237,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       "product": "Materials Service",
       "quantity": 1,
       "discount": 0,
-      "totalPrice": totalSum,
+      "totalPrice": totalSum, // This is now the total selling price
     };
 
     final response = await bomService.createQuotation(

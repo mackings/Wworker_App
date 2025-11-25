@@ -9,6 +9,8 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
 class QuotationSummary extends ConsumerStatefulWidget {
   const QuotationSummary({super.key});
 
@@ -74,23 +76,14 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
     }
   }
 
-  double _calculateMaterialCost(List<Map<String, dynamic>> materials) {
-    return materials.fold<double>(
-      0,
-      (sum, item) =>
-          sum + (double.tryParse(item["Price"]?.toString() ?? "0") ?? 0.0),
-    );
-  }
+  // ✅ Get cost price from quotation (materials + additional costs)
+  double _getCostPrice(Map<String, dynamic> quotation) {
+    // If costPrice is already calculated and stored
+    if (quotation.containsKey("costPrice")) {
+      return (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
+    }
 
-  double _calculateAdditionalCost(List<Map<String, dynamic>> additionalCosts) {
-    return additionalCosts.fold<double>(
-      0,
-      (sum, item) =>
-          sum + (double.tryParse(item["amount"]?.toString() ?? "0") ?? 0.0),
-    );
-  }
-
-  double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    // Otherwise calculate it
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
     );
@@ -98,10 +91,40 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
       quotation["additionalCosts"] ?? [],
     );
 
-    double total =
-        _calculateMaterialCost(materials) +
-        _calculateAdditionalCost(additionalCosts);
-    return total * quantity;
+    double materialTotal = materials.fold<double>(
+      0,
+      (sum, item) =>
+          sum + (double.tryParse(item["Price"]?.toString() ?? "0") ?? 0.0),
+    );
+
+    double additionalTotal = additionalCosts.fold<double>(
+      0,
+      (sum, item) =>
+          sum + (double.tryParse(item["amount"]?.toString() ?? "0") ?? 0.0),
+    );
+
+    return materialTotal + additionalTotal;
+  }
+
+  // ✅ Get selling price from quotation (cost price + overhead)
+  double _getSellingPrice(Map<String, dynamic> quotation) {
+    // If sellingPrice is already calculated and stored
+    if (quotation.containsKey("sellingPrice")) {
+      return (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
+    }
+
+    // Otherwise return cost price (for backward compatibility)
+    return _getCostPrice(quotation);
+  }
+
+  // ✅ Calculate total cost with quantity multiplier
+  double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    return _getCostPrice(quotation) * quantity;
+  }
+
+  // ✅ Calculate total selling price with quantity multiplier
+  double _calculateTotalSellingPrice(Map<String, dynamic> quotation, int quantity) {
+    return _getSellingPrice(quotation) * quantity;
   }
 
   @override
@@ -145,7 +168,7 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
                   left: 20,
                   right: 20,
                   top: 20,
-                  bottom: 140,
+                  bottom: 200, // Increased to accommodate buttons
                 ),
                 itemCount: allQuotations.length,
                 itemBuilder: (context, index) {
@@ -161,6 +184,10 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
                       bomNo: product["productId"] ?? "N/A",
                       description: product["description"] ?? "",
                       costPrice: _calculateTotalCost(
+                        quotation,
+                        currentQuantity,
+                      ),
+                      sellingPrice: _calculateTotalSellingPrice(
                         quotation,
                         currentQuantity,
                       ),
@@ -200,7 +227,7 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
                 children: [
                   CustomButton(
                     text: "Continue",
-                    icon: Icons.add,
+                    icon: Icons.arrow_forward,
                     onPressed: () {
                       final quotationQuantitiesMap = <String, int>{};
 

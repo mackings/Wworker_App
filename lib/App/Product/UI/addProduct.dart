@@ -12,6 +12,8 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
+
+
 class AddProduct extends ConsumerStatefulWidget {
   final ProductModel? existingProduct;
 
@@ -69,8 +71,9 @@ class _AddProductState extends ConsumerState<AddProduct> {
   Future<void> _uploadProduct() async {
     final existing = widget.existingProduct;
 
+    // ✅ If using existing product without edits, just proceed
     if (existing != null && !_isEdited) {
-      _proceedWithQuotation(existing);
+      _proceedToBOMSummary(existing);
       return;
     }
 
@@ -104,7 +107,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
       if (response["success"] == true) {
         final productData = response["data"];
-        _proceedWithQuotation(productData);
+        _proceedToBOMSummary(productData);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -121,64 +124,39 @@ class _AddProductState extends ConsumerState<AddProduct> {
     }
   }
 
-  Future<void> _proceedWithQuotation(dynamic productData) async {
+  // ✅ Store product data in provider and navigate to BOM Summary
+  Future<void> _proceedToBOMSummary(dynamic productData) async {
     final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
-    final materialNotifier = ref.read(materialProvider.notifier);
 
-    final materialState = materialNotifier.state;
-    final materials = List<Map<String, dynamic>>.from(
-      materialState["materials"] ?? [],
-    );
-    final additionalCosts = List<Map<String, dynamic>>.from(
-      materialState["additionalCosts"] ?? [],
-    );
+    // ✅ Store product data in provider (but don't create quotation yet)
+    final productInfo = (productData is ProductModel)
+        ? {
+            "productId": productData.productId,
+            "name": productData.name,
+            "category": productData.category,
+            "description": productData.description,
+            "image": productData.image,
+          }
+        : productData;
 
-    // ✅ Safely get product name
-    final productName = (productData is ProductModel)
-        ? productData.name
-        : (productData is Map<String, dynamic>)
-        ? productData["name"]
-        : "Unknown";
+    // ✅ Just set the product data without creating a quotation
+    quotationNotifier.setProduct(productInfo);
 
-    // ✅ Update materials with product name
-    final updatedMaterials = materials
-        .map((m) => {...m, "Product": productName})
-        .toList();
-
-    final newQuotation = {
-      "product": (productData is ProductModel)
-          ? {
-              "productId": productData.productId,
-              "name": productData.name,
-              "category": productData.category,
-              "description": productData.description,
-              "image": productData.image,
-            }
-          : productData,
-      "materials": updatedMaterials,
-      "additionalCosts": additionalCosts,
-    };
-
-    await quotationNotifier.addNewQuotation(newQuotation);
+    debugPrint("✅ Product data stored: ${productInfo["name"]}");
 
     if (context.mounted) {
-      // Navigator.push(
-      //   context,
-      //   MaterialPageRoute(builder: (context) => const QuotationSummary()),
-      // );
-
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const BOMSummary()),
       );
-    }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("✅ Quotation created successfully!"),
-        backgroundColor: Colors.green,
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ Product selected! Add materials to continue."),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
