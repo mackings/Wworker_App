@@ -698,7 +698,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(child: Text("✅ Invoice created successfully")),
+                Expanded(child: Text("Invoice created successfully")),
               ],
             ),
             backgroundColor: Colors.green,
@@ -709,6 +709,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         // Navigate back to home or invoice list
         Navigator.pop(context);
         Navigator.pop(context);
+
       } else {
         if (!mounted) return;
 

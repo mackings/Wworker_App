@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/Constant/urls.dart';
-
-
+import 'package:wworker/GeneralWidgets/Nav.dart';
 
 class OrderPreviewPage extends StatefulWidget {
   final Quotation quotation;
@@ -47,7 +46,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   /// Calculate end date based on expected duration
   DateTime _calculateEndDate(DateTime start) {
     final duration = widget.quotation.expectedDuration;
-    
+
     if (duration == null || duration.value == null) {
       // Default to 1 day if no duration specified
       return start.add(const Duration(days: 1));
@@ -60,16 +59,16 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
       case 'day':
       case 'days':
         return start.add(Duration(days: value));
-      
+
       case 'week':
       case 'weeks':
         return start.add(Duration(days: value * 7));
-      
+
       case 'month':
       case 'months':
         // Approximate month as 30 days
         return start.add(Duration(days: value * 30));
-      
+
       default:
         return start.add(Duration(days: value));
     }
@@ -95,7 +94,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         startDate = picked;
@@ -125,7 +124,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         );
       },
     );
-    
+
     if (picked != null) {
       setState(() {
         endDate = picked;
@@ -204,7 +203,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 ),
               ),
               const SizedBox(height: 16),
-
             ],
           ),
         ),
@@ -320,7 +318,10 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                       children: [
                         Text(
                           "Items: ${widget.quotation.items.length}",
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
                         if (widget.quotation.expectedDuration != null) ...[
                           const SizedBox(width: 8),
@@ -368,7 +369,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
             ],
           ),
           const SizedBox(height: 16),
-          
+
           // Date Pickers with auto-calculation
           Row(
             children: [
@@ -390,18 +391,14 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
               ),
             ],
           ),
-          
+
           // Show hint about auto-calculation
           if (startDate != null && endDate != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    size: 14,
-                    color: Colors.grey[600],
-                  ),
+                  Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
                   const SizedBox(width: 4),
                   Expanded(
                     child: Text(
@@ -708,7 +705,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(child: Text("✅ Order created successfully")),
+                Expanded(child: Text("Order created successfully")),
               ],
             ),
             backgroundColor: Colors.green,
@@ -716,7 +713,9 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           ),
         );
 
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Nav.pop();
+        Nav.pop();
+
       } else {
         if (!mounted) return;
 

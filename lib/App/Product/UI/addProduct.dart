@@ -150,12 +150,12 @@ class _AddProductState extends ConsumerState<AddProduct> {
         MaterialPageRoute(builder: (context) => const BOMSummary()),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("✅ Product selected! Add materials to continue."),
-          backgroundColor: Colors.green,
-        ),
-      );
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   const SnackBar(
+      //     content: Text("✅ Product selected! Add materials to continue."),
+      //     backgroundColor: Colors.green,
+      //   ),
+      // );
     }
   }
 

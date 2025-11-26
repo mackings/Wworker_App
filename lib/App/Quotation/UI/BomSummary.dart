@@ -331,7 +331,13 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
         );
 
-        Nav.pushReplacement(AllQuotations());
+        Nav.pop();
+        Nav.pop();
+        Nav.pop();
+      
+
+       // Nav.pushReplacement(AllQuotations());
+
       }
     } catch (e) {
       debugPrint("⚠️ Error creating quotation: $e");

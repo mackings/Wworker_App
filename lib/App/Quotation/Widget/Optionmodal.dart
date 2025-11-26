@@ -58,7 +58,7 @@ class SelectOptionSheet extends StatelessWidget {
           ...options.map(
             (option) => GestureDetector(
               onTap: () {
-                Navigator.pop(context); // Close the modal
+               // Navigator.pop(context); // Close the modal
                 option.onTap?.call(); // Execute the callback
               },
               child: Container(
