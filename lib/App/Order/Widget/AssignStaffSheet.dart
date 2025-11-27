@@ -23,6 +23,7 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
   final TextEditingController _notesController = TextEditingController();
   
   List<StaffModel> staffList = [];
+  Map<String, int> staffWorkload = {}; // staffId -> pending orders count
   StaffModel? selectedStaff;
   bool isLoading = true;
   bool isAssigning = false;
@@ -57,8 +58,14 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
 
       if (result['success'] == true) {
         final List<dynamic> staffJson = result['data'] ?? [];
+        final List<StaffModel> loadedStaff = 
+            staffJson.map((e) => StaffModel.fromJson(e)).toList();
+        
+        // Load workload for each staff
+        await _loadStaffWorkloads(loadedStaff);
+        
         setState(() {
-          staffList = staffJson.map((e) => StaffModel.fromJson(e)).toList();
+          staffList = loadedStaff;
           isLoading = false;
         });
       } else {
@@ -75,6 +82,38 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
     }
   }
 
+  Future<void> _loadStaffWorkloads(List<StaffModel> staff) async {
+    try {
+      // Fetch all orders to calculate workload
+      final ordersResult = await _orderService.getAllOrders();
+      
+      if (ordersResult['success'] == true) {
+        final data = ordersResult['data'];
+        final List<dynamic> ordersJson = data['orders'] ?? [];
+        final workloadMap = <String, int>{};
+        
+        // Count pending/in-progress orders for each staff
+        for (var orderJson in ordersJson) {
+          final order = OrderModel.fromJson(orderJson);
+          
+          // Only count orders that are pending or in-progress
+          if ((order.status == 'pending' || order.status == 'in_progress') &&
+              order.assignedTo != null) {
+            final staffId = order.assignedTo!.id;
+            workloadMap[staffId] = (workloadMap[staffId] ?? 0) + 1;
+          }
+        }
+        
+        setState(() {
+          staffWorkload = workloadMap;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading staff workloads: $e');
+      // Continue without workload data
+    }
+  }
+
   Future<void> _assignStaff() async {
     if (selectedStaff == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -84,6 +123,102 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
         ),
       );
       return;
+    }
+
+    // Show warning if staff has high workload
+    final workload = staffWorkload[selectedStaff!.id] ?? 0;
+    if (workload >= 1) {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: workload >= 3 ? Colors.red : Colors.orange,
+                size: 28,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('Pending Orders Warning'),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${selectedStaff!.displayName} currently has $workload pending order${workload > 1 ? 's' : ''}.',
+                style: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: workload >= 3 
+                      ? Colors.red.withOpacity(0.1)
+                      : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: workload >= 3 
+                        ? Colors.red.withOpacity(0.3)
+                        : Colors.orange.withOpacity(0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      workload >= 3 
+                          ? Icons.error_outline 
+                          : Icons.info_outline,
+                      color: workload >= 3 ? Colors.red : Colors.orange,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        workload >= 3
+                            ? 'This staff member has a high workload. Consider assigning to someone else.'
+                            : 'This staff member has pending orders.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: workload >= 3 
+                              ? Colors.red[900] 
+                              : Colors.orange[900],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Are you sure you want to assign this order?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA16438),
+              ),
+              child: const Text('Assign Anyway',style: TextStyle(color: Colors.white),),
+            ),
+          ],
+        ),
+      );
+      
+      if (confirm != true) return;
     }
 
     setState(() => isAssigning = true);
@@ -487,6 +622,8 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
 
   Widget _buildStaffTile(StaffModel staff) {
     final isSelected = selectedStaff?.id == staff.id;
+    final workload = staffWorkload[staff.id] ?? 0;
+    final hasPendingOrders = workload > 0;
     
     return GestureDetector(
       onTap: () {
@@ -511,27 +648,50 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: isSelected 
-                    ? const Color(0xFFA16438) 
-                    : Colors.grey[200],
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  staff.displayName.isNotEmpty 
-                      ? staff.displayName[0].toUpperCase() 
-                      : '?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : Colors.grey[600],
+            Stack(
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: isSelected 
+                        ? const Color(0xFFA16438) 
+                        : Colors.grey[200],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      staff.displayName.isNotEmpty 
+                          ? staff.displayName[0].toUpperCase() 
+                          : '?',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isSelected ? Colors.white : Colors.grey[600],
+                      ),
+                    ),
                   ),
                 ),
-              ),
+                // Warning icon for pending orders
+                if (hasPendingOrders)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: workload >= 3 ? Colors.red : Colors.orange,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        Icons.warning_rounded,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -585,16 +745,69 @@ class _AssignStaffSheetState extends State<AssignStaffSheet> {
                         color: Colors.grey[600],
                       ),
                     ),
-                  Text(
-                    staff.email,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[500],
-                    ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          staff.email,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      // Pending orders badge
+                      if (hasPendingOrders) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: workload >= 3 
+                                ? Colors.red[50] 
+                                : Colors.orange[50],
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: workload >= 3 
+                                  ? Colors.red[200]! 
+                                  : Colors.orange[200]!,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.pending_actions,
+                                size: 12,
+                                color: workload >= 3 
+                                    ? Colors.red[700] 
+                                    : Colors.orange[700],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$workload pending',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  color: workload >= 3 
+                                      ? Colors.red[700] 
+                                      : Colors.orange[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
             if (isSelected)
               const Icon(
                 Icons.check_circle,

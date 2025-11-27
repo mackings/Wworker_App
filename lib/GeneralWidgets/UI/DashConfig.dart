@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Dashboad/Home.dart';
+import 'package:wworker/App/Order/View/allOrders.dart';
+import 'package:wworker/App/Quotation/UI/Quotations.dart';
+import 'package:wworker/App/Sales/Views/salesHome.dart';
 import 'package:wworker/App/Staffing/View/settings.dart';
 import 'package:wworker/GeneralWidgets/UI/NavBar.dart';
 
@@ -15,9 +18,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   final List<Widget> _pages = const [
     Home(),
-    Center(child: Text('Orders')),
-    Center(child: Text('Quotations')),
-    Center(child: Text('Profile')),
+    AllQuotations(),
+    AllOrdersPage(),
+    SalesPage(),
     Settings(),
   ];
 
@@ -32,7 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           BottomNavItem(icon: Icons.home, label: "Home"),
           BottomNavItem(icon: Icons.calculate, label: "Quotation"),
           BottomNavItem(icon: Icons.shopping_cart_outlined, label: "Orders"),
-          BottomNavItem(icon: Icons.description_outlined, label: "Quotes"),
+          BottomNavItem(icon: Icons.analytics, label: "Sales"),
           BottomNavItem(icon: Icons.settings, label: "Settings"),
         ],
       ),
