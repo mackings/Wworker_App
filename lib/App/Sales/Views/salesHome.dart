@@ -251,15 +251,7 @@ class _SalesPageState extends State<SalesPage> {
       ),
       child: Column(
         children: [
-          const Text(
-            'Financial Summary',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 20),
+        
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [

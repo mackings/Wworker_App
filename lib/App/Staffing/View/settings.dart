@@ -43,7 +43,7 @@ class _SettingsState extends ConsumerState<Settings> {
                 SizedBox(height: 30),
 
                 CustomButton(
-                  text: "Add Overhead",
+                  text: "Overhead cost",
                   onPressed: () {
                     Nav.push(AddOverheadCostCard());
                   },

@@ -31,8 +31,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   String selectedCategory = 'Depreciation';
 
   // Periods
-  final List<String> periods = ['Monthly', 'Quarterly', 'Yearly'];
-  String? selectedPeriod = 'Yearly';
+  final List<String> periods = ['Hourly','Daily','Monthly', 'Quarterly', 'Yearly'];
+  String? selectedPeriod = 'Monthly';
 
   // Form fields
   final TextEditingController descriptionController = TextEditingController();

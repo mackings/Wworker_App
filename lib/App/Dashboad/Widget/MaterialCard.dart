@@ -208,7 +208,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "Unit": unit,
       "Sqm": _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
       "Price": _costCalculation!.pricing.projectCost.toStringAsFixed(2),
-      "quantity": _costCalculation!.quantity.minimumUnits.toString(),
+       "quantity": "1"
+     // "quantity": _costCalculation!.quantity.minimumUnits.toString(),
     };
 
     widget.onAddItem?.call(item);
