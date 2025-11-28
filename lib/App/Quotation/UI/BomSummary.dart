@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/OverHead/View/AddOverhead.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
@@ -10,6 +11,53 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+
+
+
+class PricingSettingsManager {
+  static const String _markupKey = 'pricing_markup_percentage';
+  static const String _pricingMethodKey = 'pricing_method';
+  static const String _workingDaysKey = 'factory_working_days_per_month';
+
+  // Save markup percentage
+  static Future<void> saveMarkup(double markupPercentage) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_markupKey, markupPercentage);
+    debugPrint("💾 Saved markup: $markupPercentage%");
+  }
+
+  // Get markup percentage (default: 30%)
+  static Future<double> getMarkup() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_markupKey) ?? 30.0;
+  }
+
+  // Save pricing method (Method 1 or Method 2)
+  static Future<void> savePricingMethod(String method) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_pricingMethodKey, method);
+    debugPrint("💾 Saved pricing method: $method");
+  }
+
+  // Get pricing method (default: Method 1)
+  static Future<String> getPricingMethod() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_pricingMethodKey) ?? 'Method 1';
+  }
+
+  // Save working days per month
+  static Future<void> saveWorkingDays(int days) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_workingDaysKey, days);
+    debugPrint("💾 Saved working days: $days");
+  }
+
+  // Get working days per month (default: 26 days)
+  static Future<int> getWorkingDays() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_workingDaysKey) ?? 26;
+  }
+}
 class BOMSummary extends ConsumerStatefulWidget {
   const BOMSummary({super.key});
 
@@ -26,18 +74,45 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   bool isLoadingOverhead = true;
 
   // Expected Duration State
-  String? selectedDuration = '24';
-  String selectedPeriod = 'Day'; // Hour, Day, Week, Month
+  String? selectedDuration = '1';
+  String selectedPeriod = 'Day';
   final List<String> periodOptions = ['Hour', 'Day', 'Week', 'Month'];
 
-  // Duration options (1-365 for days/hours, 1-52 for weeks, 1-12 for months)
+  // Pricing Settings
+  double markupPercentage = 30.0;
+  String pricingMethod = 'Method 1'; // Method 1 or Method 2
+  int workingDaysPerMonth = 26;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadOverheadCosts();
+     _loadPricingSettings();
+  }
+
+  // Load pricing settings
+  Future<void> _loadPricingSettings() async {
+    final markup = await PricingSettingsManager.getMarkup();
+    final method = await PricingSettingsManager.getPricingMethod();
+    final workingDays = await PricingSettingsManager.getWorkingDays();
+
+    setState(() {
+      markupPercentage = markup;
+      pricingMethod = method;
+      workingDaysPerMonth = workingDays;
+    });
+
+    debugPrint("📊 Loaded pricing settings:");
+    debugPrint("   Markup: $markupPercentage%");
+    debugPrint("   Method: $pricingMethod");
+    debugPrint("   Working Days/Month: $workingDaysPerMonth");
+  }
+
+  // Duration options
   List<String> get durationOptions {
     switch (selectedPeriod) {
       case 'Hour':
-        return List.generate(
-          24 * 30,
-          (index) => '${index + 1}',
-        ); // Up to 720 hours (30 days)
+        return List.generate(24 * 30, (index) => '${index + 1}');
       case 'Day':
         return List.generate(365, (index) => '${index + 1}');
       case 'Week':
@@ -49,18 +124,11 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _loadOverheadCosts();
-  }
-
-  // 📊 Load Overhead Costs from API
+  // Load Overhead Costs from API
   Future<void> _loadOverheadCosts() async {
     setState(() => isLoadingOverhead = true);
 
     try {
-      // Replace with your actual API call
       final costs = await OverheadCostManager.getOverheadCosts();
 
       setState(() {
@@ -78,215 +146,205 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     }
   }
 
-  // 💰 Calculate Overhead Cost Based on Duration and Period
-  double calculateProportionalOverhead() {
-    if (overheadCosts.isEmpty || selectedDuration == null) return 0.0;
+  // 💰 METHOD 1: Calculate MOC (Manufacturing Overhead Cost) per day
+  double calculateMOCPerDay() {
+    if (overheadCosts.isEmpty) return 0.0;
 
-    final int duration = int.tryParse(selectedDuration!) ?? 0;
-    if (duration == 0) return 0.0;
-
-    double totalOverhead = 0.0;
+    double yearlyTotal = 0.0;
 
     for (var overhead in overheadCosts) {
       final double cost = (overhead['cost'] ?? 0).toDouble();
       final String period = overhead['period'] ?? 'Monthly';
 
-      // Convert overhead cost to daily rate
-      double dailyRate = 0.0;
+      // Convert all costs to yearly
+      double yearlyCost = 0.0;
 
       switch (period.toLowerCase()) {
         case 'hourly':
-          dailyRate = cost * 24; // 24 hours in a day
+          yearlyCost = cost * 24 * 365; // hours per year
           break;
         case 'daily':
-          dailyRate = cost;
+          yearlyCost = cost * 365;
           break;
         case 'weekly':
-          dailyRate = cost / 7;
+          yearlyCost = cost * 52;
           break;
         case 'monthly':
-          dailyRate = cost / 30; // Approximate 30 days per month
+          yearlyCost = cost * 12;
+          break;
+        case 'quarterly':
+          yearlyCost = cost * 4;
           break;
         case 'yearly':
-          dailyRate = cost / 365;
+          yearlyCost = cost;
           break;
         default:
-          dailyRate = cost / 30; // Default to monthly
+          yearlyCost = cost * 12; // Default to monthly
       }
 
-      // Convert user's selected duration to days
-      double durationInDays = 0.0;
-
-      switch (selectedPeriod) {
-        case 'Hour':
-          durationInDays = duration / 24;
-          break;
-        case 'Day':
-          durationInDays = duration.toDouble();
-          break;
-        case 'Week':
-          durationInDays = duration * 7;
-          break;
-        case 'Month':
-          durationInDays = duration * 30;
-          break;
-      }
-
-      // Calculate proportional overhead
-      final proportionalCost = dailyRate * durationInDays;
-      totalOverhead += proportionalCost;
-
+      yearlyTotal += yearlyCost;
+      
       debugPrint(
-        "📊 ${overhead['category']}: ₦$cost/${period} → ₦${dailyRate.toStringAsFixed(2)}/day × $durationInDays days = ₦${proportionalCost.toStringAsFixed(2)}",
+        "📊 ${overhead['category']}: ₦$cost/${period} → ₦${yearlyCost.toStringAsFixed(2)}/year",
       );
     }
 
-    return totalOverhead;
+    // Calculate MOC per day
+    final monthlyMOC = yearlyTotal / 12;
+    final dailyMOC = monthlyMOC / workingDaysPerMonth;
+
+    debugPrint("📊 Yearly Total: ₦${yearlyTotal.toStringAsFixed(2)}");
+    debugPrint("📊 Monthly MOC: ₦${monthlyMOC.toStringAsFixed(2)}");
+    debugPrint("📊 Daily MOC: ₦${dailyMOC.toStringAsFixed(2)}");
+
+    return dailyMOC;
   }
 
-  Future<void> _addBOMToServer(
+  // 💰 Calculate Manufacturing Overhead Cost based on duration
+  double calculateManufacturingOverhead() {
+    if (selectedDuration == null) return 0.0;
+
+    final int duration = int.tryParse(selectedDuration!) ?? 0;
+    if (duration == 0) return 0.0;
+
+    final dailyMOC = calculateMOCPerDay();
+
+    // Convert user's selected duration to days
+    double durationInDays = 0.0;
+
+    switch (selectedPeriod) {
+      case 'Hour':
+        durationInDays = duration / 24;
+        break;
+      case 'Day':
+        durationInDays = duration.toDouble();
+        break;
+      case 'Week':
+        durationInDays = duration * 7;
+        break;
+      case 'Month':
+        durationInDays = duration * 30;
+        break;
+    }
+
+    final totalMOC = dailyMOC * durationInDays;
+
+    debugPrint(
+      "💰 Manufacturing Overhead: ₦${dailyMOC.toStringAsFixed(2)}/day × $durationInDays days = ₦${totalMOC.toStringAsFixed(2)}",
+    );
+
+    return totalMOC;
+  }
+
+  // 📊 Calculate Pricing based on selected method
+  Map<String, double> calculatePricing(
     List<Map<String, dynamic>> materials,
     List<Map<String, dynamic>> additionalCosts,
-  ) async {
-    setState(() => isLoading = true);
-
-    try {
-      if (materials.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Please add at least one material.")),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      // ✅ Get productId from quotationSummaryProvider
-      final quotationState = ref.read(quotationSummaryProvider);
-      final productData = quotationState["product"];
-
-      if (productData == null || productData["productId"] == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("❌ Product ID not found. Please select a product."),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-        setState(() => isLoading = false);
-        return;
-      }
-
-      final String productId = productData["productId"];
-      final productName = productData["name"] ?? "BOM Item";
-
-      final now = DateTime.now();
-      final formattedDate = DateFormat("d MMMM yyyy, h:mm a").format(now);
-      final description = "$productName created on $formattedDate";
-
-      final formattedMaterials = materials.map((m) {
-        return {
-          "woodType": m["Product"] ?? "",
-          "foamType": null,
-          "type": m["Materialname"] ?? "",
-          "width": double.tryParse(m["Width"].toString()) ?? 0,
-          "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-          "length": double.tryParse(m["Length"].toString()) ?? 0,
-          "thickness": double.tryParse(m["Thickness"].toString()) ?? 0,
-          "unit": m["Unit"] ?? "cm",
-          "squareMeter": double.tryParse(m["Sqm"].toString()) ?? 0,
-          "price": double.tryParse(m["Price"].toString()) ?? 0,
-          "quantity": int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1,
-          "description": m["Materialname"] ?? "",
-        };
-      }).toList();
-
-      // ✅ Format additional costs with name field
-      final formattedAdditionalCosts = additionalCosts.map((c) {
-        return {
-          "name": c["type"] ?? "Additional Cost",
-          "type": c["type"] ?? "",
-          "description": c["description"] ?? "",
-          "amount": double.tryParse(c["amount"]?.toString() ?? "0") ?? 0,
-        };
-      }).toList();
-
-      debugPrint("📤 Creating BOM with productId: $productId");
-      debugPrint("📦 Materials: ${formattedMaterials.length}");
-      debugPrint("💰 Additional Costs: ${formattedAdditionalCosts.length}");
-
-      // ✅ Create BOM with productId and additionalCosts
-      final createResponse = await _bomService.createBOM(
-        name: productName,
-        description: description,
-        productId: productId,
-        materials: formattedMaterials,
-        additionalCosts: formattedAdditionalCosts.isNotEmpty
-            ? formattedAdditionalCosts
-            : null,
-      );
-
-      if (createResponse["success"] == true) {
-        final bomData = createResponse["data"];
-        debugPrint("✅ BOM created successfully!");
-        debugPrint("📋 BOM ID: ${bomData["_id"]}");
-        debugPrint("💵 Total Cost: ${bomData["totalCost"]}");
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("✅ BOM successfully created!"),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "❌ Failed: ${createResponse["message"] ?? "Unknown error"}",
-              ),
-              backgroundColor: Colors.redAccent,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      debugPrint("⚠️ Error creating BOM: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("⚠️ Unexpected error: $e"),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-    } finally {
-      setState(() => isLoading = false);
+  ) {
+    // Calculate material total
+    double materialTotal = 0;
+    for (var m in materials) {
+      final price = double.tryParse(m["Price"].toString()) ?? 0;
+      final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
+      materialTotal += price * qty;
     }
+
+    // Calculate additional costs total
+    double additionalTotal = 0;
+    for (var c in additionalCosts) {
+      final amount = double.tryParse(c["amount"].toString()) ?? 0;
+      additionalTotal += amount;
+    }
+
+    double costPrice = 0;
+    double overheadCost = 0;
+    double sellingPrice = 0;
+
+    if (pricingMethod == 'Method 1') {
+      // METHOD 1: Cost Price = Materials + Other Costs + MOC (based on duration)
+      overheadCost = calculateManufacturingOverhead();
+      costPrice = materialTotal + additionalTotal + overheadCost;
+      
+      // Add markup to get selling price
+      sellingPrice = costPrice * (1 + (markupPercentage / 100));
+
+      debugPrint("💵 METHOD 1:");
+      debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
+      debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
+      debugPrint("   Manufacturing Overhead: ₦${overheadCost.toStringAsFixed(2)}");
+      debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
+      debugPrint("   Markup: $markupPercentage%");
+      debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
+    } else {
+      // METHOD 2: Cost Price = Materials + Other Costs (NO MOC)
+      costPrice = materialTotal + additionalTotal;
+      overheadCost = 0; // MOC not included in Method 2
+      
+      // Add markup to get selling price
+      sellingPrice = costPrice * (1 + (markupPercentage / 100));
+
+      debugPrint("💵 METHOD 2:");
+      debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
+      debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
+      debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
+      debugPrint("   Markup: $markupPercentage%");
+      debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
+    }
+
+    return {
+      'materialTotal': materialTotal,
+      'additionalTotal': additionalTotal,
+      'costPrice': costPrice,
+      'overheadCost': overheadCost,
+      'sellingPrice': sellingPrice,
+    };
   }
 
-  // ✅ Create Quotation with Selling Price and Continue
+  // Show pricing method selector dialog
+  Future<void> _showPricingMethodDialog() async {
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Pricing Method'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            RadioListTile<String>(
+              title: const Text('Method 1'),
+              subtitle: const Text('Include Manufacturing Overhead Cost'),
+              value: 'Method 1',
+              groupValue: pricingMethod,
+              onChanged: (value) {
+                setState(() => pricingMethod = value!);
+                PricingSettingsManager.savePricingMethod(value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Method 2'),
+              subtitle: const Text('Direct Markup (No MOC)'),
+              value: 'Method 2',
+              groupValue: pricingMethod,
+              onChanged: (value) {
+                setState(() => pricingMethod = value!);
+                PricingSettingsManager.savePricingMethod(value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Create Quotation and Continue
   Future<void> _createQuotationAndContinue(
     List<Map<String, dynamic>> materials,
     List<Map<String, dynamic>> additionalCosts,
   ) async {
     try {
-      // Calculate totals
-      double materialTotal = 0;
-      for (var m in materials) {
-        final price = double.tryParse(m["Price"].toString()) ?? 0;
-        final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-        materialTotal += price * qty;
-      }
-
-      double additionalTotal = 0;
-      for (var c in additionalCosts) {
-        final amount = double.tryParse(c["amount"].toString()) ?? 0;
-        additionalTotal += amount;
-      }
-
-      final costPrice = materialTotal + additionalTotal;
-      final overheadCost = calculateProportionalOverhead();
-      final sellingPrice = costPrice + overheadCost;
+      final pricing = calculatePricing(materials, additionalCosts);
 
       // Get product data
       final quotationState = ref.read(quotationSummaryProvider);
@@ -304,24 +362,21 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
 
-      // Create quotation with selling price
+      // Create quotation
       final newQuotation = {
         "product": productData,
         "materials": materials,
         "additionalCosts": additionalCosts,
-        "costPrice": costPrice,
-        "overheadCost": overheadCost,
-        "sellingPrice": sellingPrice,
+        "costPrice": pricing['costPrice'],
+        "overheadCost": pricing['overheadCost'],
+        "sellingPrice": pricing['sellingPrice'],
+        "markupPercentage": markupPercentage,
+        "pricingMethod": pricingMethod,
         "expectedDuration": selectedDuration,
         "expectedPeriod": selectedPeriod,
       };
 
       await quotationNotifier.addNewQuotation(newQuotation);
-
-      debugPrint(
-        "✅ Quotation created with selling price: ₦${sellingPrice.toStringAsFixed(2)}",
-      );
-      debugPrint(newQuotation.toString());
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -334,10 +389,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         Nav.pop();
         Nav.pop();
         Nav.pop();
-      
-
-       // Nav.pushReplacement(AllQuotations());
-
       }
     } catch (e) {
       debugPrint("⚠️ Error creating quotation: $e");
@@ -352,6 +403,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     final materialData = ref.watch(materialProvider);
@@ -362,12 +415,21 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       materialData["additionalCosts"] ?? [],
     );
 
+    final pricing = calculatePricing(materials, additionalCosts);
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _showPricingMethodDialog,
+            tooltip: 'Pricing Method',
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -376,6 +438,32 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const CustomText(title: "Summary"),
+              const SizedBox(height: 20),
+
+              // Pricing Method Indicator
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFA16438)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFFA16438)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "$pricingMethod: ${pricingMethod == 'Method 1' ? 'With Manufacturing Overhead' : 'Direct Markup'} • ${markupPercentage.toStringAsFixed(1)}% Markup",
+                        style: const TextStyle(
+                          color: Color(0xFFA16438),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 20),
 
               const Text(
@@ -404,24 +492,17 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
               const SizedBox(height: 40),
 
-              // ✅ Expected Duration Section (Period + Duration)
-              _buildExpectedDurationSection(),
+              // Expected Duration Section (only show for Method 1)
+              if (pricingMethod == 'Method 1') ...[
+                _buildExpectedDurationSection(),
+                const SizedBox(height: 30),
+              ],
 
-              const SizedBox(height: 30),
-
-              // ✅ Cost Breakdown Section (Only this one)
-              _buildCostBreakdownSection(materials, additionalCosts),
+              // Cost Breakdown Section
+              _buildCostBreakdownSection(pricing),
 
               const SizedBox(height: 40),
 
-              CustomButton(
-                text: "Add to BOM",
-                outlined: true,
-                loading: isLoading,
-                onPressed: () => _addBOMToServer(materials, additionalCosts),
-              ),
-
-              const SizedBox(height: 20),
               CustomButton(
                 text: "Continue",
                 onPressed: () =>
@@ -434,8 +515,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-  // ✅ Expected Duration Section (Period + Duration Dropdowns)
-  Widget _buildExpectedDurationSection() {
+ Widget _buildExpectedDurationSection() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -456,7 +536,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
           const SizedBox(height: 10),
 
-          // Period Selector (Hour, Day, Week, Month)
           Row(
             children: [
               Expanded(
@@ -474,10 +553,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
                   ),
                   items: periodOptions
                       .map(
@@ -490,14 +565,13 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                   onChanged: (value) {
                     setState(() {
                       selectedPeriod = value!;
-                      selectedDuration = '1'; // Reset to 1 when period changes
+                      selectedDuration = '1';
                     });
                   },
                 ),
               ),
               const SizedBox(width: 12),
 
-              // Duration Number Selector
               Expanded(
                 flex: 3,
                 child: DropdownButtonFormField<String>(
@@ -513,12 +587,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: Colors.grey.shade300),
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
                   ),
-                  hint: const Text("Select duration"),
                   items: durationOptions
                       .map(
                         (duration) => DropdownMenuItem(
@@ -544,28 +613,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   }
 
   // ✅ Cost Breakdown Section (Cost Price, Overhead, Selling Price)
-  Widget _buildCostBreakdownSection(
-    List<Map<String, dynamic>> materials,
-    List<Map<String, dynamic>> additionalCosts,
-  ) {
-    // Calculate totals
-    double materialTotal = 0;
-    for (var m in materials) {
-      final price = double.tryParse(m["Price"].toString()) ?? 0;
-      final qty = int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-      materialTotal += price * qty;
-    }
-
-    double additionalTotal = 0;
-    for (var c in additionalCosts) {
-      final amount = double.tryParse(c["amount"].toString()) ?? 0;
-      additionalTotal += amount;
-    }
-
-    final costPrice = materialTotal + additionalTotal;
-    final overheadCost = calculateProportionalOverhead();
-    final sellingPrice = costPrice + overheadCost;
-
+ // Cost Breakdown Section
+  Widget _buildCostBreakdownSection(Map<String, double> pricing) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -574,26 +623,48 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
-        _buildCostRow("Cost Price", costPrice),
+        _buildCostRow("Materials", pricing['materialTotal']!),
+        const SizedBox(height: 12),
+        _buildCostRow("Additional Costs", pricing['additionalTotal']!),
+        const SizedBox(height: 12),
+        
+        if (pricingMethod == 'Method 1') ...[
+          _buildCostRow(
+            "Manufacturing Overhead",
+            pricing['overheadCost']!,
+            isLoading: isLoadingOverhead,
+          ),
+          const SizedBox(height: 12),
+        ],
+        
+        const Divider(),
+        const SizedBox(height: 12),
+        _buildCostRow("Cost Price", pricing['costPrice']!, isBold: true),
         const SizedBox(height: 12),
         _buildCostRow(
-          "Overhead Cost",
-          overheadCost,
-          isLoading: isLoadingOverhead,
+          "Markup ($markupPercentage%)",
+          pricing['sellingPrice']! - pricing['costPrice']!,
         ),
         const SizedBox(height: 12),
         const Divider(),
         const SizedBox(height: 12),
-        _buildCostRow("Selling Price", sellingPrice, isBold: true),
+        _buildCostRow(
+          "Selling Price",
+          pricing['sellingPrice']!,
+          isBold: true,
+          isHighlight: true,
+        ),
       ],
     );
   }
 
-  Widget _buildCostRow(
+
+Widget _buildCostRow(
     String label,
     double value, {
     bool isLoading = false,
     bool isBold = false,
+    bool isHighlight = false,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -603,7 +674,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
-            color: const Color(0xFF302E2E),
+            color: isHighlight ? const Color(0xFFA16438) : const Color(0xFF302E2E),
           ),
         ),
         if (isLoading)
@@ -618,7 +689,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
-              color: const Color(0xFF302E2E),
+              color: isHighlight ? const Color(0xFFA16438) : const Color(0xFF302E2E),
             ),
           ),
       ],
