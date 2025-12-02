@@ -8,6 +8,7 @@ import 'package:wworker/App/Quotation/UI/AddMaterial.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/BomList.dart';
 import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
+import 'package:wworker/App/Quotation/UI/ImportBom.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
@@ -23,7 +24,6 @@ class AllQuotations extends ConsumerStatefulWidget {
 }
 
 class _AllQuotationsState extends ConsumerState<AllQuotations> {
-
   List<Map<String, dynamic>> allQuotations = [];
   Map<int, int> quantities = {};
   bool isLoading = true;
@@ -128,7 +128,10 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
   }
 
   // ✅ Calculate total selling price with quantity multiplier
-  double _calculateTotalSellingPrice(Map<String, dynamic> quotation, int quantity) {
+  double _calculateTotalSellingPrice(
+    Map<String, dynamic> quotation,
+    int quantity,
+  ) {
     return _getSellingPrice(quotation) * quantity;
   }
 
@@ -154,7 +157,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   : allQuotations.isEmpty
                   ? const Center(
                       child: Padding(
-                        padding: EdgeInsets.only(left: 20,right: 20),
+                        padding: EdgeInsets.only(left: 20, right: 20),
                         child: CustomEmptyQuotes(
                           title: "",
                           buttonText: "",
@@ -226,8 +229,10 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         onPressed: () {
                           final quotationQuantitiesMap = <String, int>{};
                           for (int i = 0; i < allQuotations.length; i++) {
-                            final quotationId = allQuotations[i]["id"] as String;
-                            quotationQuantitiesMap[quotationId] = quantities[i] ?? 1;
+                            final quotationId =
+                                allQuotations[i]["id"] as String;
+                            quotationQuantitiesMap[quotationId] =
+                                quantities[i] ?? 1;
                           }
                           Navigator.push(
                             context,
@@ -264,7 +269,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                             text: "BOM",
                             outlined: true,
                             onPressed: () {
-                              Nav.push(BOMList());
+                              //  Nav.push(BOMList());
+                              Nav.push(ImportQuotationsPage());
                             },
                           ),
                         ),
@@ -272,7 +278,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         Expanded(
                           child: CustomButton(
                             textSize: 15,
-                            text: "View all",
+                            text: "Import",
                             outlined: true,
                             onPressed: () {
                               Nav.push(AllClientQuotations());
@@ -284,7 +290,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   ],
                 ),
               ),
-            )
+            ),
           ],
         ),
       ),
