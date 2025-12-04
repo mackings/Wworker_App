@@ -462,156 +462,156 @@ class PaymentReceiptPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 24),
 
-                      // Order Items
-                      const Text(
-                        'Order Items',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF302E2E),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
+                      // // Order Items
+                      // const Text(
+                      //   'Order Items',
+                      //   style: TextStyle(
+                      //     fontSize: 16,
+                      //     fontWeight: FontWeight.bold,
+                      //     color: Color(0xFF302E2E),
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 12),
                       
-                      // Check if items exist
-                      if (order.items.isEmpty)
-                        Container(
-                          padding: const EdgeInsets.all(40),
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Icon(Icons.inbox_outlined, 
-                                     size: 48, 
-                                     color: Colors.grey[400]),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'No items found',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey[300]!),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Column(
-                            children: [
-                              // Table Header
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: const BorderRadius.only(
-                                    topLeft: Radius.circular(8),
-                                    topRight: Radius.circular(8),
-                                  ),
-                                ),
-                                child: const Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 4,
-                                      child: Text(
-                                        'Item',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 2,
-                                      child: Text(
-                                        'Qty',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                    Expanded(
-                                      flex: 3,
-                                      child: Text(
-                                        'Total',
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 12,
-                                        ),
-                                        textAlign: TextAlign.right,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Table Items
-                              ...order.items.asMap().entries.map((entry) {
-                                final index = entry.key;
-                                final item = entry.value;
+                      // // Check if items exist
+                      // if (order.items.isEmpty)
+                      //   Container(
+                      //     padding: const EdgeInsets.all(40),
+                      //     decoration: BoxDecoration(
+                      //       border: Border.all(color: Colors.grey[300]!),
+                      //       borderRadius: BorderRadius.circular(8),
+                      //     ),
+                      //     child: Center(
+                      //       child: Column(
+                      //         children: [
+                      //           Icon(Icons.inbox_outlined, 
+                      //                size: 48, 
+                      //                color: Colors.grey[400]),
+                      //           const SizedBox(height: 8),
+                      //           Text(
+                      //             'No items found',
+                      //             style: TextStyle(
+                      //               fontSize: 14,
+                      //               color: Colors.grey[600],
+                      //             ),
+                      //           ),
+                      //         ],
+                      //       ),
+                      //     ),
+                      //   )
+                      // else
+                      //   Container(
+                      //     decoration: BoxDecoration(
+                      //       border: Border.all(color: Colors.grey[300]!),
+                      //       borderRadius: BorderRadius.circular(8),
+                      //     ),
+                      //     child: Column(
+                      //       children: [
+                      //         // Table Header
+                      //         Container(
+                      //           padding: const EdgeInsets.all(12),
+                      //           decoration: BoxDecoration(
+                      //             color: Colors.grey[200],
+                      //             borderRadius: const BorderRadius.only(
+                      //               topLeft: Radius.circular(8),
+                      //               topRight: Radius.circular(8),
+                      //             ),
+                      //           ),
+                      //           child: const Row(
+                      //             children: [
+                      //               Expanded(
+                      //                 flex: 4,
+                      //                 child: Text(
+                      //                   'Item',
+                      //                   style: TextStyle(
+                      //                     fontWeight: FontWeight.bold,
+                      //                     fontSize: 12,
+                      //                   ),
+                      //                 ),
+                      //               ),
+                      //               Expanded(
+                      //                 flex: 2,
+                      //                 child: Text(
+                      //                   'Qty',
+                      //                   style: TextStyle(
+                      //                     fontWeight: FontWeight.bold,
+                      //                     fontSize: 12,
+                      //                   ),
+                      //                   textAlign: TextAlign.center,
+                      //                 ),
+                      //               ),
+                      //               Expanded(
+                      //                 flex: 3,
+                      //                 child: Text(
+                      //                   'Total',
+                      //                   style: TextStyle(
+                      //                     fontWeight: FontWeight.bold,
+                      //                     fontSize: 12,
+                      //                   ),
+                      //                   textAlign: TextAlign.right,
+                      //                 ),
+                      //               ),
+                      //             ],
+                      //           ),
+                      //         ),
+                      //         // Table Items
+                      //         ...order.items.asMap().entries.map((entry) {
+                      //           final index = entry.key;
+                      //           final item = entry.value;
                                 
-                                // Get the woodType for the item name
-                                final name = item['woodType']?.toString() ?? 'N/A';
-                                final quantity = item['quantity'] ?? 0;
+                      //           // Get the woodType for the item name
+                      //           final name = item['woodType']?.toString() ?? 'N/A';
+                      //           final quantity = item['quantity'] ?? 0;
                                 
-                                // Get the selling price per unit
-                                final pricePerUnit = (item['sellingPrice'] ?? 0.0).toDouble();
+                      //           // Get the selling price per unit
+                      //           final pricePerUnit = (item['sellingPrice'] ?? 0.0).toDouble();
                                 
-                                // Calculate total: quantity × price per unit
-                                final total = quantity * pricePerUnit;
+                      //           // Calculate total: quantity × price per unit
+                      //           final total = quantity * pricePerUnit;
 
-                                return Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      bottom: index < order.items.length - 1
-                                          ? BorderSide(color: Colors.grey[300]!)
-                                          : BorderSide.none,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 4,
-                                        child: Text(
-                                          name,
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 2,
-                                        child: Text(
-                                          quantity.toString(),
-                                          style: const TextStyle(fontSize: 12),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        flex: 3,
-                                        child: Text(
-                                          '₦${_formatNumber(total)}',
-                                          style: const TextStyle(fontSize: 12),
-                                          textAlign: TextAlign.right,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }).toList(),
-                            ],
-                          ),
-                        ),
+                      //           return Container(
+                      //             padding: const EdgeInsets.all(12),
+                      //             decoration: BoxDecoration(
+                      //               border: Border(
+                      //                 bottom: index < order.items.length - 1
+                      //                     ? BorderSide(color: Colors.grey[300]!)
+                      //                     : BorderSide.none,
+                      //               ),
+                      //             ),
+                      //             child: Row(
+                      //               children: [
+                      //                 Expanded(
+                      //                   flex: 4,
+                      //                   child: Text(
+                      //                     name,
+                      //                     style: const TextStyle(fontSize: 12),
+                      //                   ),
+                      //                 ),
+                      //                 Expanded(
+                      //                   flex: 2,
+                      //                   child: Text(
+                      //                     quantity.toString(),
+                      //                     style: const TextStyle(fontSize: 12),
+                      //                     textAlign: TextAlign.center,
+                      //                   ),
+                      //                 ),
+                      //                 Expanded(
+                      //                   flex: 3,
+                      //                   child: Text(
+                      //                     '₦${_formatNumber(total)}',
+                      //                     style: const TextStyle(fontSize: 12),
+                      //                     textAlign: TextAlign.right,
+                      //                   ),
+                      //                 ),
+                      //               ],
+                      //             ),
+                      //           );
+                      //         }).toList(),
+                      //       ],
+                      //     ),
+                      //   ),
                       
-                      const SizedBox(height: 24),
+                      // const SizedBox(height: 24),
 
                       // Payment Summary
                       Container(
