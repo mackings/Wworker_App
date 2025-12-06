@@ -415,20 +415,21 @@ class _CreateMaterialPageState extends State<CreateMaterialPage> {
                 ),
               ],
             ),
+            
             const SizedBox(height: 16),
 
             // Sizes
-            _buildListSectionCard(
-              'Available Sizes',
-              sizes.isEmpty
-                  ? 'No sizes added'
-                  : sizes
-                      .map((s) => '${s.width} x ${s.length}')
-                      .join(', '),
-              _addSize,
-              () => setState(() => sizes.clear()),
-            ),
-            const SizedBox(height: 16),
+            // _buildListSectionCard(
+            //   'Available Sizes',
+            //   sizes.isEmpty
+            //       ? 'No sizes added'
+            //       : sizes
+            //           .map((s) => '${s.width} x ${s.length}')
+            //           .join(', '),
+            //   _addSize,
+            //   () => setState(() => sizes.clear()),
+            // ),
+           // const SizedBox(height: 16),
 
             // Foam Densities
             _buildListSectionCard(

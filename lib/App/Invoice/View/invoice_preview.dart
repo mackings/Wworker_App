@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
+import 'package:wworker/App/Invoice/Widget/InvoiceSelector.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
@@ -12,10 +13,10 @@ class InvoicePreview extends StatefulWidget {
   final InvoiceModel? invoice;
 
   const InvoicePreview({super.key, this.quotation, this.invoice})
-    : assert(
-        quotation != null || invoice != null,
-        'Either quotation or invoice must be provided',
-      );
+      : assert(
+          quotation != null || invoice != null,
+          'Either quotation or invoice must be provided',
+        );
 
   @override
   State<InvoicePreview> createState() => _InvoicePreviewState();
@@ -52,7 +53,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
     }
   }
 
-  // ✅ Grand total from quotation/invoice (already includes everything)
+  // Grand total from quotation/invoice
   double get grandTotal {
     return widget.quotation?.finalTotal.toDouble() ??
         widget.invoice!.finalTotal;
@@ -68,610 +69,204 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         elevation: 0,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Company Information
-              _buildInfoSection(
-                title: "Company Information",
-                content: ContactInfo(
-                  name: "Sumit Nova Trust Ltd",
-                  address: "K3, plaza, New Garage, Ibadan.",
-                  nearestBusStop: "Alao Akala Expressway",
-                  phone: "07034567890",
-                  email: "admin@sumitnovatrustltd.com",
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Icon
+                Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFA16438).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.receipt_long,
+                    size: 60,
+                    color: Color(0xFFA16438),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
-              // Client Information
-              _buildInfoSection(
-                title: "Client Information",
-                content: ContactInfo(
-                  name: clientName,
-                  address: clientAddress,
-                  nearestBusStop: nearestBusStop,
-                  phone: phoneNumber,
-                  email: email,
+                // Title
+                Text(
+                  isExistingInvoice
+                      ? 'View Invoice'
+                      : 'Ready to Create Invoice',
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF302E2E),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              // Invoice Details
-              _buildInvoiceDetails(),
-              const SizedBox(height: 24),
+                // Description
+                Text(
+                  isExistingInvoice
+                      ? 'Choose a template to view your invoice'
+                      : 'Select a beautiful template for your invoice',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
 
-              // Description
-              if (description.isNotEmpty) ...[
-                _buildDescriptionSection(),
-                const SizedBox(height: 24),
-              ],
+                // Invoice details card
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F8F2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildDetailRow(
+                        Icons.person,
+                        'Client',
+                        clientName,
+                      ),
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.numbers,
+                        'Quotation',
+                        quotationNumber,
+                      ),
+                      if (isExistingInvoice) ...[
+                        const SizedBox(height: 12),
+                        _buildDetailRow(
+                          Icons.receipt,
+                          'Invoice No',
+                          widget.invoice!.invoiceNumber,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      _buildDetailRow(
+                        Icons.attach_money,
+                        'Amount',
+                        '₦${grandTotal.toStringAsFixed(2)}',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
 
-              // Items Table (Products only - no service row)
-              _buildItemsTable(),
-              const SizedBox(height: 24),
-
-              // Financial Summary (Grand Total only)
-              _buildFinancialSummary(),
-              const SizedBox(height: 32),
-
-              // Action Buttons - Only show for new invoices from quotations
-              if (!isExistingInvoice)
+                // Action button
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: isLoading ? null : _sendInvoiceToClient,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFA16438),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: isLoading
+                  child: ElevatedButton.icon(
+                    onPressed: isLoading ? null : _navigateToTemplateSelector,
+                    icon: isLoading
                         ? const SizedBox(
-                            height: 20,
                             width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.send),
-                              SizedBox(width: 8),
-                              Text(
-                                "Send Invoice to Client",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoSection({
-    required String title,
-    required ContactInfo content,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F8F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF302E2E),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildInfoRow("Name", content.name),
-          _buildInfoRow("Address", content.address),
-          if (content.nearestBusStop.isNotEmpty)
-            _buildInfoRow("Nearest Bus Stop", content.nearestBusStop),
-          _buildInfoRow("Phone", content.phone),
-          _buildInfoRow("Email", content.email),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDescriptionSection() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFA16438).withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            "Project Description",
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFFA16438),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: const TextStyle(fontSize: 14, color: Color(0xFF302E2E)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              "$label:",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF302E2E),
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceDetails() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFA16438), width: 2),
-      ),
-      child: Column(
-        children: [
-          // Show invoice number for existing invoices
-          if (isExistingInvoice) ...[
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Invoice No:",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF7B7B7B),
-                  ),
-                ),
-                Text(
-                  widget.invoice!.invoiceNumber,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFA16438),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-          ],
-
-          // Quotation number
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                "Quotation No:",
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF7B7B7B),
-                ),
-              ),
-              Text(
-                quotationNumber,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFFA16438),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isExistingInvoice ? "Created Date:" : "Invoice Date:",
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF7B7B7B),
-                ),
-              ),
-              Text(
-                _formatDate(widget.invoice?.createdAt ?? DateTime.now()),
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF302E2E),
-                ),
-              ),
-            ],
-          ),
-
-          // Due date for existing invoices
-          if (isExistingInvoice && widget.invoice!.dueDate != null) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Due Date:",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF7B7B7B),
-                  ),
-                ),
-                Text(
-                  _formatDate(widget.invoice!.dueDate!),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF302E2E),
-                  ),
-                ),
-              ],
-            ),
-          ],
-
-          // Payment status for existing invoices
-          if (isExistingInvoice) ...[
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  "Payment Status:",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF7B7B7B),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(
-                      widget.invoice!.paymentStatus,
-                    ).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    widget.invoice!.paymentStatus.toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: _getStatusColor(widget.invoice!.paymentStatus),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'paid':
-        return Colors.green;
-      case 'pending':
-        return Colors.orange;
-      case 'overdue':
-        return Colors.red;
-      case 'partial':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Widget _buildItemsTable() {
-    if (items.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F8F2),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey[300]!),
-        ),
-        child: Column(
-          children: [
-            Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              "No Items Found",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFA16438),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(11),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Expanded(
-                  flex: 3,
-                  child: Text(
-                    "Description",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Text(
-                    "Qty",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  flex: 2,
-                  child: Text(
-                    "Price",
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Items (Products only - NO service row)
-          ...items.map((item) {
-            final invoiceItem = item as dynamic;
-            return Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          invoiceItem.woodType ??
-                              invoiceItem.foamType ??
-                              "Material",
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF302E2E),
-                          ),
-                        ),
-                        if (invoiceItem.description?.isNotEmpty ?? false)
-                          Text(
-                            invoiceItem.description,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        // Show dimensions for invoice items
-                        if (isExistingInvoice)
-                          Text(
-                            "${invoiceItem.width} × ${invoiceItem.length} × ${invoiceItem.thickness} ${invoiceItem.unit}",
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[500],
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      "${invoiceItem.quantity}",
-                      textAlign: TextAlign.center,
+                        : const Icon(Icons.style),
+                    label: Text(
+                      isExistingInvoice
+                          ? 'View Templates'
+                          : 'Choose Template',
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      "₦${grandTotal.toStringAsFixed(2)}",
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 16,
                         fontWeight: FontWeight.w600,
-                        color: Color(0xFF302E2E),
                       ),
                     ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA16438),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 2,
+                    ),
                   ),
-                ],
-              ),
-            );
-          }).toList(),
-          // ❌ REMOVED: Service row completely
-        ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildFinancialSummary() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F8F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        children: [
-          // ✅ SIMPLIFIED: Only show Grand Total
-          _buildSummaryRow(
-            "Grand Total",
-            "₦${grandTotal.toStringAsFixed(2)}",
-            isBold: true,
-            isGrandTotal: true,
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: const Color(0xFFA16438)),
+        const SizedBox(width: 12),
+        Text(
+          '$label:',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w500,
           ),
-
-          // Show payment details for existing invoices
-          if (isExistingInvoice) ...[
-            const SizedBox(height: 16),
-            const Divider(height: 8, thickness: 2),
-            const SizedBox(height: 16),
-            _buildSummaryRow(
-              "Amount Paid",
-              "₦${widget.invoice!.amountPaid.toStringAsFixed(2)}",
-              isPaid: true,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              "Outstanding Balance",
-              "₦${widget.invoice!.balance.toStringAsFixed(2)}",
-              isBold: true,
-              isBalance: true,
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    bool isGrandTotal = false,
-    bool isDiscount = false,
-    bool isPaid = false,
-    bool isBalance = false,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: isBold ? 16 : 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: isGrandTotal || isBalance
-                  ? const Color(0xFFA16438)
-                  : const Color(0xFF302E2E),
-            ),
-          ),
-          Text(
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
             value,
-            style: TextStyle(
-              fontSize: isBold ? 18 : 14,
-              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-              color: isDiscount
-                  ? Colors.red
-                  : isPaid
-                  ? Colors.green
-                  : isGrandTotal || isBalance
-                  ? const Color(0xFFA16438)
-                  : const Color(0xFF302E2E),
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF302E2E),
+              fontWeight: FontWeight.w600,
             ),
+            overflow: TextOverflow.ellipsis,
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  void _navigateToTemplateSelector() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => InvoiceTemplateSelector(
+          companyName: "Sumit Nova Trust Ltd",
+          companyAddress: "K3, plaza, New Garage, Ibadan",
+          companyBusStop: "Alao Akala Expressway",
+          companyPhone: "07034567890",
+          companyEmail: "admin@sumitnovatrustltd.com",
+          clientName: clientName,
+          clientAddress: clientAddress,
+          clientBusStop: nearestBusStop,
+          clientPhone: phoneNumber,
+          clientEmail: email,
+          invoiceNumber: isExistingInvoice
+              ? widget.invoice!.invoiceNumber
+              : "INV-${DateTime.now().millisecondsSinceEpoch}",
+          quotationNumber: quotationNumber,
+          invoiceDate: isExistingInvoice
+              ? widget.invoice!.createdAt
+              : DateTime.now(),
+          dueDate: isExistingInvoice ? widget.invoice?.dueDate : null,
+          paymentStatus: isExistingInvoice ? widget.invoice?.paymentStatus : null,
+          description: description,
+          items: items,
+          grandTotal: grandTotal,
+          amountPaid: isExistingInvoice ? widget.invoice!.amountPaid : 0,
+          balance: isExistingInvoice ? widget.invoice!.balance : 0,
+          isExistingInvoice: isExistingInvoice,
+          onTemplateSend: !isExistingInvoice ? _sendInvoiceToClient : null,
+        ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
-  }
-
-  Future<void> _sendInvoiceToClient() async {
+  Future<void> _sendInvoiceToClient(int templateIndex) async {
     setState(() => isLoading = true);
 
     try {
@@ -683,7 +278,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       final response = await _clientService.createInvoice(
         quotationId: widget.quotation!.id,
         dueDate: dueDate,
-        notes: "Payment due within 30 days",
+        notes: "Payment due within 30 days. Template: $templateIndex",
         amountPaid: 0,
       );
 
@@ -706,10 +301,10 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           ),
         );
 
-        // Navigate back to home or invoice list
-        Navigator.pop(context);
-        Navigator.pop(context);
-
+        // Navigate back to home
+        Navigator.pop(context); // Close template selector
+        Navigator.pop(context); // Close preview
+        Navigator.pop(context); // Close quotation details
       } else {
         if (!mounted) return;
 
@@ -737,21 +332,8 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       );
     }
   }
-}
 
-// ContactInfo model
-class ContactInfo {
-  final String name;
-  final String address;
-  final String nearestBusStop;
-  final String phone;
-  final String email;
-
-  ContactInfo({
-    required this.name,
-    required this.address,
-    required this.nearestBusStop,
-    required this.phone,
-    required this.email,
-  });
+  String _formatDate(DateTime date) {
+    return "${date.day}/${date.month}/${date.year}";
+  }
 }

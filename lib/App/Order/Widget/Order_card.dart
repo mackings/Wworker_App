@@ -169,7 +169,7 @@ class OrderCard extends StatelessWidget {
                 children: [
                   _buildDetailRow("Client:", order.clientName),
                   const SizedBox(height: 16),
-                  _buildDetailRow("Order No:", order.orderNumber),
+                  _buildDetailRow("Sales No:", order.orderNumber),
                   const SizedBox(height: 16),
                   _buildDetailRow(
                     "Start Date:",
