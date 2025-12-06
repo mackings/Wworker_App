@@ -5,6 +5,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/OverHead/Api/OCService.dart';
 import 'package:wworker/App/OverHead/Model/OCmodel.dart';
+import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
+import 'package:wworker/App/OverHead/Widget/OCwidgets.dart';
+
 
 
 class AddOverheadCostCard extends StatefulWidget {
@@ -26,13 +29,16 @@ class AddOverheadCostCard extends StatefulWidget {
 class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   final OverheadCostService _service = OverheadCostService();
 
-  // Tabs/Categories
+  // Categories
   final List<String> categories = ['Depreciation', 'Others', 'Rent', 'Salaries'];
   String selectedCategory = 'Depreciation';
 
   // Periods
-  final List<String> periods = ['Hourly','Daily','Monthly', 'Quarterly', 'Yearly'];
+  final List<String> periods = ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
   String? selectedPeriod = 'Monthly';
+
+  // Duration for viewing totals
+  String selectedViewDuration = 'Monthly';
 
   // Form fields
   final TextEditingController descriptionController = TextEditingController();
@@ -44,10 +50,16 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   bool isFetchingItems = true;
   List<OverheadCost> items = [];
 
+  // Pricing Settings
+  double markupPercentage = 30.0;
+  String pricingMethod = 'Method 1';
+  int workingDaysPerMonth = 26;
+
   @override
   void initState() {
     super.initState();
     _fetchOverheadCosts();
+    _loadPricingSettings();
   }
 
   @override
@@ -57,22 +69,209 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     super.dispose();
   }
 
-  // 💾 SAVE OVERHEAD COSTS TO SHARED PREFERENCES
+  // Load pricing settings
+  Future<void> _loadPricingSettings() async {
+    final markup = await PricingSettingsManager.getMarkup();
+    final method = await PricingSettingsManager.getPricingMethod();
+    final workingDays = await PricingSettingsManager.getWorkingDays();
+
+    setState(() {
+      markupPercentage = markup;
+      pricingMethod = method;
+      workingDaysPerMonth = workingDays;
+    });
+  }
+
+  // Show settings dialog
+  Future<void> _showSettingsDialog() async {
+    final markupController = TextEditingController(text: markupPercentage.toString());
+    final workingDaysController = TextEditingController(text: workingDaysPerMonth.toString());
+    String tempMethod = pricingMethod;
+
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(
+            'Pricing Settings',
+            style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Pricing Method
+                Text(
+                  'Pricing Method',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7B7B7B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                RadioListTile<String>(
+                  title: const Text('Method 1'),
+                  subtitle: const Text('Direct Markup (No MOC in cost price)'),
+                  value: 'Method 1',
+                  groupValue: tempMethod,
+                  onChanged: (value) {
+                    setDialogState(() => tempMethod = value!);
+                  },
+                  activeColor: const Color(0xFFA16438),
+                ),
+                RadioListTile<String>(
+                  title: const Text('Method 2'),
+                  subtitle: const Text('Include Manufacturing Overhead Cost'),
+                  value: 'Method 2',
+                  groupValue: tempMethod,
+                  onChanged: (value) {
+                    setDialogState(() => tempMethod = value!);
+                  },
+                  activeColor: const Color(0xFFA16438),
+                ),
+                
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+
+                // Markup Percentage
+                Text(
+                  'Markup Percentage',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7B7B7B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: markupController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    suffixText: '%',
+                    hintText: '30',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Working Days
+                Text(
+                  'Factory Working Days per Month',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF7B7B7B),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: workingDaysController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    suffixText: 'days',
+                    hintText: '26',
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.openSans(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final markup = double.tryParse(markupController.text) ?? 30.0;
+                final workingDays = int.tryParse(workingDaysController.text) ?? 26;
+
+                // Validate
+                if (markup <= 0 || markup > 1000) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid markup percentage (1-1000)'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                  return;
+                }
+
+                if (workingDays <= 0 || workingDays > 31) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter valid working days (1-31)'),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                  return;
+                }
+
+                // Save settings
+                await PricingSettingsManager.saveMarkup(markup);
+                await PricingSettingsManager.savePricingMethod(tempMethod);
+                await PricingSettingsManager.saveWorkingDays(workingDays);
+
+                // Update local state
+                setState(() {
+                  markupPercentage = markup;
+                  pricingMethod = tempMethod;
+                  workingDaysPerMonth = workingDays;
+                });
+
+                Navigator.pop(context);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Settings saved successfully!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA16438),
+              ),
+              child: Text(
+                'Save',
+                style: GoogleFonts.openSans(color: Colors.white),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Save/Load to SharedPreferences methods remain the same
   Future<void> _saveOverheadCostsToPrefs(List<OverheadCost> costs) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
-      // Convert list to JSON
-      final costsJson = costs.map((cost) => {
-        "id": cost.id,
-        "category": cost.category,
-        "description": cost.description,
-        "period": cost.period,
-        "cost": cost.cost,
-        "user": cost.user,
-        "createdAt": cost.createdAt.toIso8601String(),
-      }).toList();
-      
+      final costsJson = costs
+          .map((cost) => {
+                "id": cost.id,
+                "category": cost.category,
+                "description": cost.description,
+                "period": cost.period,
+                "cost": cost.cost,
+                "user": cost.user,
+                "createdAt": cost.createdAt.toIso8601String(),
+              })
+          .toList();
       await prefs.setString('overhead_costs', jsonEncode(costsJson));
       debugPrint("💾 Saved ${costs.length} overhead costs to prefs");
     } catch (e) {
@@ -80,19 +279,18 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     }
   }
 
-  // 📖 READ OVERHEAD COSTS FROM SHARED PREFERENCES
   Future<List<OverheadCost>> _loadOverheadCostsFromPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final costsString = prefs.getString('overhead_costs');
-      
+
       if (costsString == null || costsString.isEmpty) {
         return [];
       }
-      
+
       final List<dynamic> costsJson = jsonDecode(costsString);
       final costs = costsJson.map((json) => OverheadCost.fromJson(json)).toList();
-      
+
       debugPrint("📖 Loaded ${costs.length} overhead costs from prefs");
       return costs;
     } catch (e) {
@@ -101,18 +299,6 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     }
   }
 
-  // 🗑️ CLEAR OVERHEAD COSTS FROM SHARED PREFERENCES
-  Future<void> _clearOverheadCostsFromPrefs() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('overhead_costs');
-      debugPrint("🗑️ Cleared overhead costs from prefs");
-    } catch (e) {
-      debugPrint("⚠️ Error clearing prefs: $e");
-    }
-  }
-
-  // 🟢 FETCH OVERHEAD COSTS FROM API
   Future<void> _fetchOverheadCosts() async {
     setState(() => isFetchingItems = true);
 
@@ -124,18 +310,14 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           items = fetchedItems;
           isFetchingItems = false;
         });
-        
-        // Save to SharedPreferences
         await _saveOverheadCostsToPrefs(fetchedItems);
       }
     } catch (e) {
       if (mounted) {
         setState(() => isFetchingItems = false);
-        
-        // Try loading from prefs if API fails
         final cachedItems = await _loadOverheadCostsFromPrefs();
         setState(() => items = cachedItems);
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -150,9 +332,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     }
   }
 
-  // 🟢 CREATE OVERHEAD COST VIA API
   Future<void> _handleAddItem() async {
-    // Validate
     if (descriptionController.text.trim().isEmpty ||
         costController.text.trim().isEmpty ||
         selectedPeriod == null) {
@@ -190,14 +370,9 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         setState(() => isLoading = false);
 
         if (response["success"] == true) {
-          // Reset form
           descriptionController.clear();
           costController.clear();
-          
-          // Collapse the form
           setState(() => isExpanded = false);
-
-          // Refresh the list (will also save to prefs)
           await _fetchOverheadCosts();
 
           ScaffoldMessenger.of(context).showSnackBar(
@@ -228,9 +403,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     }
   }
 
-  // 🔴 DELETE OVERHEAD COST VIA API
-  Future<void> _handleDeleteItem(String id, int index) async {
-    // Show confirmation dialog
+  Future<void> _handleDeleteItem(String id) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -268,9 +441,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
 
       if (mounted) {
         if (response["success"] == true) {
-          // Refresh the list (will also update prefs)
           await _fetchOverheadCosts();
-
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Item deleted successfully"),
@@ -298,8 +469,11 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     }
   }
 
-  double _calculateTotal() {
-    return items.fold(0.0, (sum, item) => sum + item.cost);
+  double _calculateTotalForDuration() {
+    return OverheadCostCalculator.calculateTotalForDuration(
+      items,
+      selectedViewDuration,
+    );
   }
 
   @override
@@ -307,310 +481,101 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-                      widget.title,
-                      style: GoogleFonts.openSans(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFFA16438),
-                      ),
-                    ),
-
-                    actions: [
-                                        IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: isFetchingItems ? null : _fetchOverheadCosts,
-                    tooltip: "Refresh",
-                  ),
-                    ],
+          widget.title,
+          style: GoogleFonts.openSans(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFFA16438),
+          ),
+        ),
+        actions: [
+          // Settings Button
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _showSettingsDialog,
+            tooltip: "Pricing Settings",
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: isFetchingItems ? null : _fetchOverheadCosts,
+            tooltip: "Refresh",
+          ),
+        ],
       ),
       backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
         child: Column(
           children: [
+            const SizedBox(height: 15),
 
-            SizedBox(height: 15,),
-            // Header
+            // Settings Summary Banner
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFA16438)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFFA16438), size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "$pricingMethod • ${markupPercentage.toStringAsFixed(1)}% Markup • $workingDaysPerMonth working days/month",
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          color: const Color(0xFFA16438),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
 
+            const SizedBox(height: 15),
 
-            // Scrollable content
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Column(
                   children: [
-                    // Add Cost Card (Expandable)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: const Color(0xFFD3D3D3)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Header with expand/collapse
-                          InkWell(
-                            onTap: () {
-                              setState(() {
-                                isExpanded = !isExpanded;
-                              });
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.add,
-                                      color: Color(0xFFA16438),
-                                      size: 20,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "Add Cost",
-                                      style: GoogleFonts.openSans(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: const Color(0xFF302E2E),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                Icon(
-                                  isExpanded
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  color: const Color(0xFFA16438),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Expandable Form
-                          AnimatedCrossFade(
-                            duration: const Duration(milliseconds: 300),
-                            crossFadeState: isExpanded
-                                ? CrossFadeState.showSecond
-                                : CrossFadeState.showFirst,
-                            firstChild: const SizedBox.shrink(),
-                            secondChild: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 16),
-
-                                // Category Tabs
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: categories.map((category) {
-                                      final selected = selectedCategory == category;
-                                      return GestureDetector(
-                                        onTap: () {
-                                          setState(() {
-                                            selectedCategory = category;
-                                          });
-                                        },
-                                        child: Container(
-                                          margin: const EdgeInsets.only(right: 8),
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 8,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            border: Border(
-                                              bottom: BorderSide(
-                                                color: selected
-                                                    ? const Color(0xFFA16438)
-                                                    : Colors.transparent,
-                                                width: 2,
-                                              ),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            category,
-                                            style: GoogleFonts.openSans(
-                                              fontSize: 14,
-                                              color: selected
-                                                  ? const Color(0xFFA16438)
-                                                  : const Color(0xFF9E9E9E),
-                                              fontWeight: selected
-                                                  ? FontWeight.w600
-                                                  : FontWeight.normal,
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).toList(),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 20),
-
-                                // Description Field
-                                Text(
-                                  "Description",
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 14,
-                                    color: const Color(0xFF7B7B7B),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: descriptionController,
-                                  decoration: InputDecoration(
-                                    hintText: "e.g., Melina",
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFFBDBDBD),
-                                      fontSize: 13,
-                                    ),
-                                    filled: true,
-                                    fillColor: const Color(0xFFF5F5F5),
-                                    contentPadding: const EdgeInsets.all(12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFE0E0E0),
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFE0E0E0),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                // Period Dropdown
-                                Text(
-                                  "Period",
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 14,
-                                    color: const Color(0xFF7B7B7B),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                DropdownButtonFormField<String>(
-                                  value: selectedPeriod,
-                                  decoration: InputDecoration(
-                                    filled: true,
-                                    fillColor: const Color(0xFFF5F5F5),
-                                    contentPadding: const EdgeInsets.all(12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFE0E0E0),
-                                      ),
-                                    ),
-                                  ),
-                                  items: periods
-                                      .map((period) => DropdownMenuItem(
-                                            value: period,
-                                            child: Text(period),
-                                          ))
-                                      .toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedPeriod = value;
-                                    });
-                                  },
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                // Cost Field
-                                Text(
-                                  "Cost",
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 14,
-                                    color: const Color(0xFF7B7B7B),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                TextField(
-                                  controller: costController,
-                                  keyboardType: TextInputType.number,
-                                  decoration: InputDecoration(
-                                    hintText: "15,000",
-                                    hintStyle: const TextStyle(
-                                      color: Color(0xFFBDBDBD),
-                                      fontSize: 13,
-                                    ),
-                                    suffixText: "NGN",
-                                    suffixStyle: GoogleFonts.openSans(
-                                      fontSize: 14,
-                                      color: const Color(0xFF7B7B7B),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    filled: true,
-                                    fillColor: const Color(0xFFF5F5F5),
-                                    contentPadding: const EdgeInsets.all(12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFE0E0E0),
-                                      ),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                      borderSide: const BorderSide(
-                                        color: Color(0xFFE0E0E0),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 20),
-
-                                // Add Item Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton(
-                                    onPressed: isLoading ? null : _handleAddItem,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFFA16438),
-                                      disabledBackgroundColor: const Color(0xFFCCA183),
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    child: isLoading
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              const Icon(Icons.add, size: 20, color: Colors.white),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                "Add item",
-                                                style: GoogleFonts.openSans(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                    // Add Cost Form Widget
+                    AddCostFormWidget(
+                      isExpanded: isExpanded,
+                      onToggleExpand: () {
+                        setState(() => isExpanded = !isExpanded);
+                      },
+                      selectedCategory: selectedCategory,
+                      categories: categories,
+                      onCategoryChanged: (category) {
+                        setState(() => selectedCategory = category);
+                      },
+                      descriptionController: descriptionController,
+                      selectedPeriod: selectedPeriod,
+                      periods: periods,
+                      onPeriodChanged: (period) {
+                        setState(() => selectedPeriod = period);
+                      },
+                      costController: costController,
+                      isLoading: isLoading,
+                      onAddItem: _handleAddItem,
                     ),
+
+                    const SizedBox(height: 20),
+
+                    // Duration Selector
+                    if (items.isNotEmpty)
+                      DurationSelectorWidget(
+                        selectedDuration: selectedViewDuration,
+                        onDurationChanged: (duration) {
+                          setState(() => selectedViewDuration = duration);
+                        },
+                      ),
 
                     const SizedBox(height: 20),
 
@@ -638,48 +603,23 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                         ),
                       )
                     else ...[
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  "Items (${items.length})",
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF302E2E),
-                                  ),
-                                ),
-                                Text(
-                                  "Total: ₦${_calculateTotal().toStringAsFixed(2)}",
-                                  style: GoogleFonts.openSans(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: const Color(0xFFA16438),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            ...items.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final item = entry.value;
-                              return _buildItemCard(index, item);
-                            }),
-                          ],
-                        ),
+                      // Total Display
+                      TotalDisplayWidget(
+                        itemCount: items.length,
+                        total: _calculateTotalForDuration(),
+                        duration: selectedViewDuration,
                       ),
-                      const SizedBox(height: 20),
+
+                      const SizedBox(height: 12),
+
+                      // Items List
+                      ...items.map((item) => OverheadCostItemCard(
+                            item: item,
+                            onDelete: () => _handleDeleteItem(item.id),
+                          )),
                     ],
+
+                    const SizedBox(height: 20),
 
                     // Save Button
                     if (items.isNotEmpty)
@@ -690,7 +630,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  "Saved ${items.length} overhead cost items. Total: ₦${_calculateTotal().toStringAsFixed(2)}",
+                                  "Saved ${items.length} overhead cost items. Total ($selectedViewDuration): ₦${_calculateTotalForDuration().toStringAsFixed(2)}",
                                 ),
                                 backgroundColor: Colors.green,
                               ),
@@ -726,97 +666,5 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         ),
       ),
     );
-  }
-
-  Widget _buildItemCard(int index, OverheadCost item) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-      ),
-      child: Column(
-        children: [
-          _buildItemRow("Category", item.category),
-          _buildItemRow("Description", item.description),
-          _buildItemRow("Period", item.period),
-          _buildItemRow("Cost", "₦${item.cost.toStringAsFixed(2)}"),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _handleDeleteItem(item.id, index),
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: Text(
-                "Delete Item",
-                style: GoogleFonts.openSans(fontSize: 14),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFA16438),
-                side: const BorderSide(color: Color(0xFFA16438)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              color: const Color(0xFF7B7B7B),
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF302E2E),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// 🔧 HELPER CLASS: Overhead Cost Manager
-// Use this in your BOMSummary to get overhead costs
-class OverheadCostManager {
-  static Future<List<Map<String, dynamic>>> getOverheadCosts() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final costsString = prefs.getString('overhead_costs');
-      
-      if (costsString == null || costsString.isEmpty) {
-        return [];
-      }
-      
-      final List<dynamic> costsJson = jsonDecode(costsString);
-      return costsJson.cast<Map<String, dynamic>>();
-    } catch (e) {
-      debugPrint("⚠️ Error loading overhead costs: $e");
-      return [];
-    }
-  }
-  
-  static Future<double> getTotalOverheadCost() async {
-    final costs = await getOverheadCosts();
-    return costs.fold<double>(0.0, (sum, cost) => sum + (cost['cost'] as num).toDouble());
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/OverHead/View/AddOverhead.dart';
+import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
@@ -14,50 +15,10 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 
-class PricingSettingsManager {
-  static const String _markupKey = 'pricing_markup_percentage';
-  static const String _pricingMethodKey = 'pricing_method';
-  static const String _workingDaysKey = 'factory_working_days_per_month';
+// ==============================
+// UPDATED BOM SUMMARY - WITH PROPER OVERHEAD CALCULATION
+// ==============================
 
-  // Save markup percentage
-  static Future<void> saveMarkup(double markupPercentage) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_markupKey, markupPercentage);
-    debugPrint("💾 Saved markup: $markupPercentage%");
-  }
-
-  // Get markup percentage (default: 30%)
-  static Future<double> getMarkup() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble(_markupKey) ?? 30.0;
-  }
-
-  // Save pricing method (Method 1 or Method 2)
-  static Future<void> savePricingMethod(String method) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_pricingMethodKey, method);
-    debugPrint("💾 Saved pricing method: $method");
-  }
-
-  // Get pricing method (default: Method 1)
-  static Future<String> getPricingMethod() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_pricingMethodKey) ?? 'Method 1';
-  }
-
-  // Save working days per month
-  static Future<void> saveWorkingDays(int days) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_workingDaysKey, days);
-    debugPrint("💾 Saved working days: $days");
-  }
-
-  // Get working days per month (default: 26 days)
-  static Future<int> getWorkingDays() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_workingDaysKey) ?? 26;
-  }
-}
 class BOMSummary extends ConsumerStatefulWidget {
   const BOMSummary({super.key});
 
@@ -78,19 +39,19 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   String selectedPeriod = 'Day';
   final List<String> periodOptions = ['Hour', 'Day', 'Week', 'Month'];
 
-  // Pricing Settings
+  // Pricing Settings (loaded from PricingSettingsManager)
   double markupPercentage = 30.0;
-  String pricingMethod = 'Method 1'; // Method 1 or Method 2
+  String pricingMethod = 'Method 1';
   int workingDaysPerMonth = 26;
 
   @override
   void initState() {
     super.initState();
     _loadOverheadCosts();
-     _loadPricingSettings();
+    _loadPricingSettings();
   }
 
-  // Load pricing settings
+  // Load pricing settings from SharedPreferences
   Future<void> _loadPricingSettings() async {
     final markup = await PricingSettingsManager.getMarkup();
     final method = await PricingSettingsManager.getPricingMethod();
@@ -146,94 +107,82 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     }
   }
 
-  // 💰 METHOD 1: Calculate MOC (Manufacturing Overhead Cost) per day
-  double calculateMOCPerDay() {
-    if (overheadCosts.isEmpty) return 0.0;
-
-    double yearlyTotal = 0.0;
-
-    for (var overhead in overheadCosts) {
-      final double cost = (overhead['cost'] ?? 0).toDouble();
-      final String period = overhead['period'] ?? 'Monthly';
-
-      // Convert all costs to yearly
-      double yearlyCost = 0.0;
-
-      switch (period.toLowerCase()) {
-        case 'hourly':
-          yearlyCost = cost * 24 * 365; // hours per year
-          break;
-        case 'daily':
-          yearlyCost = cost * 365;
-          break;
-        case 'weekly':
-          yearlyCost = cost * 52;
-          break;
-        case 'monthly':
-          yearlyCost = cost * 12;
-          break;
-        case 'quarterly':
-          yearlyCost = cost * 4;
-          break;
-        case 'yearly':
-          yearlyCost = cost;
-          break;
-        default:
-          yearlyCost = cost * 12; // Default to monthly
-      }
-
-      yearlyTotal += yearlyCost;
-      
-      debugPrint(
-        "📊 ${overhead['category']}: ₦$cost/${period} → ₦${yearlyCost.toStringAsFixed(2)}/year",
-      );
-    }
-
-    // Calculate MOC per day
-    final monthlyMOC = yearlyTotal / 12;
-    final dailyMOC = monthlyMOC / workingDaysPerMonth;
-
-    debugPrint("📊 Yearly Total: ₦${yearlyTotal.toStringAsFixed(2)}");
-    debugPrint("📊 Monthly MOC: ₦${monthlyMOC.toStringAsFixed(2)}");
-    debugPrint("📊 Daily MOC: ₦${dailyMOC.toStringAsFixed(2)}");
-
-    return dailyMOC;
-  }
-
-  // 💰 Calculate Manufacturing Overhead Cost based on duration
+  // 💰 Calculate Manufacturing Overhead with proper period conversion
   double calculateManufacturingOverhead() {
-    if (selectedDuration == null) return 0.0;
+    if (overheadCosts.isEmpty || selectedDuration == null) {
+      debugPrint("💰 No overhead costs or duration not selected");
+      return 0.0;
+    }
 
     final int duration = int.tryParse(selectedDuration!) ?? 0;
-    if (duration == 0) return 0.0;
-
-    final dailyMOC = calculateMOCPerDay();
-
-    // Convert user's selected duration to days
-    double durationInDays = 0.0;
-
-    switch (selectedPeriod) {
-      case 'Hour':
-        durationInDays = duration / 24;
-        break;
-      case 'Day':
-        durationInDays = duration.toDouble();
-        break;
-      case 'Week':
-        durationInDays = duration * 7;
-        break;
-      case 'Month':
-        durationInDays = duration * 30;
-        break;
+    if (duration == 0) {
+      debugPrint("💰 Duration is 0");
+      return 0.0;
     }
 
-    final totalMOC = dailyMOC * durationInDays;
+    try {
+      debugPrint("💰 ============================================");
+      debugPrint("💰 RAW OVERHEAD COSTS DATA:");
+      debugPrint("💰 Number of costs: ${overheadCosts.length}");
+      for (var cost in overheadCosts) {
+        debugPrint("💰   ${cost['description']}: ₦${cost['cost']}/${cost['period']}");
+      }
+      debugPrint("💰 ============================================");
 
-    debugPrint(
-      "💰 Manufacturing Overhead: ₦${dailyMOC.toStringAsFixed(2)}/day × $durationInDays days = ₦${totalMOC.toStringAsFixed(2)}",
-    );
+      // Convert overhead costs to _CostItemAdapter format for calculator
+      final items = overheadCosts.map((cost) {
+        final adapter = _CostItemAdapter(
+          cost: (cost['cost'] as num).toDouble(),
+          period: cost['period'] as String,
+          category: cost['category'] as String,
+          description: cost['description'] as String,
+        );
+        debugPrint("💰 Created adapter: ${adapter.description} - ₦${adapter.cost}/${adapter.period}");
+        return adapter;
+      }).toList();
 
-    return totalMOC;
+      // STEP 1: Convert all overhead costs to the selected period
+      String targetPeriod = selectedPeriod; // 'Hour', 'Day', 'Week', or 'Month'
+      
+      debugPrint("💰 ");
+      debugPrint("💰 TARGET PERIOD: $targetPeriod");
+      debugPrint("💰 DURATION: $duration $targetPeriod(s)");
+      debugPrint("💰 ");
+
+      double overheadPerPeriod = OverheadCostCalculator.calculateTotalForDuration(
+        items,
+        targetPeriod,
+      );
+
+      debugPrint("💰 Calculated overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}");
+
+      // STEP 2: Multiply by the number of periods selected
+      final totalOverhead = overheadPerPeriod * duration;
+
+      // Detailed logging for debugging
+      debugPrint("💰 ");
+      debugPrint("💰 BREAKDOWN PER ITEM:");
+      for (var item in items) {
+        final convertedCost = OverheadCostCalculator.convertCostToDuration(
+          item.cost,
+          item.period,
+          targetPeriod,
+        );
+        debugPrint("💰   ${item.description}: ₦${item.cost}/${item.period} → ₦${convertedCost.toStringAsFixed(2)}/$targetPeriod");
+      }
+      debugPrint("💰 ");
+      debugPrint("💰 CALCULATION:");
+      debugPrint("💰   Total Overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}");
+      debugPrint("💰   × Duration: $duration $selectedPeriod(s)");
+      debugPrint("💰   = TOTAL MANUFACTURING OVERHEAD: ₦${totalOverhead.toStringAsFixed(2)}");
+      debugPrint("💰 ============================================");
+
+      return totalOverhead;
+    } catch (e, stackTrace) {
+      debugPrint("⚠️ Error calculating overhead: $e");
+      debugPrint("⚠️ Stack trace: $stackTrace");
+      return 0.0;
+    }
   }
 
   // 📊 Calculate Pricing based on selected method
@@ -261,31 +210,31 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     double sellingPrice = 0;
 
     if (pricingMethod == 'Method 1') {
-      // METHOD 1: Cost Price = Materials + Other Costs + MOC (based on duration)
+      // METHOD 1: Direct Markup (No MOC in cost price)
+      costPrice = materialTotal + additionalTotal;
+      overheadCost = 0; // MOC not included in Method 1
+      
+      // Add markup to get selling price
+      sellingPrice = costPrice * (1 + (markupPercentage / 100));
+
+      debugPrint("💵 METHOD 1 (Direct Markup):");
+      debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
+      debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
+      debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
+      debugPrint("   Markup: $markupPercentage%");
+      debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
+    } else {
+      // METHOD 2: Include Manufacturing Overhead in Cost Price
       overheadCost = calculateManufacturingOverhead();
       costPrice = materialTotal + additionalTotal + overheadCost;
       
       // Add markup to get selling price
       sellingPrice = costPrice * (1 + (markupPercentage / 100));
 
-      debugPrint("💵 METHOD 1:");
+      debugPrint("💵 METHOD 2 (With MOC):");
       debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
       debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
       debugPrint("   Manufacturing Overhead: ₦${overheadCost.toStringAsFixed(2)}");
-      debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
-      debugPrint("   Markup: $markupPercentage%");
-      debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
-    } else {
-      // METHOD 2: Cost Price = Materials + Other Costs (NO MOC)
-      costPrice = materialTotal + additionalTotal;
-      overheadCost = 0; // MOC not included in Method 2
-      
-      // Add markup to get selling price
-      sellingPrice = costPrice * (1 + (markupPercentage / 100));
-
-      debugPrint("💵 METHOD 2:");
-      debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
-      debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
       debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
       debugPrint("   Markup: $markupPercentage%");
       debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
@@ -300,44 +249,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     };
   }
 
-  // Show pricing method selector dialog
-  Future<void> _showPricingMethodDialog() async {
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Select Pricing Method'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            RadioListTile<String>(
-              title: const Text('Method 1'),
-              subtitle: const Text('Include Manufacturing Overhead Cost'),
-              value: 'Method 1',
-              groupValue: pricingMethod,
-              onChanged: (value) {
-                setState(() => pricingMethod = value!);
-                PricingSettingsManager.savePricingMethod(value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('Method 2'),
-              subtitle: const Text('Direct Markup (No MOC)'),
-              value: 'Method 2',
-              groupValue: pricingMethod,
-              onChanged: (value) {
-                setState(() => pricingMethod = value!);
-                PricingSettingsManager.savePricingMethod(value!);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   // Create Quotation and Continue
   Future<void> _createQuotationAndContinue(
     List<Map<String, dynamic>> materials,
@@ -346,7 +257,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     try {
       final pricing = calculatePricing(materials, additionalCosts);
 
-      // Get product data
       final quotationState = ref.read(quotationSummaryProvider);
       final productData = quotationState["product"];
 
@@ -362,7 +272,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
       final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
 
-      // Create quotation
       final newQuotation = {
         "product": productData,
         "materials": materials,
@@ -403,8 +312,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     }
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     final materialData = ref.watch(materialProvider);
@@ -423,13 +330,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: _showPricingMethodDialog,
-            tooltip: 'Pricing Method',
-          ),
-        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -440,7 +340,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               const CustomText(title: "Summary"),
               const SizedBox(height: 20),
 
-              // Pricing Method Indicator
+              // Pricing Method Indicator (Read-only)
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
@@ -454,7 +354,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        "$pricingMethod: ${pricingMethod == 'Method 1' ? 'With Manufacturing Overhead' : 'Direct Markup'} • ${markupPercentage.toStringAsFixed(1)}% Markup",
+                        "$pricingMethod: ${pricingMethod == 'Method 1' ? 'Direct Markup' : 'With Manufacturing Overhead'} • ${markupPercentage.toStringAsFixed(1)}% Markup",
                         style: const TextStyle(
                           color: Color(0xFFA16438),
                           fontWeight: FontWeight.w600,
@@ -492,8 +392,8 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
               const SizedBox(height: 40),
 
-              // Expected Duration Section (only show for Method 1)
-              if (pricingMethod == 'Method 1') ...[
+              // Expected Duration Section (only show for Method 2)
+              if (pricingMethod == 'Method 2') ...[
                 _buildExpectedDurationSection(),
                 const SizedBox(height: 30),
               ],
@@ -515,7 +415,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
- Widget _buildExpectedDurationSection() {
+  Widget _buildExpectedDurationSection() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -612,8 +512,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-  // ✅ Cost Breakdown Section (Cost Price, Overhead, Selling Price)
- // Cost Breakdown Section
   Widget _buildCostBreakdownSection(Map<String, double> pricing) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -628,7 +526,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         _buildCostRow("Additional Costs", pricing['additionalTotal']!),
         const SizedBox(height: 12),
         
-        if (pricingMethod == 'Method 1') ...[
+        if (pricingMethod == 'Method 2') ...[
           _buildCostRow(
             "Manufacturing Overhead",
             pricing['overheadCost']!,
@@ -658,8 +556,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     );
   }
 
-
-Widget _buildCostRow(
+  Widget _buildCostRow(
     String label,
     double value, {
     bool isLoading = false,
@@ -696,12 +593,11 @@ Widget _buildCostRow(
     );
   }
 
-  // ✅ Material Card
+  // Material and Additional Cost card widgets remain the same...
   Widget _buildMaterialCard(Map<String, dynamic> item) {
     return Consumer(
       builder: (context, ref, _) {
         int quantity = 1;
-
         final q = item["quantity"];
         if (q is int) {
           quantity = q;
@@ -718,26 +614,8 @@ Widget _buildCostRow(
           return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Color(0xFF302E2E),
-                  fontSize: 16,
-                  fontFamily: 'Open Sans',
-                  fontWeight: FontWeight.w400,
-                  height: 1.50,
-                ),
-              ),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Color(0xFF302E2E),
-                  fontSize: 16,
-                  fontFamily: 'Open Sans',
-                  fontWeight: FontWeight.w400,
-                  height: 1.50,
-                ),
-              ),
+              Text(label, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+              Text(value, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
             ],
           );
         }
@@ -769,34 +647,12 @@ Widget _buildCostRow(
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: ShapeDecoration(
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
+                decoration: ShapeDecoration(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'Price',
-                      style: TextStyle(
-                        color: Color(0xFF302E2E),
-                        fontSize: 16,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.w400,
-                        height: 1.50,
-                      ),
-                    ),
-                    Text(
-                      "₦${price.toStringAsFixed(2)}",
-                      style: const TextStyle(
-                        color: Color(0xFF302E2E),
-                        fontSize: 16,
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    const Text('Price', style: TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+                    Text("₦${price.toStringAsFixed(2)}", style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -807,35 +663,15 @@ Widget _buildCostRow(
     );
   }
 
-  // ✅ Additional Cost Card
   Widget _buildAdditionalCostCard(Map<String, dynamic> item) {
-    final double amount =
-        double.tryParse((item["amount"] ?? "0").toString()) ?? 0;
+    final double amount = double.tryParse((item["amount"] ?? "0").toString()) ?? 0;
 
     Widget buildRow(String label, String value) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF302E2E),
-              fontSize: 16,
-              fontFamily: 'Open Sans',
-              fontWeight: FontWeight.w400,
-              height: 1.50,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF302E2E),
-              fontSize: 16,
-              fontFamily: 'Open Sans',
-              fontWeight: FontWeight.w400,
-              height: 1.50,
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+          Text(value, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
         ],
       );
     }
@@ -857,34 +693,12 @@ Widget _buildCostRow(
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: ShapeDecoration(
-              color: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
+            decoration: ShapeDecoration(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Amount',
-                  style: TextStyle(
-                    color: Color(0xFF302E2E),
-                    fontSize: 16,
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w400,
-                    height: 1.50,
-                  ),
-                ),
-                Text(
-                  "₦${amount.toStringAsFixed(2)}",
-                  style: const TextStyle(
-                    color: Color(0xFF302E2E),
-                    fontSize: 16,
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                const Text('Amount', style: TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+                Text("₦${amount.toStringAsFixed(2)}", style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -892,4 +706,25 @@ Widget _buildCostRow(
       ),
     );
   }
+}
+
+// Helper adapter class for the calculator
+class _CostItemAdapter {
+  final double cost;
+  final String period;
+  final String category;
+  final String description;
+
+  _CostItemAdapter({
+    required this.cost,
+    required this.period,
+    required this.category,
+    required this.description,
+  });
+
+  // Getters for the calculator to access properties
+  double get getCost => cost;
+  String get getPeriod => period;
+  String get getCategory => category;
+  String get getDescription => description;
 }
