@@ -1,64 +1,91 @@
 class MaterialModel {
   final String id;
   final String name;
-  final String unit;
-  final double standardWidth;
-  final double standardLength;
-  final String standardUnit;
-  final double pricePerSqm;
+  final String? category;
+  final String? unit;
+  final double? standardWidth;
+  final double? standardLength;
+  final String? standardUnit;
+  final double? pricePerSqm;
+  final double? pricePerUnit;
+  final String? pricingUnit;
+  final List<MaterialType> types;
+  final List<SizeVariant> sizeVariants;
+  final List<FoamVariant> foamVariants;
+  final double wasteThreshold;
+  final bool? isActive;
+  final String? notes;
   final List<Size> sizes;
   final List<FoamDensity> foamDensities;
   final List<FoamThickness> foamThicknesses;
-  final List<MaterialType> types;
-  final double wasteThreshold;
-  final String createdAt;
-  final String updatedAt;
+  final String? createdAt;
+  final String? updatedAt;
 
   MaterialModel({
     required this.id,
     required this.name,
-    required this.unit,
-    required this.standardWidth,
-    required this.standardLength,
-    required this.standardUnit,
-    required this.pricePerSqm,
-    required this.sizes,
-    required this.foamDensities,
-    required this.foamThicknesses,
-    required this.types,
-    required this.wasteThreshold,
-    required this.createdAt,
-    required this.updatedAt,
+    this.category,
+    this.unit,
+    this.standardWidth,
+    this.standardLength,
+    this.standardUnit,
+    this.pricePerSqm,
+    this.pricePerUnit,
+    this.pricingUnit,
+    this.types = const [],
+    this.sizeVariants = const [],
+    this.foamVariants = const [],
+    this.wasteThreshold = 0.75,
+    this.isActive,
+    this.notes,
+    this.sizes = const [],
+    this.foamDensities = const [],
+    this.foamThicknesses = const [],
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory MaterialModel.fromJson(Map<String, dynamic> json) {
     return MaterialModel(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
-      unit: json['unit'] ?? '',
-      standardWidth: json['standardWidth']?.toDouble() ?? 0.0,
-      standardLength: json['standardLength']?.toDouble() ?? 0.0,
-      standardUnit: json['standardUnit'] ?? '',
-      pricePerSqm: json['pricePerSqm']?.toDouble() ?? 0.0,
+      category: json['category'],
+      unit: json['unit'],
+      standardWidth: json['standardWidth']?.toDouble(),
+      standardLength: json['standardLength']?.toDouble(),
+      standardUnit: json['standardUnit'],
+      pricePerSqm: json['pricePerSqm']?.toDouble(),
+      pricePerUnit: json['pricePerUnit']?.toDouble(),
+      pricingUnit: json['pricingUnit'],
+      types: (json['types'] as List?)
+              ?.map((t) => MaterialType.fromJson(t))
+              .toList() ??
+          [],
+      sizeVariants: (json['sizeVariants'] as List?)
+              ?.map((s) => SizeVariant.fromJson(s))
+              .toList() ??
+          [],
+      foamVariants: (json['foamVariants'] as List?)
+              ?.map((f) => FoamVariant.fromJson(f))
+              .toList() ??
+          [],
+      wasteThreshold: json['wasteThreshold']?.toDouble() ?? 0.75,
+      isActive: json['isActive'],
+      notes: json['notes'],
       sizes: (json['sizes'] as List?)
-          ?.map((s) => Size.fromJson(s))
-          .toList() ??
+              ?.map((s) => Size.fromJson(s))
+              .toList() ??
           [],
       foamDensities: (json['foamDensities'] as List?)
-          ?.map((f) => FoamDensity.fromJson(f))
-          .toList() ??
+              ?.map((f) => FoamDensity.fromJson(f))
+              .toList() ??
           [],
       foamThicknesses: (json['foamThicknesses'] as List?)
-          ?.map((f) => FoamThickness.fromJson(f))
-          .toList() ??
+              ?.map((f) => FoamThickness.fromJson(f))
+              .toList() ??
           [],
-      types: (json['types'] as List?)
-          ?.map((t) => MaterialType.fromJson(t))
-          .toList() ??
-          [],
-      wasteThreshold: json['wasteThreshold']?.toDouble() ?? 0.0,
-      createdAt: json['createdAt'] ?? '',
-      updatedAt: json['updatedAt'] ?? '',
+      createdAt: json['createdAt'],
+      updatedAt: json['updatedAt'],
     );
   }
 
@@ -66,18 +93,137 @@ class MaterialModel {
     return {
       '_id': id,
       'name': name,
-      'unit': unit,
-      'standardWidth': standardWidth,
-      'standardLength': standardLength,
-      'standardUnit': standardUnit,
-      'pricePerSqm': pricePerSqm,
+      if (category != null) 'category': category,
+      if (unit != null) 'unit': unit,
+      if (standardWidth != null) 'standardWidth': standardWidth,
+      if (standardLength != null) 'standardLength': standardLength,
+      if (standardUnit != null) 'standardUnit': standardUnit,
+      if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+      if (pricingUnit != null) 'pricingUnit': pricingUnit,
+      'types': types.map((t) => t.toJson()).toList(),
+      'sizeVariants': sizeVariants.map((s) => s.toJson()).toList(),
+      'foamVariants': foamVariants.map((f) => f.toJson()).toList(),
+      'wasteThreshold': wasteThreshold,
+      if (isActive != null) 'isActive': isActive,
+      if (notes != null) 'notes': notes,
       'sizes': sizes.map((s) => s.toJson()).toList(),
       'foamDensities': foamDensities.map((f) => f.toJson()).toList(),
       'foamThicknesses': foamThicknesses.map((f) => f.toJson()).toList(),
-      'types': types.map((t) => t.toJson()).toList(),
-      'wasteThreshold': wasteThreshold,
-      'createdAt': createdAt,
-      'updatedAt': updatedAt,
+      if (createdAt != null) 'createdAt': createdAt,
+      if (updatedAt != null) 'updatedAt': updatedAt,
+    };
+  }
+}
+
+class MaterialType {
+  final String name;
+  final double? pricePerSqm;
+  final double? standardWidth;
+  final double? standardLength;
+
+  MaterialType({
+    required this.name,
+    this.pricePerSqm,
+    this.standardWidth,
+    this.standardLength,
+  });
+
+  factory MaterialType.fromJson(Map<String, dynamic> json) {
+    return MaterialType(
+      name: json['name'] ?? '',
+      pricePerSqm: json['pricePerSqm']?.toDouble(),
+      standardWidth: json['standardWidth']?.toDouble(),
+      standardLength: json['standardLength']?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
+      if (standardWidth != null) 'standardWidth': standardWidth,
+      if (standardLength != null) 'standardLength': standardLength,
+    };
+  }
+}
+
+class SizeVariant {
+  final String name;
+  final double width;
+  final double length;
+  final String? unit;
+  final double? pricePerUnit;
+
+  SizeVariant({
+    required this.name,
+    required this.width,
+    required this.length,
+    this.unit,
+    this.pricePerUnit,
+  });
+
+  factory SizeVariant.fromJson(Map<String, dynamic> json) {
+    return SizeVariant(
+      name: json['name'] ?? '',
+      width: json['width']?.toDouble() ?? 0.0,
+      length: json['length']?.toDouble() ?? 0.0,
+      unit: json['unit'],
+      pricePerUnit: json['pricePerUnit']?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'width': width,
+      'length': length,
+      if (unit != null) 'unit': unit,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+    };
+  }
+}
+
+class FoamVariant {
+  final double thickness;
+  final String thicknessUnit;
+  final String? density;
+  final double width;
+  final double length;
+  final String dimensionUnit;
+  final double? pricePerSqm;
+
+  FoamVariant({
+    required this.thickness,
+    required this.thicknessUnit,
+    this.density,
+    required this.width,
+    required this.length,
+    required this.dimensionUnit,
+    this.pricePerSqm,
+  });
+
+  factory FoamVariant.fromJson(Map<String, dynamic> json) {
+    return FoamVariant(
+      thickness: json['thickness']?.toDouble() ?? 0.0,
+      thicknessUnit: json['thicknessUnit'] ?? 'inches',
+      density: json['density'],
+      width: json['width']?.toDouble() ?? 0.0,
+      length: json['length']?.toDouble() ?? 0.0,
+      dimensionUnit: json['dimensionUnit'] ?? 'inches',
+      pricePerSqm: json['pricePerSqm']?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'thickness': thickness,
+      'thicknessUnit': thicknessUnit,
+      if (density != null) 'density': density,
+      'width': width,
+      'length': length,
+      'dimensionUnit': dimensionUnit,
+      if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
     };
   }
 }
@@ -133,23 +279,5 @@ class FoamThickness {
 
   Map<String, dynamic> toJson() {
     return {'thickness': thickness, 'unit': unit};
-  }
-}
-
-class MaterialType {
-  final String name;
-  final double pricePerSqm;
-
-  MaterialType({required this.name, required this.pricePerSqm});
-
-  factory MaterialType.fromJson(Map<String, dynamic> json) {
-    return MaterialType(
-      name: json['name'] ?? '',
-      pricePerSqm: json['pricePerSqm']?.toDouble() ?? 0.0,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {'name': name, 'pricePerSqm': pricePerSqm};
   }
 }

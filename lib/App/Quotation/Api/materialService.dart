@@ -15,6 +15,7 @@ class MaterialService {
       InterceptorsWrapper(
         onRequest: (options, handler) {
           debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
+          debugPrint("📦 [DATA] => ${options.data}");
           return handler.next(options);
         },
         onResponse: (response, handler) {
@@ -33,136 +34,203 @@ class MaterialService {
     );
   }
 
-  // 🟢 GET MATERIALS
-  Future<List<MaterialModel>> getMaterials() async {
+  // 🟢 GET ALL MATERIALS
+  Future<Map<String, dynamic>> getAllMaterials({String? category}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
-      if (token == null) throw Exception("No auth token found");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      String url = "/api/product/materials";
+      if (category != null) {
+        url += "?category=$category";
+      }
 
       final response = await _dio.get(
-        "/api/product/materials",
+        url,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      final data = response.data;
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [GET MATERIALS ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to fetch materials'
+      };
+    }
+  }
 
-      if (data["success"] == true && data["data"] is List) {
-        return (data["data"] as List)
+  // 🟢 GET MATERIALS (for backward compatibility)
+  Future<List<MaterialModel>> getMaterials() async {
+    try {
+      final result = await getAllMaterials();
+      
+      if (result['success'] == true && result['data'] is List) {
+        return (result['data'] as List)
             .map((json) => MaterialModel.fromJson(json))
             .toList();
       } else {
         return [];
       }
-    } on DioException catch (e) {
-      debugPrint("⚠️ [GET MATERIALS ERROR] => ${e.response?.data ?? e.message}");
+    } catch (e) {
+      debugPrint("⚠️ [GET MATERIALS ERROR] => $e");
       return [];
     }
   }
 
-  // 🟢 CREATE MATERIAL
-  Future<MaterialModel?> createMaterial({
-    required String name,
-    required String unit,
-    List<String> sizes = const [],
-    List<String> foamDensities = const [],
-    List<String> foamThicknesses = const [],
-  }) async {
+  // 🟢 CREATE MATERIAL (Generic - works for all categories)
+  Future<Map<String, dynamic>> createMaterial(Map<String, dynamic> materialData) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
-      if (token == null) throw Exception("No auth token found");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
 
       final response = await _dio.post(
-        "/api/product/creatematerial",
-        data: {
-          "name": name,
-          "unit": unit,
-          "sizes": sizes,
-          "foamDensities": foamDensities,
-          "foamThicknesses": foamThicknesses,
-        },
+        "/api/product/materials",
+        data: materialData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
-      final data = response.data;
-
-      if (data["success"] == true && data["data"] != null) {
-        return MaterialModel.fromJson(data["data"]);
-      } else {
-        return null;
-      }
+      return response.data;
     } on DioException catch (e) {
       debugPrint("⚠️ [CREATE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
-      return null;
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to create material'
+      };
     }
   }
 
   // 🟢 ADD TYPES TO MATERIAL
-  Future<MaterialModel?> addMaterialTypes({
+  Future<Map<String, dynamic>> addMaterialTypes(
+    String materialId,
+    Map<String, dynamic> typesData,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final response = await _dio.post(
+        "/api/product/material/$materialId/add-types",
+        data: typesData,
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [ADD TYPES ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to add types'
+      };
+    }
+  }
+
+  // 🟢 CALCULATE MATERIAL COST
+  Future<MaterialCostModel?> calculateMaterialCost({
     required String materialId,
-    required List<String> types,
+    required double requiredWidth,
+    required double requiredLength,
+    required String requiredUnit,
+    String? materialType,
+    String? sizeVariant,
+    double? foamThickness,
+    String? foamDensity,
+    int quantity = 1,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
       if (token == null) throw Exception("No auth token found");
 
+      final requestData = {
+        "requiredWidth": requiredWidth,
+        "requiredLength": requiredLength,
+        "requiredUnit": requiredUnit,
+        if (materialType != null) "materialType": materialType,
+        if (sizeVariant != null) "sizeVariant": sizeVariant,
+        if (foamThickness != null) "foamThickness": foamThickness,
+        if (foamDensity != null) "foamDensity": foamDensity,
+        "quantity": quantity,
+      };
+
+      debugPrint("🔢 [CALCULATING COST] => $requestData");
+
       final response = await _dio.post(
-        "/api/product/$materialId/add-types",
-        data: {"types": types},
+        "/api/product/material/$materialId/calculate-cost",
+        data: requestData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       final data = response.data;
-
       if (data["success"] == true && data["data"] != null) {
-        return MaterialModel.fromJson(data["data"]);
+        return MaterialCostModel.fromJson(data["data"]);
       } else {
         return null;
       }
     } on DioException catch (e) {
-      debugPrint("⚠️ [ADD TYPES ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint("⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}");
       return null;
     }
   }
 
+  // 🟢 UPDATE MATERIAL
+  Future<Map<String, dynamic>> updateMaterial(
+    String materialId,
+    Map<String, dynamic> updates,
+  ) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
 
-  // 🟢 CALCULATE MATERIAL COST
-Future<MaterialCostModel?> calculateMaterialCost({
-  required String materialId,
-  required double requiredWidth,
-  required double requiredLength,
-  required String requiredUnit,
-  String? materialType,
-}) async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-    if (token == null) throw Exception("No auth token found");
+      final response = await _dio.put(
+        "/api/product/material/$materialId",
+        data: updates,
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
-    final response = await _dio.post(
-      "/api/product/material/$materialId/calculate-cost",
-      data: {
-        "requiredWidth": requiredWidth,
-        "requiredLength": requiredLength,
-        "requiredUnit": requiredUnit,
-        "materialType": materialType,
-      },
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
-
-    final data = response.data;
-    if (data["success"] == true && data["data"] != null) {
-      return MaterialCostModel.fromJson(data["data"]);
-    } else {
-      return null;
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [UPDATE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to update material'
+      };
     }
-  } on DioException catch (e) {
-    debugPrint("⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}");
-    return null;
   }
-}
 
+  // 🟢 DELETE MATERIAL
+  Future<Map<String, dynamic>> deleteMaterial(String materialId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
 
+      final response = await _dio.delete(
+        "/api/product/material/$materialId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      debugPrint("⚠️ [DELETE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      return {
+        'success': false,
+        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to delete material'
+      };
+    }
+  }
 }

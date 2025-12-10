@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+
 class PricingSettingsManager {
   static const String _markupKey = 'pricing_markup_percentage';
   static const String _pricingMethodKey = 'pricing_method';

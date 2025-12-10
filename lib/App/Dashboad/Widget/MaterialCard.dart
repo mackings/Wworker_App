@@ -39,6 +39,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   String? _selectedMaterialType;
   bool _isCustomType = false;
 
+  // Foam-specific selections
+  FoamVariant? _selectedFoamVariant;
+
   // Project/Required dimensions
   String? width, length, thickness, unit;
 
@@ -76,7 +79,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   /// Set default units based on material type
   void _setDefaultUnitsForMaterial(MaterialModel material) {
-    final materialUnit = material.unit.toLowerCase();
+    final materialUnit = material.unit?.toLowerCase() ?? '';
     
     // Default unit based on material type
     String? defaultUnit;
@@ -92,7 +95,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     } else if (materialUnit.contains('yard')) {
       defaultUnit = 'in';
     } else {
-      defaultUnit = 'cm';
+      defaultUnit = material.standardUnit ?? 'cm';
     }
     
     setState(() {
@@ -104,6 +107,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     setState(() {
       _selectedMaterial = material;
       _selectedMaterialType = null;
+      _selectedFoamVariant = null;
       _isCustomType = false;
       _costCalculation = null;
       materialTypeController.clear();
@@ -125,6 +129,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         materialTypeController.text = type ?? '';
       }
     });
+  }
+
+  void _onFoamVariantSelected(FoamVariant? variant) {
+    setState(() {
+      _selectedFoamVariant = variant;
+      if (variant != null) {
+        // Set the material type to show which foam is selected
+        materialTypeController.text = 
+            '${variant.thickness}${variant.thicknessUnit} ${variant.density ?? ""}';
+      }
+    });
+    _calculateCosts();
   }
 
   /// Calculate costs via API (auto-triggered)
@@ -150,6 +166,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         requiredLength: l,
         requiredUnit: unit!,
         materialType: _selectedMaterialType,
+        foamThickness: _selectedFoamVariant?.thickness,
+        foamDensity: _selectedFoamVariant?.density,
       );
 
       if (mounted) {
@@ -208,8 +226,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "Unit": unit,
       "Sqm": _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
       "Price": _costCalculation!.pricing.projectCost.toStringAsFixed(2),
-       "quantity": "1"
-     // "quantity": _costCalculation!.quantity.minimumUnits.toString(),
+      "quantity": "1",
     };
 
     widget.onAddItem?.call(item);
@@ -217,6 +234,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     // Reset form (but keep material selection and units)
     setState(() {
       _selectedMaterialType = null;
+      _selectedFoamVariant = null;
       _isCustomType = false;
       width = null;
       length = null;
@@ -236,6 +254,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isFoam = _selectedMaterial?.category?.toUpperCase() == 'FOAM';
+    final hasTypes = _selectedMaterial?.types.isNotEmpty ?? false;
+    final hasFoamVariants = _selectedMaterial?.foamVariants.isNotEmpty ?? false;
+
     return Container(
       width: MediaQuery.of(context).size.width - 35,
       padding: const EdgeInsets.all(16),
@@ -343,15 +365,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
           const SizedBox(height: 16),
 
-          // Material Type/Name - Smart Dropdown with Custom Input
-          if (_selectedMaterial != null) _buildMaterialTypeField(),
+          // Foam Variants Selection (if foam material)
+          if (isFoam && hasFoamVariants) _buildFoamVariantSelection(),
+
+          // Material Type/Name - Smart Dropdown with Custom Input (for non-foam or foam with types)
+          if (_selectedMaterial != null && (!isFoam || hasTypes)) 
+            _buildMaterialTypeField(),
 
           const SizedBox(height: 20),
 
           // Display standard material info (read-only from API)
           if (_selectedMaterial != null) ...[
-          //  _buildSectionHeader("Standard Material Size (from supplier)"),
-            const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -361,15 +385,39 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow(
-                    "Dimensions:",
-                    "${_selectedMaterial!.standardWidth} × ${_selectedMaterial!.standardLength} ${_selectedMaterial!.standardUnit}",
-                  ),
-                  const SizedBox(height: 4),
-                  _buildInfoRow(
-                    "Price per sq m:",
-                    "₦${_selectedMaterial!.pricePerSqm.toStringAsFixed(2)}",
-                  ),
+                  if (_selectedMaterial!.standardWidth != null &&
+                      _selectedMaterial!.standardLength != null)
+                    _buildInfoRow(
+                      "Standard Size:",
+                      "${_selectedMaterial!.standardWidth} × ${_selectedMaterial!.standardLength} ${_selectedMaterial!.standardUnit ?? ''}",
+                    ),
+                  if (_selectedMaterial!.pricePerSqm != null &&
+                      _selectedMaterial!.pricePerSqm! > 0) ...[
+                    const SizedBox(height: 4),
+                    _buildInfoRow(
+                      "Price per sq m:",
+                      "₦${_selectedMaterial!.pricePerSqm!.toStringAsFixed(2)}",
+                    ),
+                  ],
+                  if (_selectedFoamVariant != null) ...[
+                    const Divider(height: 16),
+                    _buildInfoRow(
+                      "Selected Foam:",
+                      "${_selectedFoamVariant!.thickness}${_selectedFoamVariant!.thicknessUnit} ${_selectedFoamVariant!.density ?? ''}",
+                    ),
+                    const SizedBox(height: 4),
+                    _buildInfoRow(
+                      "Foam Size:",
+                      "${_selectedFoamVariant!.width} × ${_selectedFoamVariant!.length} ${_selectedFoamVariant!.dimensionUnit}",
+                    ),
+                    if (_selectedFoamVariant!.pricePerSqm != null) ...[
+                      const SizedBox(height: 4),
+                      _buildInfoRow(
+                        "Foam Price:",
+                        "₦${_selectedFoamVariant!.pricePerSqm!.toStringAsFixed(2)}/m²",
+                      ),
+                    ],
+                  ],
                 ],
               ),
             ),
@@ -458,69 +506,50 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             ),
 
           // Calculated Results
-          if (_costCalculation != null)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF3E0),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFA16438)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "Calculated Costs",
-                    style: GoogleFonts.openSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFFA16438),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _buildResultRow(
-                    "Project Area:",
-                    "${_costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2)} sq m",
-                  ),
-                  _buildResultRow(
-                    "Standard Area:",
-                    "${_costCalculation!.dimensions.standardAreaSqm.toStringAsFixed(2)} sq m",
-                  ),
-                  const Divider(color: Color(0xFFCCA183)),
-                  _buildResultRow(
-                    "Price per sq m:",
-                    "₦${_costCalculation!.pricing.pricePerSqm.toStringAsFixed(2)}",
-                  ),
-                  _buildResultRow(
-                    "Full Board Price:",
-                    "₦${_costCalculation!.pricing.totalBoardPrice.toStringAsFixed(2)}",
-                  ),
-                  const Divider(color: Color(0xFFCCA183)),
-                  _buildResultRow(
-                    "Project Cost:",
-                    "₦${_costCalculation!.pricing.projectCost.toStringAsFixed(2)}",
-                  ),
-                  _buildResultRow(
-                    "Minimum Boards:",
-                    "${_costCalculation!.quantity.minimumUnits} board(s)",
-                  ),
-                  const Divider(color: Color(0xFFCCA183)),
-                  _buildResultRow(
-                    "Total Area Used:",
-                    "${_costCalculation!.waste.totalAreaUsed.toStringAsFixed(2)} sq m",
-                  ),
-                  _buildResultRow(
-                    "Waste:",
-                    "${_costCalculation!.waste.wasteArea.toStringAsFixed(2)} sq m (${_costCalculation!.waste.wastePercentage.toStringAsFixed(1)}%)",
-                  ),
-                ],
-              ),
-            ),
+          if (_costCalculation != null) _buildCalculationResults(),
 
           const SizedBox(height: 20),
           CustomButton(text: "Add Item", onPressed: _handleAddItem),
         ],
       ),
+    );
+  }
+
+  Widget _buildFoamVariantSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Select Foam Variant",
+          style: GoogleFonts.openSans(
+            fontSize: 14,
+            color: const Color(0xFF7B7B7B),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<FoamVariant>(
+          value: _selectedFoamVariant,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+            ),
+          ),
+          hint: const Text("Select thickness and density"),
+          items: _selectedMaterial!.foamVariants.map((variant) {
+            final label = 
+                '${variant.thickness}${variant.thicknessUnit} ${variant.density ?? ""} '
+                '(${variant.width}×${variant.length} ${variant.dimensionUnit})';
+            return DropdownMenuItem(
+              value: variant,
+              child: Text(label),
+            );
+          }).toList(),
+          onChanged: _onFoamVariantSelected,
+        ),
+        const SizedBox(height: 16),
+      ],
     );
   }
 
@@ -554,7 +583,20 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ..._selectedMaterial!.types.map((type) {
                 return DropdownMenuItem(
                   value: type.name,
-                  child: Text(type.name),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(type.name),
+                      if (type.pricePerSqm != null && type.pricePerSqm! > 0)
+                        Text(
+                          '₦${type.pricePerSqm!.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFFA16438),
+                          ),
+                        ),
+                    ],
+                  ),
                 );
               }),
               const DropdownMenuItem(
@@ -574,7 +616,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 ),
               ),
             ],
-            onChanged: _onMaterialTypeSelected,
+            onChanged: (value) {
+              _onMaterialTypeSelected(value);
+              _calculateCosts();
+            },
           )
         else
           Row(
@@ -617,6 +662,67 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             ],
           ),
       ],
+    );
+  }
+
+  Widget _buildCalculationResults() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFA16438)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Calculated Costs",
+            style: GoogleFonts.openSans(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: const Color(0xFFA16438),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildResultRow(
+            "Project Area:",
+            "${_costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2)} sq m",
+          ),
+          _buildResultRow(
+            "Standard Area:",
+            "${_costCalculation!.dimensions.standardAreaSqm.toStringAsFixed(2)} sq m",
+          ),
+          const Divider(color: Color(0xFFCCA183)),
+          _buildResultRow(
+            "Price per sq m:",
+            "₦${_costCalculation!.pricing.pricePerSqm.toStringAsFixed(2)}",
+          ),
+          _buildResultRow(
+            "Full Board Price:",
+            "₦${_costCalculation!.pricing.totalBoardPrice.toStringAsFixed(2)}",
+          ),
+          const Divider(color: Color(0xFFCCA183)),
+          _buildResultRow(
+            "Project Cost:",
+            "₦${_costCalculation!.pricing.projectCost.toStringAsFixed(2)}",
+          ),
+          _buildResultRow(
+            "Minimum Boards:",
+            "${_costCalculation!.quantity.minimumUnits} board(s)",
+          ),
+          const Divider(color: Color(0xFFCCA183)),
+          _buildResultRow(
+            "Total Area Used:",
+            "${_costCalculation!.waste.totalAreaUsed.toStringAsFixed(2)} sq m",
+          ),
+          _buildResultRow(
+            "Waste:",
+            "${_costCalculation!.waste.wasteArea.toStringAsFixed(2)} sq m "
+            "(${_costCalculation!.waste.wastePercentage.toStringAsFixed(1)}%)",
+          ),
+        ],
+      ),
     );
   }
 
