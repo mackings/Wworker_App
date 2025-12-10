@@ -12,6 +12,7 @@ class MaterialModel {
   final List<MaterialType> types;
   final List<SizeVariant> sizeVariants;
   final List<FoamVariant> foamVariants;
+  final List<CommonThickness> commonThicknesses; // NEW
   final double wasteThreshold;
   final bool? isActive;
   final String? notes;
@@ -35,6 +36,7 @@ class MaterialModel {
     this.types = const [],
     this.sizeVariants = const [],
     this.foamVariants = const [],
+    this.commonThicknesses = const [], // NEW
     this.wasteThreshold = 0.75,
     this.isActive,
     this.notes,
@@ -69,6 +71,10 @@ class MaterialModel {
               ?.map((f) => FoamVariant.fromJson(f))
               .toList() ??
           [],
+      commonThicknesses: (json['commonThicknesses'] as List?)
+              ?.map((c) => CommonThickness.fromJson(c))
+              .toList() ??
+          [], // NEW
       wasteThreshold: json['wasteThreshold']?.toDouble() ?? 0.75,
       isActive: json['isActive'],
       notes: json['notes'],
@@ -104,6 +110,7 @@ class MaterialModel {
       'types': types.map((t) => t.toJson()).toList(),
       'sizeVariants': sizeVariants.map((s) => s.toJson()).toList(),
       'foamVariants': foamVariants.map((f) => f.toJson()).toList(),
+      'commonThicknesses': commonThicknesses.map((c) => c.toJson()).toList(), // NEW
       'wasteThreshold': wasteThreshold,
       if (isActive != null) 'isActive': isActive,
       if (notes != null) 'notes': notes,
@@ -115,6 +122,25 @@ class MaterialModel {
     };
   }
 }
+
+class CommonThickness {
+  final double thickness;
+  final String unit;
+
+  CommonThickness({required this.thickness, required this.unit});
+
+  factory CommonThickness.fromJson(Map<String, dynamic> json) {
+    return CommonThickness(
+      thickness: json['thickness']?.toDouble() ?? 0.0,
+      unit: json['unit'] ?? 'mm',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'thickness': thickness, 'unit': unit};
+  }
+}
+
 
 class MaterialType {
   final String name;

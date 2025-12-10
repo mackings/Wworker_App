@@ -20,15 +20,17 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
   final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
 
   String _standardUnit = 'inches';
+  String _thicknessUnit = 'inches';
   bool isCreating = false;
 
-  // Wood types with prices
+  // Wood types and thicknesses
   List<WoodType> woodTypes = [];
+  List<ThicknessOption> commonThicknesses = [];
 
   @override
   void initState() {
     super.initState();
-    // Pre-populate common wood types (user can modify)
+    // Pre-populate common wood types
     woodTypes = [
       WoodType(name: 'Iroko', pricePerSqm: null),
       WoodType(name: 'Mahogany', pricePerSqm: null),
@@ -38,17 +40,35 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
       WoodType(name: 'Thick', pricePerSqm: null),
       WoodType(name: 'Ordinary', pricePerSqm: null),
     ];
+
+    // Pre-populate common wood thicknesses (in inches)
+    commonThicknesses = [
+      ThicknessOption(thickness: 0.5),
+      ThicknessOption(thickness: 0.75),
+      ThicknessOption(thickness: 1),
+      ThicknessOption(thickness: 1.5),
+      ThicknessOption(thickness: 2),
+    ];
   }
 
   Future<void> _createMaterial() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validate that at least one type has a price
     final typesWithPrices = woodTypes.where((t) => t.pricePerSqm != null).toList();
     if (typesWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please set a base price or at least one type price'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (commonThicknesses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one thickness option'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -72,6 +92,10 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         'name': t.name,
         if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
       }).toList(),
+      'commonThicknesses': commonThicknesses.map((t) => {
+        'thickness': t.thickness,
+        'unit': _thicknessUnit,
+      }).toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -83,7 +107,7 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         const SnackBar(content: Text('Wood material created successfully')),
       );
       Navigator.pop(context);
-      Navigator.pop(context); // Go back to materials list
+      Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -92,6 +116,52 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         ),
       );
     }
+  }
+
+  void _addThickness() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final thicknessController = TextEditingController();
+
+        return AlertDialog(
+          title: const Text('Add Thickness'),
+          content: TextField(
+            controller: thicknessController,
+            decoration: InputDecoration(
+              labelText: 'Thickness *',
+              border: const OutlineInputBorder(),
+              hintText: _thicknessUnit == 'inches' ? 'e.g., 0.75' : 'e.g., 18',
+              suffix: Text(_thicknessUnit),
+            ),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = double.tryParse(thicknessController.text);
+                if (value != null) {
+                  setState(() {
+                    commonThicknesses.add(ThicknessOption(thickness: value));
+                    commonThicknesses.sort((a, b) => a.thickness.compareTo(b.thickness));
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA16438),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _addWoodType() {
@@ -249,7 +319,6 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            // Info Banner
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -265,7 +334,7 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Wood materials are priced per square meter. Add different wood types with specific prices.',
+                      'Wood materials are priced per square meter. Add different wood types and available thicknesses.',
                       style: TextStyle(
                         fontSize: 13,
                         color: const Color(0xFF8B4513),
@@ -277,7 +346,6 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
             ),
             const SizedBox(height: 20),
 
-            // Basic Information
             _buildSectionCard(
               'Basic Information',
               [
@@ -295,7 +363,6 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
             ),
             const SizedBox(height: 16),
 
-            // Standard Dimensions
             _buildSectionCard(
               'Standard Sheet Size',
               [
@@ -348,7 +415,9 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
             ),
             const SizedBox(height: 16),
 
-            // Base Pricing
+            _buildThicknessSection(),
+            const SizedBox(height: 16),
+
             _buildSectionCard(
               'Base Pricing (Optional)',
               [
@@ -377,11 +446,9 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
             ),
             const SizedBox(height: 16),
 
-            // Wood Types
             _buildWoodTypesSection(),
             const SizedBox(height: 32),
 
-            // Create Button
             SizedBox(
               height: 50,
               child: ElevatedButton(
@@ -413,6 +480,92 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildThicknessSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Available Thicknesses',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF302E2E),
+                ),
+              ),
+              Row(
+                children: [
+                  DropdownButton<String>(
+                    value: _thicknessUnit,
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(value: 'mm', child: Text('mm')),
+                      DropdownMenuItem(value: 'inches', child: Text('inches')),
+                    ],
+                    onChanged: (value) => setState(() => _thicknessUnit = value!),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _addThickness,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (commonThicknesses.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'No thicknesses added',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: commonThicknesses.asMap().entries.map((entry) {
+                final index = entry.key;
+                final thickness = entry.value;
+                return Chip(
+                  label: Text('${thickness.thickness}$_thicknessUnit'),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () {
+                    setState(() => commonThicknesses.removeAt(index));
+                  },
+                  backgroundColor: const Color(0xFFA16438).withOpacity(0.1),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFFA16438),
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
       ),
     );
   }
@@ -577,4 +730,10 @@ class WoodType {
   final double? pricePerSqm;
 
   WoodType({required this.name, this.pricePerSqm});
+}
+
+class ThicknessOption {
+  final double thickness;
+
+  ThicknessOption({required this.thickness});
 }

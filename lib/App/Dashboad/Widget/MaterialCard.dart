@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:wworker/App/Dashboad/Widget/Calculation_helper.dart';
 import 'package:wworker/App/Quotation/Api/materialService.dart';
 import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
 import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
@@ -30,7 +29,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final MaterialService _materialService = MaterialService();
   
   final List<String> linearUnits = ["mm", "cm", "m", "ft", "in"];
-  final List<String> numbers = List.generate(100, (i) => "${i + 1}");
 
   // API Data
   List<MaterialModel> _materials = [];
@@ -44,12 +42,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   // Project/Required dimensions
   String? width, length, thickness, unit;
+  
+  // Available thicknesses from API
+  List<String> _availableThicknesses = [];
 
   // API calculation result
   MaterialCostModel? _costCalculation;
   bool _isCalculating = false;
 
+  // Text controllers for manual input
   final TextEditingController materialTypeController = TextEditingController();
+  final TextEditingController widthController = TextEditingController();
+  final TextEditingController lengthController = TextEditingController();
 
   @override
   void initState() {
@@ -60,6 +64,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   @override
   void dispose() {
     materialTypeController.dispose();
+    widthController.dispose();
+    lengthController.dispose();
     super.dispose();
   }
 
@@ -73,35 +79,89 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       if (_materials.isNotEmpty && _selectedMaterial == null) {
         _selectedMaterial = _materials.first;
         _setDefaultUnitsForMaterial(_materials.first);
+        _loadThicknessesForMaterial(_materials.first);
       }
     });
   }
 
   /// Set default units based on material type
-  void _setDefaultUnitsForMaterial(MaterialModel material) {
-    final materialUnit = material.unit?.toLowerCase() ?? '';
-    
-    // Default unit based on material type
-    String? defaultUnit;
-    
-    if (materialUnit.contains('length') || 
-        materialUnit.contains('sheet') || 
-        materialUnit.contains('width')) {
-      defaultUnit = 'cm';
-    } else if (materialUnit.contains('square meter') || 
-               materialUnit.contains('sqm') ||
-               materialUnit.contains('m²')) {
-      defaultUnit = 'm';
-    } else if (materialUnit.contains('yard')) {
-      defaultUnit = 'in';
-    } else {
-      defaultUnit = material.standardUnit ?? 'cm';
-    }
-    
-    setState(() {
-      unit = defaultUnit;
-    });
+void _setDefaultUnitsForMaterial(MaterialModel material) {
+  final materialUnit = material.unit?.toLowerCase() ?? '';
+
+  String defaultUnit;
+
+  if (materialUnit.contains('length') ||
+      materialUnit.contains('sheet') ||
+      materialUnit.contains('width')) {
+    defaultUnit = 'cm';
+  } else if (materialUnit.contains('square meter') ||
+      materialUnit.contains('sqm') ||
+      materialUnit.contains('m²')) {
+    defaultUnit = 'm';
+  } else if (materialUnit.contains('yard') ||
+      materialUnit.contains('inch')) {
+    defaultUnit = 'in';
+  } else {
+    final allowedUnits = ["mm", "cm", "m", "ft", "in"];
+    defaultUnit = allowedUnits.contains(material.standardUnit)
+        ? material.standardUnit!
+        : 'cm';
   }
+
+  setState(() {
+    unit = defaultUnit;
+  });
+}
+
+
+  /// Load available thicknesses from material data
+void _loadThicknessesForMaterial(MaterialModel material) {
+  List<String> thicknesses = [];
+
+  // 1. Foam-specific thicknesses (already exists)
+  if (material.foamThicknesses.isNotEmpty) {
+    thicknesses.addAll(material.foamThicknesses
+        .map((ft) => ft.thickness.toString())
+        .toList());
+  }
+
+  if (material.foamVariants.isNotEmpty) {
+    thicknesses.addAll(material.foamVariants
+        .map((fv) => fv.thickness.toString())
+        .toList());
+  }
+
+  // 2. Common thicknesses (new)
+  if (material.commonThicknesses.isNotEmpty) {
+    thicknesses.addAll(material.commonThicknesses
+        .map((ct) => ct.thickness.toString())
+        .toList());
+  }
+
+  // 3. Size variants (optional)
+  if (material.sizeVariants.isNotEmpty) {
+    // If thickness is implied in sizeVariants (maybe width/length?), add logic if needed
+    // For now, let's assume we don't get thickness from sizeVariants unless explicitly provided
+  }
+
+  // Remove duplicates and sort
+  thicknesses = thicknesses.toSet().toList();
+  thicknesses.sort((a, b) => double.parse(a).compareTo(double.parse(b)));
+
+  setState(() {
+    _availableThicknesses = thicknesses;
+
+    // Auto-set the thickness if it's null or invalid
+    if (thicknesses.isNotEmpty) {
+      if (thickness == null || !thicknesses.contains(thickness)) {
+        thickness = thicknesses.first;
+      }
+    } else {
+      thickness = null;
+    }
+  });
+}
+
 
   void _onMaterialSelected(MaterialModel material) {
     setState(() {
@@ -114,6 +174,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       
       // Auto-set units based on material type
       _setDefaultUnitsForMaterial(material);
+      
+      // Load thicknesses for this material
+      _loadThicknessesForMaterial(material);
     });
   }
 
@@ -138,6 +201,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         // Set the material type to show which foam is selected
         materialTypeController.text = 
             '${variant.thickness}${variant.thicknessUnit} ${variant.density ?? ""}';
+        // Auto-set thickness from foam variant
+        thickness = variant.thickness.toString();
       }
     });
     _calculateCosts();
@@ -146,14 +211,14 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   /// Calculate costs via API (auto-triggered)
   Future<void> _calculateCosts() async {
     if (_selectedMaterial == null || 
-        width == null || 
-        length == null || 
+        widthController.text.isEmpty || 
+        lengthController.text.isEmpty || 
         unit == null) {
       return;
     }
 
-    final w = double.tryParse(width!);
-    final l = double.tryParse(length!);
+    final w = double.tryParse(widthController.text);
+    final l = double.tryParse(lengthController.text);
 
     if (w == null || l == null) return;
 
@@ -202,8 +267,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     // Validate all required fields
     if (_selectedMaterial == null ||
         materialTypeController.text.trim().isEmpty ||
-        width == null ||
-        length == null ||
+        widthController.text.isEmpty ||
+        lengthController.text.isEmpty ||
         thickness == null ||
         unit == null ||
         _costCalculation == null) {
@@ -220,8 +285,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final item = {
       "Product": _selectedMaterial!.name,
       "Materialname": materialTypeController.text.trim(),
-      "Width": width,
-      "Length": length,
+      "Width": widthController.text,
+      "Length": lengthController.text,
       "Thickness": thickness,
       "Unit": unit,
       "Sqm": _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
@@ -231,14 +296,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     widget.onAddItem?.call(item);
 
-    // Reset form (but keep material selection and units)
+    // Reset form (but keep material selection, units, and thickness)
     setState(() {
       _selectedMaterialType = null;
       _selectedFoamVariant = null;
       _isCustomType = false;
-      width = null;
-      length = null;
-      thickness = null;
+      widthController.clear();
+      lengthController.clear();
       _costCalculation = null;
     });
 
@@ -428,33 +492,37 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           _buildSectionHeader("Project Size (what you need)"),
           const SizedBox(height: 12),
 
-          // Length + Width
+          // Length + Width (Manual Input)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildDropdown("Length (longer)", numbers, length, (v) {
-                setState(() => length = v);
-                _calculateCosts();
-              }),
-              _buildDropdown("Width (shorter)", numbers, width, (v) {
-                setState(() => width = v);
-                _calculateCosts();
-              }),
+              _buildManualInputField(
+                "Length (longer)",
+                lengthController,
+                () => _calculateCosts(),
+              ),
+              const SizedBox(width: 12),
+              _buildManualInputField(
+                "Width (shorter)",
+                widthController,
+                () => _calculateCosts(),
+              ),
             ],
           ),
 
           const SizedBox(height: 12),
 
-          // Thickness + Unit
+          // Thickness (Auto from API) + Unit (Dropdown)
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildDropdown(
                 "Thickness",
-                numbers,
+                _availableThicknesses.isNotEmpty 
+                    ? _availableThicknesses 
+                    : ["No thickness available"],
                 thickness,
                 (v) => setState(() => thickness = v),
               ),
+              const SizedBox(width: 12),
               _buildDropdown("Unit", linearUnits, unit, (v) {
                 setState(() => unit = v);
                 _calculateCosts();
@@ -466,7 +534,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              "Note: Thickness is for reference only, not used in area calculations",
+              "Note: Thickness is auto-populated from material data and is for reference only",
               style: GoogleFonts.openSans(
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
@@ -515,6 +583,52 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     );
   }
 
+  Widget _buildManualInputField(
+    String label,
+    TextEditingController controller,
+    VoidCallback onChanged,
+  ) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              fontSize: 14,
+              color: const Color(0xFF7B7B7B),
+            ),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.all(12),
+              hintText: "Enter value",
+              hintStyle: const TextStyle(
+                color: Color(0xFFBDBDBD),
+                fontSize: 13,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+              ),
+            ),
+            onChanged: (value) {
+              // Auto-calculate when user types
+              if (value.isNotEmpty) {
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  onChanged();
+                });
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFoamVariantSelection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,6 +643,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         const SizedBox(height: 6),
         DropdownButtonFormField<FoamVariant>(
           value: _selectedFoamVariant,
+          isExpanded: true,
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.all(12),
             border: OutlineInputBorder(
@@ -543,7 +658,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 '(${variant.width}×${variant.length} ${variant.dimensionUnit})';
             return DropdownMenuItem(
               value: variant,
-              child: Text(label),
+              child: Text(
+                label,
+                overflow: TextOverflow.ellipsis,
+              ),
             );
           }).toList(),
           onChanged: _onFoamVariantSelected,
@@ -571,6 +689,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         if (hasTypes && !_isCustomType)
           DropdownButtonFormField<String>(
             value: _selectedMaterialType,
+            isExpanded: true,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
@@ -586,7 +705,12 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(type.name),
+                      Expanded(
+                        child: Text(
+                          type.name,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                       if (type.pricePerSqm != null && type.pricePerSqm! > 0)
                         Text(
                           '₦${type.pricePerSqm!.toStringAsFixed(0)}',
@@ -792,8 +916,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     String? value,
     ValueChanged<String?> onChanged,
   ) {
-    return SizedBox(
-      width: (MediaQuery.of(context).size.width - 95) / 2,
+    return Expanded(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -807,6 +930,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           const SizedBox(height: 6),
           DropdownButtonFormField<String>(
             value: value,
+            isExpanded: true,
             decoration: InputDecoration(
               contentPadding: const EdgeInsets.all(12),
               border: OutlineInputBorder(
@@ -815,9 +939,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ),
             ),
             items: items
-                .map((v) => DropdownMenuItem(value: v, child: Text(v)))
+                .map((v) => DropdownMenuItem(
+                      value: v,
+                      child: Text(
+                        v,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ))
                 .toList(),
-            onChanged: onChanged,
+            onChanged: items.first == "No thickness available" 
+                ? null 
+                : onChanged,
           ),
         ],
       ),

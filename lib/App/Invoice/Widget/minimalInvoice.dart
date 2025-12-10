@@ -104,7 +104,6 @@ class MinimalInvoiceTemplate extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _buildInfoRow('Date :', _formatDate(invoiceDate)),
-            _buildInfoRow('Inv No.', invoiceNumber),
             _buildInfoRow('QT No.', quotationNumber),
           ],
         ),

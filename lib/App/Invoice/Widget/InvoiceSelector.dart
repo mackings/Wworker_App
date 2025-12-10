@@ -1,8 +1,16 @@
 // invoice_template_selector.dart
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:screenshot/screenshot.dart';
 import 'package:wworker/App/Invoice/Widget/DarkInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/elegantInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/minimalInvoice.dart';
+import 'dart:io';
+import 'package:flutter/material.dart';
+
 
 
 class InvoiceTemplateSelector extends StatefulWidget {
@@ -27,7 +35,7 @@ class InvoiceTemplateSelector extends StatefulWidget {
   final double amountPaid;
   final double balance;
   final bool isExistingInvoice;
-  final Function(int templateIndex)? onTemplateSend;
+  final Future<void> Function(int templateIndex, File pdfFile)? onTemplateSend;
 
   const InvoiceTemplateSelector({
     super.key,
@@ -63,6 +71,8 @@ class InvoiceTemplateSelector extends StatefulWidget {
 class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
   int selectedTemplate = 0;
   final PageController _pageController = PageController();
+  bool isGeneratingPdf = false;
+  final ScreenshotController _screenshotController = ScreenshotController();
 
   @override
   void dispose() {
@@ -157,6 +167,121 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
     },
   ];
 
+  Future<File> _generatePdfFromTemplate() async {
+    try {
+      debugPrint("📸 Capturing screenshot of template...");
+      
+      // Get the template and wrap it properly for PDF capture
+      final templateWidget = templates[selectedTemplate];
+      
+      // Capture the selected template as an image with high resolution
+      final imageBytes = await _screenshotController.captureFromWidget(
+        MediaQuery(
+          data: const MediaQueryData(
+            size: Size(1600, 2262), // Double the size for better quality
+            devicePixelRatio: 3.0, // High DPI for crisp output
+          ),
+          child: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Material(
+              child: Container(
+                width: 1600, // A4 width * 2
+                height: 2262, // A4 height * 2
+                color: Colors.white,
+                child: templateWidget,
+              ),
+            ),
+          ),
+        ),
+        delay: const Duration(milliseconds: 500),
+        context: context,
+        pixelRatio: 3.0, // High pixel ratio for sharp text
+      );
+      
+      debugPrint("✅ Screenshot captured: ${imageBytes.length} bytes");
+      
+      // Create PDF document
+      final pdf = pw.Document();
+      
+      // Convert screenshot to PDF image
+      final image = pw.MemoryImage(imageBytes);
+      
+      // Add page with the image
+      pdf.addPage(
+        pw.Page(
+          pageFormat: PdfPageFormat.a4,
+          build: (pw.Context context) {
+            return pw.Center(
+              child: pw.Image(image, fit: pw.BoxFit.contain),
+            );
+          },
+        ),
+      );
+      
+      debugPrint("📄 PDF document created");
+      
+      // Get temporary directory
+      final directory = await path_provider.getTemporaryDirectory();
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filePath = '${directory.path}/invoice_${widget.invoiceNumber}_$timestamp.pdf';
+      
+      // Save PDF to file
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+      
+      debugPrint("💾 PDF saved to: $filePath");
+      
+      return file;
+    } catch (e) {
+      debugPrint("❌ Error in PDF generation: $e");
+      rethrow;
+    }
+  }
+
+  Future<void> _handleSendInvoice() async {
+    if (widget.onTemplateSend == null) return;
+
+    setState(() => isGeneratingPdf = true);
+
+    try {
+      debugPrint("📄 Starting PDF generation for template $selectedTemplate");
+      
+      // Generate PDF from selected template
+      final pdfFile = await _generatePdfFromTemplate();
+      
+      debugPrint("✅ PDF generated successfully: ${pdfFile.path}");
+      
+      // Call the callback with both template index and PDF file
+      await widget.onTemplateSend!(selectedTemplate, pdfFile);
+      
+    } catch (e) {
+      debugPrint('❌ Error generating or sending PDF: $e');
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Failed to generate PDF: ${e.toString()}'),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => isGeneratingPdf = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -240,7 +365,7 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
             ),
           ),
 
-          // Template preview - Fixed with proper constraints
+          // Template preview
           Expanded(
             child: PageView.builder(
               controller: _pageController,
@@ -290,7 +415,7 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: isGeneratingPdf ? null : () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back),
                         label: const Text('Back'),
                         style: OutlinedButton.styleFrom(
@@ -310,13 +435,20 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
                     Expanded(
                       flex: 2,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          if (widget.onTemplateSend != null) {
-                            widget.onTemplateSend!(selectedTemplate);
-                          }
-                        },
-                        icon: const Icon(Icons.send),
-                        label: const Text('Send Invoice'),
+                        onPressed: isGeneratingPdf ? null : _handleSendInvoice,
+                        icon: isGeneratingPdf
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.send),
+                        label: Text(
+                          isGeneratingPdf ? 'Generating...' : 'Send Invoice',
+                        ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFA16438),
                           foregroundColor: Colors.white,

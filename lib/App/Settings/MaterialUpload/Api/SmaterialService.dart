@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -12,32 +14,63 @@ class MaterialService {
     receiveTimeout: const Duration(seconds: 30),
   ));
 
-  MaterialService() {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) {
-          debugPrint("📤 [REQUEST] => ${options.method} ${options.uri}");
-          debugPrint("📦 [DATA] => ${options.data}");
-          return handler.next(options);
-        },
-        onResponse: (response, handler) {
-          debugPrint(
-            "✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
-          );
-          debugPrint("📄 [RESPONSE DATA] => ${response.data}");
-          return handler.next(response);
-        },
-        onError: (DioException e, handler) {
-          debugPrint("❌ [ERROR] => ${e.requestOptions.uri}");
-          debugPrint("📛 [MESSAGE] => ${e.message}");
-          if (e.response != null) {
-            debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
-          }
-          return handler.next(e);
-        },
-      ),
-    );
+  static void _prettyPrintJson(dynamic data) {
+  try {
+    const encoder = JsonEncoder.withIndent('  ');
+    final prettyString = encoder.convert(data);
+    debugPrint(prettyString);
+  } catch (e) {
+    debugPrint(data.toString());
   }
+}
+
+MaterialService() {
+  _dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        debugPrint("━━━━━━━━━━━━━━ 📤 REQUEST ━━━━━━━━━━━━━━");
+        debugPrint("➡️ METHOD: ${options.method}");
+        debugPrint("🌍 URL: ${options.uri}");
+        debugPrint("🧾 HEADERS: ${options.headers}");
+        debugPrint("🔎 QUERY PARAMS: ${options.queryParameters}");
+        debugPrint("📦 BODY: ${options.data}");
+        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        return handler.next(options);
+      },
+
+      onResponse: (response, handler) {
+        debugPrint("━━━━━━━━━━━━━━ ✅ RESPONSE ━━━━━━━━━━━━━━");
+        debugPrint("✅ STATUS CODE: ${response.statusCode}");
+        debugPrint("🌍 URL: ${response.requestOptions.uri}");
+        debugPrint("🧾 HEADERS: ${response.headers.map}");
+        debugPrint("📄 DATA:");
+        _prettyPrintJson(response.data);
+        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        return handler.next(response);
+      },
+
+      onError: (DioException e, handler) {
+        debugPrint("━━━━━━━━━━━━━━ ❌ ERROR ━━━━━━━━━━━━━━");
+        debugPrint("❌ URL: ${e.requestOptions.uri}");
+        debugPrint("❌ METHOD: ${e.requestOptions.method}");
+        debugPrint("❌ MESSAGE: ${e.message}");
+        debugPrint("❌ TYPE: ${e.type}");
+
+        if (e.response != null) {
+          debugPrint("❌ STATUS CODE: ${e.response?.statusCode}");
+          debugPrint("❌ RESPONSE DATA:");
+          _prettyPrintJson(e.response?.data);
+        } else {
+          debugPrint("❌ NO SERVER RESPONSE RECEIVED");
+        }
+
+        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        return handler.next(e);
+      },
+    ),
+  );
+}
+
 
   /// Get authorization token
   Future<String?> _getToken() async {

@@ -228,7 +228,6 @@ class ModernInvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInvoiceDetailRow('Invoice No', invoiceNumber),
                 _buildInvoiceDetailRow('QT No', quotationNumber),
                 _buildInvoiceDetailRow('Date', _formatDate(invoiceDate)),
                 if (dueDate != null)

@@ -20,10 +20,12 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
 
   String _standardUnit = 'inches';
+  String _thicknessUnit = 'mm';
   bool isCreating = false;
 
-  // Board types with prices
+  // Board types and thicknesses
   List<BoardType> boardTypes = [];
+  List<ThicknessOption> commonThicknesses = [];
 
   @override
   void initState() {
@@ -43,6 +45,16 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       BoardType(name: 'Marine_board', pricePerSqm: null),
       BoardType(name: 'Halfinch_plywood', pricePerSqm: null),
     ];
+
+    // Pre-populate common thicknesses for boards
+    commonThicknesses = [
+      ThicknessOption(thickness: 6),
+      ThicknessOption(thickness: 9),
+      ThicknessOption(thickness: 12),
+      ThicknessOption(thickness: 15),
+      ThicknessOption(thickness: 18),
+      ThicknessOption(thickness: 25),
+    ];
   }
 
   Future<void> _createMaterial() async {
@@ -53,6 +65,16 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please set a base price or at least one type price'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (commonThicknesses.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add at least one thickness option'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -76,6 +98,10 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
         'name': t.name,
         if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
       }).toList(),
+      'commonThicknesses': commonThicknesses.map((t) => {
+        'thickness': t.thickness,
+        'unit': _thicknessUnit,
+      }).toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -96,6 +122,52 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
         ),
       );
     }
+  }
+
+  void _addThickness() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final thicknessController = TextEditingController();
+
+        return AlertDialog(
+          title: const Text('Add Thickness'),
+          content: TextField(
+            controller: thicknessController,
+            decoration: InputDecoration(
+              labelText: 'Thickness *',
+              border: const OutlineInputBorder(),
+              hintText: 'e.g., 12',
+              suffix: Text(_thicknessUnit),
+            ),
+            keyboardType: TextInputType.number,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final value = double.tryParse(thicknessController.text);
+                if (value != null) {
+                  setState(() {
+                    commonThicknesses.add(ThicknessOption(thickness: value));
+                    commonThicknesses.sort((a, b) => a.thickness.compareTo(b.thickness));
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA16438),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   void _addBoardType() {
@@ -268,7 +340,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Board materials include MDF, HDF, plywood and particle boards.',
+                      'Board materials include MDF, HDF, plywood and particle boards with various thicknesses.',
                       style: TextStyle(
                         fontSize: 13,
                         color: const Color(0xFFD2691E),
@@ -350,6 +422,9 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             ),
             const SizedBox(height: 16),
 
+            _buildThicknessSection(),
+            const SizedBox(height: 16),
+
             _buildSectionCard(
               'Base Pricing (Optional)',
               [
@@ -411,6 +486,92 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildThicknessSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Available Thicknesses',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF302E2E),
+                ),
+              ),
+              Row(
+                children: [
+                  DropdownButton<String>(
+                    value: _thicknessUnit,
+                    underline: const SizedBox(),
+                    items: const [
+                      DropdownMenuItem(value: 'mm', child: Text('mm')),
+                      DropdownMenuItem(value: 'inches', child: Text('inches')),
+                    ],
+                    onChanged: (value) => setState(() => _thicknessUnit = value!),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    onPressed: _addThickness,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (commonThicknesses.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  'No thicknesses added',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: commonThicknesses.asMap().entries.map((entry) {
+                final index = entry.key;
+                final thickness = entry.value;
+                return Chip(
+                  label: Text('${thickness.thickness}$_thicknessUnit'),
+                  deleteIcon: const Icon(Icons.close, size: 18),
+                  onDeleted: () {
+                    setState(() => commonThicknesses.removeAt(index));
+                  },
+                  backgroundColor: const Color(0xFFA16438).withOpacity(0.1),
+                  labelStyle: const TextStyle(
+                    color: Color(0xFFA16438),
+                    fontWeight: FontWeight.w500,
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
       ),
     );
   }
@@ -575,4 +736,10 @@ class BoardType {
   final double? pricePerSqm;
 
   BoardType({required this.name, this.pricePerSqm});
+}
+
+class ThicknessOption {
+  final double thickness;
+
+  ThicknessOption({required this.thickness});
 }

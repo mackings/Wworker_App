@@ -133,7 +133,6 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Invoice No :', invoiceNumber),
             _buildDetailRow('Date :', _formatDate(invoiceDate)),
             _buildDetailRow('Quotation No.', quotationNumber),
           ],
@@ -391,8 +390,8 @@ class ElegantInvoiceTemplate extends StatelessWidget {
                 child: Column(
                   children: [
                     _buildSummaryRow('Sub-total:', grandTotal),
-                    _buildSummaryRow('Tax:', 0.0),
-                    const Divider(height: 24),
+                   // _buildSummaryRow('Tax:', 0.0),
+                   // const Divider(height: 24),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,

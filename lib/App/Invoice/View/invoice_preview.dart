@@ -3,10 +3,7 @@ import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/InvoiceSelector.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
-import 'package:wworker/GeneralWidgets/Nav.dart';
-
-
-
+import 'dart:io';
 
 class InvoicePreview extends StatefulWidget {
   final Quotation? quotation;
@@ -260,13 +257,15 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           amountPaid: isExistingInvoice ? widget.invoice!.amountPaid : 0,
           balance: isExistingInvoice ? widget.invoice!.balance : 0,
           isExistingInvoice: isExistingInvoice,
+          // 🆕 Updated callback signature to accept File parameter
           onTemplateSend: !isExistingInvoice ? _sendInvoiceToClient : null,
         ),
       ),
     );
   }
 
-  Future<void> _sendInvoiceToClient(int templateIndex) async {
+  // 🆕 Updated method to accept both templateIndex and pdfFile
+  Future<void> _sendInvoiceToClient(int templateIndex, File pdfFile) async {
     setState(() => isLoading = true);
 
     try {
@@ -275,11 +274,15 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           .add(const Duration(days: 30))
           .toIso8601String();
 
+      debugPrint("📤 Sending invoice with PDF: ${pdfFile.path}");
+      debugPrint("📋 Template Index: $templateIndex");
+
       final response = await _clientService.createInvoice(
         quotationId: widget.quotation!.id,
         dueDate: dueDate,
         notes: "Payment due within 30 days. Template: $templateIndex",
         amountPaid: 0,
+        pdfFile: pdfFile, // 🆕 Pass the generated PDF file
       );
 
       setState(() => isLoading = false);
@@ -287,17 +290,30 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       if (response["success"] == true) {
         if (!mounted) return;
 
+        // 🆕 Clean up temporary PDF file after successful upload
+        try {
+          if (await pdfFile.exists()) {
+            await pdfFile.delete();
+            debugPrint("🗑️ Temporary PDF deleted successfully");
+          }
+        } catch (deleteError) {
+          debugPrint("⚠️ Could not delete temp PDF: $deleteError");
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(child: Text("Invoice created successfully")),
+                Expanded(
+                  child: Text("Invoice created and sent successfully!"),
+                ),
               ],
             ),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 3),
           ),
         );
 
@@ -308,26 +324,65 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       } else {
         if (!mounted) return;
 
+        // 🆕 Clean up PDF even on failure
+        try {
+          if (await pdfFile.exists()) {
+            await pdfFile.delete();
+          }
+        } catch (deleteError) {
+          debugPrint("⚠️ Could not delete temp PDF: $deleteError");
+        }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              "❌ ${response["message"] ?? "Failed to create invoice"}",
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    response["message"] ?? "Failed to create invoice",
+                  ),
+                ),
+              ],
             ),
             backgroundColor: Colors.red,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e) {
       setState(() => isLoading = false);
 
+      debugPrint("❌ Error sending invoice: $e");
+
       if (!mounted) return;
+
+      // 🆕 Attempt to clean up PDF on error
+      try {
+        if (await pdfFile.exists()) {
+          await pdfFile.delete();
+          debugPrint("🗑️ Temporary PDF deleted after error");
+        }
+      } catch (deleteError) {
+        debugPrint("⚠️ Could not delete temp PDF: $deleteError");
+      }
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("❌ Error: $e"),
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text("Error: ${e.toString()}"),
+              ),
+            ],
+          ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
         ),
       );
     }

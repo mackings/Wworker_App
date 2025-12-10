@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -66,12 +68,13 @@ class ClientService {
     }
   }
 
-  // 🟢 CREATE INVOICE FROM QUOTATION
+  // 🟢 CREATE INVOICE FROM QUOTATION WITH PDF ATTACHMENT
   Future<Map<String, dynamic>> createInvoice({
     required String quotationId,
     String? dueDate,
     String? notes,
     double amountPaid = 0,
+    File? pdfFile, // 🆕 PDF file from mobile
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -83,15 +86,29 @@ class ClientService {
 
       debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/invoices/create");
 
+      // Create FormData for multipart request
+      FormData formData = FormData.fromMap({
+        "quotationId": quotationId,
+        if (dueDate != null) "dueDate": dueDate,
+        if (notes != null) "notes": notes,
+        "amountPaid": amountPaid,
+        // Add PDF file if provided
+        if (pdfFile != null)
+          "invoicePdf": await MultipartFile.fromFile(
+            pdfFile.path,
+            filename: "invoice_${DateTime.now().millisecondsSinceEpoch}.pdf",
+          ),
+      });
+
       final response = await _dio.post(
         "/api/invoices/create",
-        data: {
-          "quotationId": quotationId,
-          if (dueDate != null) "dueDate": dueDate,
-          if (notes != null) "notes": notes,
-          "amountPaid": amountPaid,
-        },
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "multipart/form-data",
+          },
+        ),
       );
 
       debugPrint("✅ [CREATE INVOICE SUCCESS] => ${response.data}");
