@@ -7,6 +7,7 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 
 
+
 class AddMaterialCard extends StatefulWidget {
   final String title;
   final IconData? icon;
@@ -28,7 +29,7 @@ class AddMaterialCard extends StatefulWidget {
 class _AddMaterialCardState extends State<AddMaterialCard> {
   final MaterialService _materialService = MaterialService();
   
-  final List<String> linearUnits = ["mm", "cm", "m", "ft", "in"];
+  final List<String> linearUnits = ["mm", "cm", "m", "ft", "inches"];
 
   // API Data
   List<MaterialModel> _materials = [];

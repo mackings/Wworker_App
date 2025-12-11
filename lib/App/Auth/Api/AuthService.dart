@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
+
 class AuthService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -39,7 +40,7 @@ class AuthService {
           if (retries <= 2) {
             debugPrint("🔁 Retrying request... attempt #$retries");
             requestOptions.extra["retries"] = retries;
-            await Future.delayed(const Duration(seconds: 1)); // short delay
+            await Future.delayed(const Duration(seconds: 1));
             try {
               final response = await _dio.fetch(requestOptions);
               return handler.resolve(response);
@@ -54,28 +55,69 @@ class AuthService {
     );
   }
 
-  // 🟢 SIGNUP
+  // 🟢 SIGNUP - Company info is now optional
   Future<Map<String, dynamic>> signup({
+    required String fullname,
     required String email,
     required String phoneNumber,
     required String password,
+    String? companyName,
+    String? companyEmail,
   }) async {
     try {
-      final response = await _dio.post(
-        "/api/auth/signup",
-        data: {
-          "email": email,
-          "phoneNumber": phoneNumber,
-          "password": password,
-        },
-      );
-      return response.data;
+      final data = {
+        "fullname": fullname,
+        "email": email,
+        "phoneNumber": phoneNumber,
+        "password": password,
+      };
+
+      // Add company info only if provided
+      if (companyName != null && companyName.isNotEmpty) {
+        data["companyName"] = companyName;
+        if (companyEmail != null && companyEmail.isNotEmpty) {
+          data["companyEmail"] = companyEmail;
+        }
+      }
+
+      final response = await _dio.post("/api/auth/signup", data: data);
+
+      final responseData = response.data;
+
+      // Save token and user data if signup successful
+      if (responseData["success"] == true) {
+        final prefs = await SharedPreferences.getInstance();
+        final mainData = responseData["data"];
+
+        if (mainData["token"] != null) {
+          await prefs.setString("token", mainData["token"]);
+        }
+
+        if (mainData["user"] != null) {
+          final user = mainData["user"];
+          if (user["id"] != null) {
+            await prefs.setString("userId", user["id"]);
+          }
+          if (user["email"] != null) {
+            await prefs.setString("email", user["email"]);
+          }
+          if (user["role"] != null) {
+            await prefs.setString("role", user["role"]);
+          }
+          // Save company if exists
+          if (user["company"] != null) {
+            await prefs.setString("company", jsonEncode(user["company"]));
+          }
+        }
+      }
+
+      return responseData;
     } on DioException catch (e) {
       return _handleError(e);
     }
   }
 
-  // 🟢 SIGNIN
+  // 🟢 SIGNIN - Simplified
   Future<Map<String, dynamic>> signin({
     required String email,
     required String password,
@@ -88,57 +130,269 @@ class AuthService {
 
       final data = response.data;
       debugPrint("✅ [RESPONSE DATA] => $data");
-      debugPrint("🧩 [DATA TYPE] => ${data["data"]?.runtimeType}");
-
-      dynamic mainData = data["data"];
-
-      // 🔹 Decode stringified JSON if needed
-      if (mainData is String) {
-        try {
-          mainData = jsonDecode(mainData);
-          debugPrint("🧩 [DECODED DATA] => $mainData");
-        } catch (e) {
-          debugPrint("⚠️ Could not decode string data: $e");
-        }
-      }
-
-      if (mainData is List && mainData.isNotEmpty) {
-        mainData = mainData.first;
-      }
-
-      if (mainData is! Map) {
-        debugPrint("⚠️ Unexpected data structure: $mainData");
-        return {"success": false, "message": "Invalid response format"};
-      }
-
-      final token = mainData["token"];
-      final user = mainData["user"];
-      final userId = user?["id"];
 
       if (data["success"] == true) {
         final prefs = await SharedPreferences.getInstance();
+        final mainData = data["data"];
 
-        if (token != null && token is String) {
-          await prefs.setString("token", token);
-          await prefs.setString("email", email);
-        } else {
-          debugPrint("⚠️ No token found in response");
+        // Save token
+        if (mainData["token"] != null) {
+          await prefs.setString("token", mainData["token"]);
         }
 
-        if (userId != null && userId is String) {
-          await prefs.setString("userId", userId);
-        } else {
-          debugPrint("⚠️ No user ID found in response");
+        // Save user info
+        if (mainData["user"] != null) {
+          final user = mainData["user"];
+          if (user["id"] != null) {
+            await prefs.setString("userId", user["id"]);
+          }
+          if (user["email"] != null) {
+            await prefs.setString("email", user["email"]);
+          }
+          if (user["role"] != null) {
+            await prefs.setString("role", user["role"]);
+          }
+          if (user["position"] != null) {
+            await prefs.setString("position", user["position"]);
+          }
+          // Save company if exists
+          if (user["company"] != null) {
+            await prefs.setString("company", jsonEncode(user["company"]));
+          }
         }
       }
 
       return data;
     } on DioException catch (e) {
       debugPrint("❌ [ERROR] => ${e.response?.data ?? e.message}");
-      return {
-        "success": false,
-        "message": e.response?.data["message"] ?? e.message,
-      };
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 UPDATE COMPANY INFO
+  Future<Map<String, dynamic>> updateCompany({
+    required String companyName,
+    String? companyEmail,
+    String? companyPhone,
+    String? companyAddress,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/auth/company",
+        data: {
+          "companyName": companyName,
+          if (companyEmail != null) "companyEmail": companyEmail,
+          if (companyPhone != null) "companyPhone": companyPhone,
+          if (companyAddress != null) "companyAddress": companyAddress,
+        },
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      final data = response.data;
+
+      if (data["success"] == true && data["data"]["company"] != null) {
+        await prefs.setString("company", jsonEncode(data["data"]["company"]));
+      }
+
+      return data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 INVITE STAFF - Creates full profile
+  Future<Map<String, dynamic>> inviteStaff({
+    required String fullname,
+    required String email,
+    required String phoneNumber,
+    required String role,
+    required String position,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.post(
+        "/api/auth/invite-staff",
+        data: {
+          "fullname": fullname,
+          "email": email,
+          "phoneNumber": phoneNumber,
+          "role": role,
+          "position": position,
+        },
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 GET COMPANY STAFF
+  Future<Map<String, dynamic>> getCompanyStaff() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/auth/staff",
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 REVOKE STAFF ACCESS
+  Future<Map<String, dynamic>> revokeStaffAccess({
+    required String userId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/auth/staff/$userId/revoke",
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 RESTORE STAFF ACCESS
+  Future<Map<String, dynamic>> restoreStaffAccess({
+    required String userId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/auth/staff/$userId/restore",
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 REMOVE STAFF
+  Future<Map<String, dynamic>> removeStaff({
+    required String userId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.delete(
+        "/api/auth/staff/$userId",
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 CHANGE PASSWORD
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/auth/change-password",
+        data: {
+          "currentPassword": currentPassword,
+          "newPassword": newPassword,
+        },
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 GET ME
+  Future<Map<String, dynamic>> getMe() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/auth/me",
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+        ),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
     }
   }
 
@@ -159,8 +413,8 @@ class AuthService {
 
       final data = response.data;
 
-      if (data["data"]?["userId"] != null) {
-        await prefs.setString("userId", data["data"]["userId"]);
+      if (data["userId"] != null) {
+        await prefs.setString("userId", data["userId"]);
       }
 
       return data;
@@ -182,16 +436,10 @@ class AuthService {
         };
       }
 
-      debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/verify-otp");
-      debugPrint("📦 [DATA] => {userId: $userId, otp: $otp}");
-
       final response = await _dio.post(
         "/api/auth/verify-otp",
         data: {"userId": userId, "otp": otp},
       );
-
-      debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.realUri}");
-      debugPrint("📥 [DATA] => ${response.data}");
 
       final data = response.data;
 
@@ -215,18 +463,10 @@ class AuthService {
         return {"success": false, "message": "No reset token found"};
       }
 
-      debugPrint(
-        "📤 [REQUEST] => POST ${Urls.baseUrl}/api/auth/reset-password",
-      );
-      debugPrint("📦 [DATA] => {resetToken: $resetToken, password: $password}");
-
       final response = await _dio.post(
         "/api/auth/reset-password",
         data: {"resetToken": resetToken, "password": password},
       );
-
-      debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.realUri}");
-      debugPrint("📥 [DATA] => ${response.data}");
 
       return response.data;
     } on DioException catch (e) {

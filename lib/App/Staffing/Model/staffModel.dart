@@ -3,49 +3,49 @@ class StaffModel {
   final String fullname;
   final String email;
   final String phoneNumber;
+  final String role; // 'owner', 'admin', 'staff'
   final String position;
-  final String role;
-  final bool accessGranted;
-  final bool isVerified;
-  final String createdAt;
+  final bool accessGranted; // ← Added back
+  final String? joinedAt;
 
   StaffModel({
     required this.id,
     required this.fullname,
     required this.email,
     required this.phoneNumber,
-    required this.position,
     required this.role,
-    required this.accessGranted,
-    required this.isVerified,
-    required this.createdAt,
+    required this.position,
+    required this.accessGranted, // ← Added back
+    this.joinedAt,
   });
 
   factory StaffModel.fromJson(Map<String, dynamic> json) {
     return StaffModel(
-      id: json['_id'] ?? '',
+      id: json['id'] ?? '',
       fullname: json['fullname'] ?? '',
       email: json['email'] ?? '',
       phoneNumber: json['phoneNumber'] ?? '',
-      position: json['position'] ?? '',
       role: json['role'] ?? 'staff',
-      accessGranted: json['accessGranted'] ?? true,
-      isVerified: json['isVerified'] ?? false,
-      createdAt: json['createdAt'] ?? '',
+      position: json['position'] ?? '',
+      accessGranted: json['accessGranted'] ?? true, // ← Added back
+      joinedAt: json['joinedAt'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      '_id': id,
+      'id': id,
       'fullname': fullname,
       'email': email,
       'phoneNumber': phoneNumber,
-      'position': position,
       'role': role,
-      'accessGranted': accessGranted,
-      'isVerified': isVerified,
-      'createdAt': createdAt,
+      'position': position,
+      'accessGranted': accessGranted, // ← Added back
+      'joinedAt': joinedAt,
     };
   }
+
+  bool get isOwner => role == 'owner';
+  bool get isAdmin => role == 'admin';
+  bool get canManageStaff => isOwner || isAdmin;
 }

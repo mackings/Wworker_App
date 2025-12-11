@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Staffing/Api/staffService.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
@@ -17,12 +19,15 @@ class _AddStaffState extends ConsumerState<AddStaff> {
   final fullnameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
-
-  final StaffService _staffService = StaffService();
+  
+  final AuthService _authService = AuthService();
+  
   bool isLoading = false;
-  bool obscurePassword = true;
   String? selectedPosition;
+  String? selectedRole;
+
+  // ✅ List of roles
+  final List<String> roles = ["admin", "staff"];
 
   // ✅ List of positions in a woodwork company
   final List<String> positions = [
@@ -45,17 +50,16 @@ class _AddStaffState extends ConsumerState<AddStaff> {
     fullnameController.dispose();
     emailController.dispose();
     phoneController.dispose();
-    passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _addStaff() async {
+  Future<void> _inviteStaff() async {
     // Validate fields
     if (fullnameController.text.isEmpty ||
         emailController.text.isEmpty ||
         phoneController.text.isEmpty ||
-        selectedPosition == null ||
-        passwordController.text.isEmpty) {
+        selectedRole == null ||
+        selectedPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill all fields"),
@@ -77,11 +81,11 @@ class _AddStaffState extends ConsumerState<AddStaff> {
       return;
     }
 
-    // Validate password length
-    if (passwordController.text.length < 8) {
+    // Validate phone number (basic validation)
+    if (phoneController.text.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Password must be at least 8 characters long"),
+          content: Text("Please enter a valid phone number"),
           backgroundColor: Colors.redAccent,
         ),
       );
@@ -91,22 +95,30 @@ class _AddStaffState extends ConsumerState<AddStaff> {
     setState(() => isLoading = true);
 
     try {
-      final result = await _staffService.createStaff(
+      final result = await _authService.inviteStaff(
         fullname: fullnameController.text.trim(),
         email: emailController.text.trim(),
         phoneNumber: phoneController.text.trim(),
+        role: selectedRole!,
         position: selectedPosition!,
-        password: passwordController.text,
       );
 
       setState(() => isLoading = false);
 
       if (result['success'] == true) {
         if (mounted) {
+          // Show temp password if returned (optional)
+          final tempPassword = result['data']?['tempPassword'];
+          
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("✅ Staff added successfully!"),
+            SnackBar(
+              content: Text(
+                tempPassword != null
+                    ? "✅ Staff invited! Temp password: $tempPassword"
+                    : "✅ Staff invited successfully! Email sent.",
+              ),
               backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
             ),
           );
 
@@ -114,22 +126,19 @@ class _AddStaffState extends ConsumerState<AddStaff> {
           fullnameController.clear();
           emailController.clear();
           phoneController.clear();
-          passwordController.clear();
-          setState(() => selectedPosition = null);
+          setState(() {
+            selectedPosition = null;
+            selectedRole = null;
+          });
 
-          // Navigate back or to staff list
+          // Navigate back
           Nav.pop();
-          // OR navigate to staff list
-          // Navigator.pushReplacement(
-          //   context,
-          //   MaterialPageRoute(builder: (_) => const StaffListScreen()),
-          // );
         }
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text("❌ ${result['message'] ?? 'Failed to add staff'}"),
+              content: Text("❌ ${result['message'] ?? 'Failed to invite staff'}"),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -162,14 +171,23 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                   vertical: 10,
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    CustomText(
+                      subtitle: "Create a new staff account. They'll receive login credentials via email.",
+                      subtitleColor: Colors.grey,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Full Name
                     CustomTextField(
-                      label: "Fullname",
+                      label: "Full Name",
                       hintText: "Enter full name",
                       controller: fullnameController,
                     ),
                     const SizedBox(height: 20),
 
+                    // Email
                     CustomTextField(
                       label: "Email",
                       hintText: "Enter email address",
@@ -178,18 +196,34 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Phone
                     CustomTextField(
-                      label: "Phone number",
+                      label: "Phone Number",
                       hintText: "Enter phone number",
                       controller: phoneController,
                       keyboardType: TextInputType.phone,
                     ),
                     const SizedBox(height: 20),
 
+                    // ✅ Role Dropdown
+                    CustomTextField(
+                      label: "Role",
+                      hintText: "Select role",
+                      isDropdown: true,
+                      dropdownItems: roles,
+                      value: selectedRole,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedRole = value;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
                     // ✅ Position Dropdown
                     CustomTextField(
                       label: "Position",
-                      hintText: "Select position/role",
+                      hintText: "Select position",
                       isDropdown: true,
                       dropdownItems: positions,
                       value: selectedPosition,
@@ -199,21 +233,12 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                         });
                       },
                     ),
-                    const SizedBox(height: 20),
-
-                    CustomTextField(
-                      label: "Password",
-                      hintText: "Enter password (min 8 characters)",
-                      controller: passwordController,
-                      isPassword: true,
-                    ),
-
                     const SizedBox(height: 40),
 
                     CustomButton(
                       text: "Add Staff",
                       loading: isLoading,
-                      onPressed: _addStaff,
+                      onPressed: _inviteStaff,
                     ),
 
                     const SizedBox(height: 10),

@@ -10,6 +10,9 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
+
+
+
 class Signin extends ConsumerStatefulWidget {
   const Signin({super.key});
 
@@ -42,8 +45,9 @@ class _SigninState extends ConsumerState<Signin> {
 
     ref.listen(signinProvider, (prev, next) {
       next.when(
-        data: (data) {
+        data: (data) async {
           if (data["success"] == true) {
+
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(data["message"] ?? "Signed in successfully"),

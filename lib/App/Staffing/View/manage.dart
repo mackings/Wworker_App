@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wworker/App/Staffing/Api/staffService.dart';
+import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Staffing/Model/staffModel.dart';
 import 'package:wworker/App/Staffing/View/addStaff.dart';
 import 'package:wworker/App/Staffing/Widgets/staffList.dart';
-import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
@@ -17,7 +16,7 @@ class StaffManagement extends ConsumerStatefulWidget {
 }
 
 class _StaffManagementState extends ConsumerState<StaffManagement> {
-  final StaffService _staffService = StaffService();
+  final AuthService _authService = AuthService();
   List<StaffModel> staffList = [];
   List<StaffModel> filteredStaffList = [];
   bool isLoading = true;
@@ -39,7 +38,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
     setState(() => isLoading = true);
 
     try {
-      final result = await _staffService.getAllStaff();
+      final result = await _authService.getCompanyStaff();
 
       if (result['success'] == true) {
         final data = result['data'] as List;
@@ -92,8 +91,8 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
   Future<void> _toggleAccess(StaffModel staff) async {
     try {
       final result = staff.accessGranted
-          ? await _staffService.revokeAccess(staff.id)
-          : await _staffService.grantAccess(staff.id);
+          ? await _authService.revokeStaffAccess(userId: staff.id)
+          : await _authService.restoreStaffAccess(userId: staff.id);
 
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,13 +122,24 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
   }
 
   Future<void> _deleteStaff(StaffModel staff) async {
+    // Cannot delete owner
+    if (staff.isOwner) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cannot remove company owner'),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Staff'),
+        title: const Text('Remove Staff'),
         content: Text(
-          'Are you sure you want to delete ${staff.fullname}? This action cannot be undone.',
+          'Are you sure you want to remove ${staff.fullname}? This will permanently remove them from the company.',
         ),
         actions: [
           TextButton(
@@ -139,7 +149,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text(
-              'Delete',
+              'Remove',
               style: TextStyle(color: Color(0xFFD72638)),
             ),
           ),
@@ -149,12 +159,12 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
 
     if (confirmed == true) {
       try {
-        final result = await _staffService.deleteStaff(staff.id);
+        final result = await _authService.removeStaff(userId: staff.id);
 
         if (result['success'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✅ Staff deleted successfully'),
+              content: Text('✅ Staff removed successfully'),
               backgroundColor: Colors.green,
             ),
           );
@@ -162,7 +172,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['message'] ?? 'Failed to delete staff'),
+              content: Text(result['message'] ?? 'Failed to remove staff'),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -185,15 +195,15 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title:                   CustomText(
-                    title: 'Staff List',
-                    titleFontSize: 16,
-                    titleFontWeight: FontWeight.w600,
-                    titleColor: const Color(0xFF302E2E),
-                  ),
+        title: CustomText(
+          title: 'Staff List',
+          titleFontSize: 16,
+          titleFontWeight: FontWeight.w600,
+          titleColor: const Color(0xFF302E2E),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add, color: Colors.black),
+            icon: const Icon(Icons.person_add, color: Colors.black),
             onPressed: () async {
               await Navigator.push(
                 context,
@@ -207,15 +217,6 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              child: Row(
-                children: [
-                ],
-              ),
-            ),
-
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -261,75 +262,75 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : filteredStaffList.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 64,
-                            color: Colors.grey.shade400,
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.people_outline,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              CustomText(
+                                title: searchController.text.isEmpty
+                                    ? 'No staff members yet'
+                                    : 'No results found',
+                                titleColor: Colors.grey.shade600,
+                              ),
+                              const SizedBox(height: 8),
+                              if (searchController.text.isEmpty)
+                                TextButton(
+                                  onPressed: () async {
+                                    await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => const AddStaff(),
+                                      ),
+                                    );
+                                    _loadStaff();
+                                  },
+                                  child: const Text('Add First Staff Member'),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          CustomText(
-                            title: searchController.text.isEmpty
-                                ? 'No staff members yet'
-                                : 'No results found',
-                            titleColor: Colors.grey.shade600,
-                          ),
-                          const SizedBox(height: 8),
-                          if (searchController.text.isEmpty)
-                            TextButton(
-                              onPressed: () async {
-                                await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const AddStaff(),
-                                  ),
-                                );
-                                _loadStaff();
-                              },
-                              child: const Text('Add First Staff Member'),
-                            ),
-                        ],
-                      ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFFFCFCFC),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            // Table Header
-                            _buildTableHeader(),
-                            const SizedBox(height: 16),
-
-                            // Staff List Items
-                            Expanded(
-                              child: ListView.separated(
-                                itemCount: filteredStaffList.length,
-                                separatorBuilder: (context, index) =>
-                                    const SizedBox(height: 16),
-                                itemBuilder: (context, index) {
-                                  final staff = filteredStaffList[index];
-                                  return StaffListItem(
-                                    staff: staff,
-                                    onToggleAccess: () => _toggleAccess(staff),
-                                    onDelete: () => _deleteStaff(staff),
-                                  );
-                                },
+                        )
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: ShapeDecoration(
+                              color: const Color(0xFFFCFCFC),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                          ],
+                            child: Column(
+                              children: [
+                                // Table Header
+                                _buildTableHeader(),
+                                const SizedBox(height: 16),
+
+                                // Staff List Items
+                                Expanded(
+                                  child: ListView.separated(
+                                    itemCount: filteredStaffList.length,
+                                    separatorBuilder: (context, index) =>
+                                        const SizedBox(height: 16),
+                                    itemBuilder: (context, index) {
+                                      final staff = filteredStaffList[index];
+                                      return StaffListItem(
+                                        staff: staff,
+                                        onToggleAccess: () => _toggleAccess(staff),
+                                        onDelete: () => _deleteStaff(staff),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
             ),
           ],
         ),
@@ -377,7 +378,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: CustomText(
-                  title: 'Delete',
+                  title: 'Remove',
                   titleColor: const Color(0xFF8B4513),
                   titleFontSize: 12,
                 ),
