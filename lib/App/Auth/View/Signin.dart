@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Auth/Api/Provider.dart';
 import 'package:wworker/App/Auth/View/Signup.dart';
 import 'package:wworker/App/Auth/View/resetHome.dart';
+import 'package:wworker/App/Staffing/View/Selector.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/AltSignIn.dart';
 import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
@@ -29,9 +30,9 @@ class _SigninState extends ConsumerState<Signin> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("All fields are required")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("All fields are required")),
+      );
       return;
     }
 
@@ -47,20 +48,45 @@ class _SigninState extends ConsumerState<Signin> {
       next.when(
         data: (data) async {
           if (data["success"] == true) {
-
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(data["message"] ?? "Signed in successfully"),
+                backgroundColor: Colors.green,
               ),
             );
-            Nav.push(const DashboardScreen());
+
+            // Check if user has multiple companies
+            final userData = data["data"]?["user"];
+            if (userData != null) {
+              final companies = userData["companies"] as List?;
+              final activeCompanyIndex = userData["activeCompanyIndex"] ?? 0;
+
+              if (companies != null && companies.length > 1) {
+                // User has multiple companies - show selection screen
+                Nav.pushReplacement(
+                  CompanySelectionScreen(
+                    companies: companies,
+                    currentIndex: activeCompanyIndex,
+                  ),
+                );
+              } else {
+                // User has single company or no company - go to dashboard
+                Nav.pushReplacement(const DashboardScreen());
+              }
+            } else {
+              // No user data - go to dashboard anyway
+              Nav.pushReplacement(const DashboardScreen());
+            }
           }
         },
         loading: () {},
         error: (err, _) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(" $err")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("$err"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
         },
       );
     });

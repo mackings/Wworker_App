@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Staffing/Api/staffService.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
+
+
+
 
 class AddStaff extends ConsumerStatefulWidget {
   const AddStaff({super.key});
@@ -20,7 +22,7 @@ class _AddStaffState extends ConsumerState<AddStaff> {
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
   
-  final AuthService _authService = AuthService();
+  final CompanyService _companyService = CompanyService(); // ✅ Changed to CompanyService
   
   bool isLoading = false;
   String? selectedPosition;
@@ -95,7 +97,7 @@ class _AddStaffState extends ConsumerState<AddStaff> {
     setState(() => isLoading = true);
 
     try {
-      final result = await _authService.inviteStaff(
+      final result = await _companyService.inviteStaff( // ✅ Using CompanyService
         fullname: fullnameController.text.trim(),
         email: emailController.text.trim(),
         phoneNumber: phoneController.text.trim(),

@@ -80,45 +80,6 @@ class SigninNotifier extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
   }
 }
 
-// ============================================================
-// INVITE STAFF PROVIDER - NEW
-// ============================================================
-final inviteStaffProvider = StateNotifierProvider<InviteStaffNotifier,
-    AsyncValue<Map<String, dynamic>>>(
-  (ref) => InviteStaffNotifier(ref),
-);
-
-class InviteStaffNotifier
-    extends StateNotifier<AsyncValue<Map<String, dynamic>>> {
-  final Ref _ref;
-
-  InviteStaffNotifier(this._ref) : super(const AsyncValue.data({}));
-
-  Future<void> inviteStaff({
-    required String fullname,
-    required String email,
-    required String phoneNumber,
-    required String role,
-    required String position,
-  }) async {
-    state = const AsyncValue.loading();
-
-    final service = _ref.read(authServiceProvider);
-    final result = await service.inviteStaff(
-      fullname: fullname,
-      email: email,
-      phoneNumber: phoneNumber,
-      role: role,
-      position: position,
-    );
-
-    if (result["success"] == true) {
-      state = AsyncValue.data(result);
-    } else {
-      state = AsyncValue.error(result["message"], StackTrace.current);
-    }
-  }
-}
 
 // ============================================================
 // CHANGE PASSWORD PROVIDER - NEW
