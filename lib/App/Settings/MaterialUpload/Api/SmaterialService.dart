@@ -15,67 +15,86 @@ class MaterialService {
   ));
 
   static void _prettyPrintJson(dynamic data) {
-  try {
-    const encoder = JsonEncoder.withIndent('  ');
-    final prettyString = encoder.convert(data);
-    debugPrint(prettyString);
-  } catch (e) {
-    debugPrint(data.toString());
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      final prettyString = encoder.convert(data);
+      debugPrint(prettyString);
+    } catch (e) {
+      debugPrint(data.toString());
+    }
   }
-}
 
-MaterialService() {
-  _dio.interceptors.add(
-    InterceptorsWrapper(
-      onRequest: (options, handler) {
-        debugPrint("━━━━━━━━━━━━━━ 📤 REQUEST ━━━━━━━━━━━━━━");
-        debugPrint("➡️ METHOD: ${options.method}");
-        debugPrint("🌍 URL: ${options.uri}");
-        debugPrint("🧾 HEADERS: ${options.headers}");
-        debugPrint("🔎 QUERY PARAMS: ${options.queryParameters}");
-        debugPrint("📦 BODY: ${options.data}");
-        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        return handler.next(options);
-      },
+  MaterialService() {
+    _dio.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          debugPrint("━━━━━━━━━━━━━━ 📤 REQUEST ━━━━━━━━━━━━━━");
+          debugPrint("➡️ METHOD: ${options.method}");
+          debugPrint("🌍 URL: ${options.uri}");
+          debugPrint("🧾 HEADERS: ${options.headers}");
+          debugPrint("🔎 QUERY PARAMS: ${options.queryParameters}");
+          debugPrint("📦 BODY: ${options.data}");
+          debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          return handler.next(options);
+        },
+        onResponse: (response, handler) {
+          debugPrint("━━━━━━━━━━━━━━ ✅ RESPONSE ━━━━━━━━━━━━━━");
+          debugPrint("✅ STATUS CODE: ${response.statusCode}");
+          debugPrint("🌍 URL: ${response.requestOptions.uri}");
+          debugPrint("🧾 HEADERS: ${response.headers.map}");
+          debugPrint("📄 DATA:");
+          _prettyPrintJson(response.data);
+          debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          return handler.next(response);
+        },
+        onError: (DioException e, handler) {
+          debugPrint("━━━━━━━━━━━━━━ ❌ ERROR ━━━━━━━━━━━━━━");
+          debugPrint("❌ URL: ${e.requestOptions.uri}");
+          debugPrint("❌ METHOD: ${e.requestOptions.method}");
+          debugPrint("❌ MESSAGE: ${e.message}");
+          debugPrint("❌ TYPE: ${e.type}");
 
-      onResponse: (response, handler) {
-        debugPrint("━━━━━━━━━━━━━━ ✅ RESPONSE ━━━━━━━━━━━━━━");
-        debugPrint("✅ STATUS CODE: ${response.statusCode}");
-        debugPrint("🌍 URL: ${response.requestOptions.uri}");
-        debugPrint("🧾 HEADERS: ${response.headers.map}");
-        debugPrint("📄 DATA:");
-        _prettyPrintJson(response.data);
-        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        return handler.next(response);
-      },
+          if (e.response != null) {
+            debugPrint("❌ STATUS CODE: ${e.response?.statusCode}");
+            debugPrint("❌ RESPONSE DATA:");
+            _prettyPrintJson(e.response?.data);
+          } else {
+            debugPrint("❌ NO SERVER RESPONSE RECEIVED");
+          }
 
-      onError: (DioException e, handler) {
-        debugPrint("━━━━━━━━━━━━━━ ❌ ERROR ━━━━━━━━━━━━━━");
-        debugPrint("❌ URL: ${e.requestOptions.uri}");
-        debugPrint("❌ METHOD: ${e.requestOptions.method}");
-        debugPrint("❌ MESSAGE: ${e.message}");
-        debugPrint("❌ TYPE: ${e.type}");
-
-        if (e.response != null) {
-          debugPrint("❌ STATUS CODE: ${e.response?.statusCode}");
-          debugPrint("❌ RESPONSE DATA:");
-          _prettyPrintJson(e.response?.data);
-        } else {
-          debugPrint("❌ NO SERVER RESPONSE RECEIVED");
-        }
-
-        debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        return handler.next(e);
-      },
-    ),
-  );
-}
-
+          debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          return handler.next(e);
+        },
+      ),
+    );
+  }
 
   /// Get authorization token
   Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString("token");
+  }
+
+  /// ✅ Get company name from SharedPreferences
+  Future<String?> _getCompanyName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("companyName");
+  }
+
+  /// ✅ Validate company exists
+  Future<Map<String, dynamic>?> _validateCompany() async {
+    final companyName = await _getCompanyName();
+    
+    if (companyName == null || companyName.isEmpty) {
+      debugPrint("⚠️ No active company found!");
+      return {
+        'success': false,
+        'message': 'No active company found. Please select or create a company.',
+      };
+    }
+    
+    debugPrint("🏢 Active Company: $companyName");
+    return null; // No error
   }
 
   /// Create a new material (Enhanced - supports all categories)
@@ -91,10 +110,19 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      // ✅ Get company name and attach to request
+      final companyName = await _getCompanyName();
+      request['companyName'] = companyName;
+
       debugPrint("📤 [CREATE MATERIAL] => $request");
+      debugPrint("🏢 [COMPANY] => $companyName");
 
       final response = await _dio.post(
-        '/api/product/creatematerial',
+        '/api/product/creatematerial', 
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -129,7 +157,12 @@ MaterialService() {
         };
       }
 
-      debugPrint("📤 [GET ALL MATERIALS] Category: $category");
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      final companyName = await _getCompanyName();
+      debugPrint("📤 [GET ALL MATERIALS] Company: $companyName, Category: $category");
 
       final queryParams = <String, dynamic>{};
       if (category != null) {
@@ -137,7 +170,7 @@ MaterialService() {
       }
 
       final response = await _dio.get(
-        '/api/product/materials',
+        '/api/materials',  // Backend filters by company automatically via middleware
         queryParameters: queryParams,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -172,10 +205,14 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
       debugPrint("📤 [GET MATERIAL CATEGORIES]");
 
       final response = await _dio.get(
-        '/api/product/material-categories',
+        '/api/materials/categories',  // Backend filters by company
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -209,10 +246,14 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
       debugPrint("📤 [GET MATERIAL BY ID] => $materialId");
 
       final response = await _dio.get(
-        '/api/product/material/$materialId',
+        '/api/materials/$materialId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -249,11 +290,19 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      // ✅ Attach company name (in case it's needed for validation)
+      final companyName = await _getCompanyName();
+      updateData['companyName'] = companyName;
+
       debugPrint("📤 [UPDATE MATERIAL] => $materialId");
       debugPrint("📦 [UPDATE DATA] => $updateData");
 
       final response = await _dio.put(
-        '/api/product/material/$materialId',
+        '/api/materials/$materialId',
         data: updateData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -291,11 +340,15 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
       debugPrint("📤 [ADD MATERIAL TYPES] => Material ID: $materialId");
       debugPrint("📦 [TYPES] => $request");
 
       final response = await _dio.post(
-        '/api/product/$materialId/add-types',
+        '/api/materials/$materialId/types',
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -330,10 +383,14 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
       debugPrint("📤 [DELETE MATERIAL] => $materialId");
 
       final response = await _dio.delete(
-        '/api/product/material/$materialId',
+        '/api/materials/$materialId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -370,11 +427,15 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
       debugPrint("📤 [CALCULATE MATERIAL COST] => Material ID: $materialId");
       debugPrint("📦 [REQUEST] => $request");
 
       final response = await _dio.post(
-        '/api/product/material/$materialId/calculate',
+        '/api/materials/$materialId/calculate',
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -411,11 +472,23 @@ MaterialService() {
         };
       }
 
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      // ✅ Attach company name to all materials
+      final companyName = await _getCompanyName();
+      final materialsWithCompany = materials.map((material) {
+        material['companyName'] = companyName;
+        return material;
+      }).toList();
+
       debugPrint("📤 [BULK CREATE MATERIALS] => Count: ${materials.length}");
+      debugPrint("🏢 [COMPANY] => $companyName");
 
       final response = await _dio.post(
-        '/api/product/materials/bulk',
-        data: {'materials': materials},
+        '/api/materials/bulk',
+        data: {'materials': materialsWithCompany},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

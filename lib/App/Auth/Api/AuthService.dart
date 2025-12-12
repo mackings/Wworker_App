@@ -82,32 +82,7 @@ class AuthService {
       final responseData = response.data;
 
       if (responseData["success"] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        final mainData = responseData["data"];
-
-        if (mainData["token"] != null) {
-          await prefs.setString("token", mainData["token"]);
-        }
-
-        if (mainData["user"] != null) {
-          final user = mainData["user"];
-          if (user["id"] != null) {
-            await prefs.setString("userId", user["id"]);
-          }
-          if (user["email"] != null) {
-            await prefs.setString("email", user["email"]);
-          }
-          if (user["companies"] != null) {
-            await prefs.setString("companies", jsonEncode(user["companies"]));
-          }
-          if (user["activeCompany"] != null) {
-            await prefs.setString(
-                "activeCompany", jsonEncode(user["activeCompany"]));
-          }
-          if (user["activeCompanyIndex"] != null) {
-            await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
-          }
-        }
+        await _saveUserData(responseData["data"]);
       }
 
       return responseData;
@@ -130,38 +105,129 @@ class AuthService {
       final data = response.data;
 
       if (data["success"] == true) {
-        final prefs = await SharedPreferences.getInstance();
-        final mainData = data["data"];
-
-        if (mainData["token"] != null) {
-          await prefs.setString("token", mainData["token"]);
-        }
-
-        if (mainData["user"] != null) {
-          final user = mainData["user"];
-          if (user["id"] != null) {
-            await prefs.setString("userId", user["id"]);
-          }
-          if (user["email"] != null) {
-            await prefs.setString("email", user["email"]);
-          }
-          if (user["companies"] != null) {
-            await prefs.setString("companies", jsonEncode(user["companies"]));
-          }
-          if (user["activeCompanyIndex"] != null) {
-            await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
-          }
-          if (user["activeCompany"] != null) {
-            await prefs.setString(
-                "activeCompany", jsonEncode(user["activeCompany"]));
-          }
-        }
+        await _saveUserData(data["data"]);
       }
 
       return data;
     } on DioException catch (e) {
       return _handleError(e);
     }
+  }
+
+  // 🟢 SAVE USER DATA TO SHARED PREFERENCES
+  Future<void> _saveUserData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+
+    // Save token
+    if (data["token"] != null) {
+      await prefs.setString("token", data["token"]);
+      debugPrint("✅ Token saved");
+    }
+
+    // Save user data
+    if (data["user"] != null) {
+      final user = data["user"];
+
+      if (user["id"] != null) {
+        await prefs.setString("userId", user["id"]);
+        debugPrint("✅ User ID saved: ${user["id"]}");
+      }
+
+      if (user["fullname"] != null) {
+        await prefs.setString("fullname", user["fullname"]);
+        debugPrint("✅ Fullname saved: ${user["fullname"]}");
+      }
+
+      if (user["email"] != null) {
+        await prefs.setString("email", user["email"]);
+        debugPrint("✅ Email saved: ${user["email"]}");
+      }
+
+      if (user["phoneNumber"] != null) {
+        await prefs.setString("phoneNumber", user["phoneNumber"]);
+        debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
+      }
+
+      // ✅ Save companies array
+      if (user["companies"] != null) {
+        await prefs.setString("companies", jsonEncode(user["companies"]));
+        debugPrint("✅ Companies saved: ${user["companies"].length} companies");
+      }
+
+      // ✅ Save active company index
+      if (user["activeCompanyIndex"] != null) {
+        await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
+        debugPrint("✅ Active company index saved: ${user["activeCompanyIndex"]}");
+      }
+
+      // ✅ Save active company data (MOST IMPORTANT)
+      if (user["activeCompany"] != null) {
+        final activeCompany = user["activeCompany"];
+        await prefs.setString("activeCompany", jsonEncode(activeCompany));
+        
+        // ✅ Save individual company fields for easy access
+        if (activeCompany["name"] != null) {
+          await prefs.setString("companyName", activeCompany["name"]);
+          debugPrint("🏢 Active Company Name saved: ${activeCompany["name"]}");
+        }
+        
+        if (activeCompany["email"] != null) {
+          await prefs.setString("companyEmail", activeCompany["email"]);
+        }
+        
+        if (activeCompany["phoneNumber"] != null) {
+          await prefs.setString("companyPhoneNumber", activeCompany["phoneNumber"]);
+        }
+        
+        if (activeCompany["address"] != null) {
+          await prefs.setString("companyAddress", activeCompany["address"]);
+        }
+        
+        if (activeCompany["role"] != null) {
+          await prefs.setString("userRole", activeCompany["role"]);
+          debugPrint("👤 User role saved: ${activeCompany["role"]}");
+        }
+        
+        if (activeCompany["position"] != null) {
+          await prefs.setString("userPosition", activeCompany["position"]);
+          debugPrint("💼 User position saved: ${activeCompany["position"]}");
+        }
+
+        debugPrint("✅ Full Active Company saved: ${jsonEncode(activeCompany)}");
+      }
+    }
+
+    debugPrint("🎉 All user data saved successfully!");
+  }
+
+  // 🟢 GET ACTIVE COMPANY NAME (Helper method)
+  Future<String?> getActiveCompanyName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("companyName");
+  }
+
+  // 🟢 GET ACTIVE COMPANY DATA (Helper method)
+  Future<Map<String, dynamic>?> getActiveCompany() async {
+    final prefs = await SharedPreferences.getInstance();
+    final companyString = prefs.getString("activeCompany");
+    
+    if (companyString != null) {
+      return jsonDecode(companyString);
+    }
+    
+    return null;
+  }
+
+  // 🟢 GET USER ROLE (Helper method)
+  Future<String?> getUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("userRole");
+  }
+
+  // 🟢 CHECK IF USER IS OWNER/ADMIN (Helper method)
+  Future<bool> canManageStaff() async {
+    final role = await getUserRole();
+    return role == 'owner' || role == 'admin';
   }
 
   // 🟢 CHANGE PASSWORD
@@ -289,6 +355,11 @@ class AuthService {
         ),
       );
 
+      // ✅ Update stored data with fresh data from server
+      if (response.data["success"] == true && response.data["data"] != null) {
+        await _saveUserData({"user": response.data["data"]});
+      }
+
       return response.data;
     } on DioException catch (e) {
       return _handleError(e);
@@ -299,6 +370,7 @@ class AuthService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    debugPrint("🚪 User logged out - all data cleared");
   }
 
   // 🔹 Error Handler

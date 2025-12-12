@@ -7,6 +7,8 @@ import 'package:wworker/App/Invoice/Model/Client_model.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
+
+
 class ClientService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -35,6 +37,28 @@ class ClientService {
     );
   }
 
+  /// ✅ Get company name from SharedPreferences
+  Future<String?> _getCompanyName() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString("companyName");
+  }
+
+  /// ✅ Validate company exists
+  Future<Map<String, dynamic>?> _validateCompany() async {
+    final companyName = await _getCompanyName();
+    
+    if (companyName == null || companyName.isEmpty) {
+      debugPrint("⚠️ No active company found!");
+      return {
+        'success': false,
+        'message': 'No active company found. Please select or create a company.',
+      };
+    }
+    
+    debugPrint("🏢 Active Company: $companyName");
+    return null; // No error
+  }
+
   // 🟢 GET CLIENTS
   Future<List<ClientModel>> getClients() async {
     try {
@@ -44,6 +68,15 @@ class ClientService {
       if (token == null) {
         throw Exception("No auth token found");
       }
+
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) {
+        throw Exception(companyError['message']);
+      }
+
+      final companyName = await _getCompanyName();
+      debugPrint("🏢 [COMPANY] => $companyName");
 
       debugPrint("📤 [REQUEST] => GET ${Urls.baseUrl}/api/sales/get-clients");
 
@@ -74,25 +107,36 @@ class ClientService {
     String? dueDate,
     String? notes,
     double amountPaid = 0,
-    File? pdfFile, // 🆕 PDF file from mobile
+    File? pdfFile,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
 
       if (token == null) {
-        throw Exception("No auth token found");
+        return {
+          'success': false,
+          'message': 'No auth token found',
+        };
       }
+
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      // ✅ Get company name
+      final companyName = await _getCompanyName();
+      debugPrint("🏢 [COMPANY] => $companyName");
 
       debugPrint("📤 [REQUEST] => POST ${Urls.baseUrl}/api/invoices/create");
 
-      // Create FormData for multipart request
+      // Create FormData for multipart request with company name
       FormData formData = FormData.fromMap({
         "quotationId": quotationId,
+        "companyName": companyName, // ✅ Add company name
         if (dueDate != null) "dueDate": dueDate,
         if (notes != null) "notes": notes,
         "amountPaid": amountPaid,
-        // Add PDF file if provided
         if (pdfFile != null)
           "invoicePdf": await MultipartFile.fromFile(
             pdfFile.path,
@@ -133,6 +177,15 @@ class ClientService {
       if (token == null) {
         throw Exception("No auth token found");
       }
+
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) {
+        throw Exception(companyError['message']);
+      }
+
+      final companyName = await _getCompanyName();
+      debugPrint("🏢 [COMPANY] => $companyName");
 
       debugPrint("📤 [REQUEST] => GET ${Urls.baseUrl}/api/invoices/invoices");
 
