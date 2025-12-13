@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Staffing/Api/staffService.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
@@ -10,11 +11,13 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 class CompanySelectionScreen extends StatefulWidget {
   final List<dynamic> companies;
   final int currentIndex;
+  final bool isFromSettings;
 
   const CompanySelectionScreen({
     super.key,
     required this.companies,
     required this.currentIndex,
+    this.isFromSettings = false,
   });
 
   @override
@@ -43,15 +46,20 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
       return;
     }
 
-    // If same company is selected, just navigate
+    // ✅ If same company is selected, just navigate (no API call needed)
     if (selectedIndex == widget.currentIndex) {
-      Nav.pushReplacement(const DashboardScreen());
+      if (widget.isFromSettings) {
+        Navigator.pop(context, false);
+      } else {
+        Nav.pushReplacement(const DashboardScreen());
+      }
       return;
     }
 
     setState(() => isLoading = true);
 
     try {
+      // ✅ Call API to switch company
       final result = await _companyService.switchCompany(
         companyIndex: selectedIndex!,
       );
@@ -59,8 +67,26 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
       setState(() => isLoading = false);
 
       if (result['success'] == true) {
+        // ✅ Update SharedPreferences with new active company data
+        await _updateLocalCompanyData(selectedIndex!);
+
         if (mounted) {
-          Nav.pushReplacement(const DashboardScreen());
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✅ Company switched successfully'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 1),
+            ),
+          );
+
+          // Wait a bit for the snackbar to show
+          await Future.delayed(const Duration(milliseconds: 500));
+
+          if (widget.isFromSettings) {
+            Navigator.pop(context, true); // Return true (switched)
+          } else {
+            Nav.pushReplacement(const DashboardScreen());
+          }
         }
       } else {
         if (mounted) {
@@ -85,6 +111,48 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
     }
   }
 
+  // ✅ Update SharedPreferences with selected company data
+  Future<void> _updateLocalCompanyData(int companyIndex) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (companyIndex >= 0 && companyIndex < widget.companies.length) {
+      final selectedCompany = widget.companies[companyIndex];
+      
+      // Update active company index
+      await prefs.setInt('activeCompanyIndex', companyIndex);
+      
+      // Update active company data
+      await prefs.setString('activeCompany', jsonEncode(selectedCompany));
+      
+      // Update individual company fields for easy access
+      if (selectedCompany['name'] != null) {
+        await prefs.setString('companyName', selectedCompany['name']);
+      }
+      
+      if (selectedCompany['email'] != null) {
+        await prefs.setString('companyEmail', selectedCompany['email']);
+      }
+      
+      if (selectedCompany['phoneNumber'] != null) {
+        await prefs.setString('companyPhoneNumber', selectedCompany['phoneNumber']);
+      }
+      
+      if (selectedCompany['address'] != null) {
+        await prefs.setString('companyAddress', selectedCompany['address']);
+      }
+      
+      if (selectedCompany['role'] != null) {
+        await prefs.setString('userRole', selectedCompany['role']);
+      }
+      
+      if (selectedCompany['position'] != null) {
+        await prefs.setString('userPosition', selectedCompany['position']);
+      }
+      
+      debugPrint('✅ Local company data updated to: ${selectedCompany['name']}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,9 +160,15 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false,
+        leading: widget.isFromSettings
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.black),
+                onPressed: () => Navigator.pop(context, false),
+              )
+            : null,
+        automaticallyImplyLeading: widget.isFromSettings,
         title: CustomText(
-          title: 'Select Company',
+          title: widget.isFromSettings ? 'Switch Company' : 'Select Company',
           titleFontSize: 18,
           titleFontWeight: FontWeight.w600,
         ),
@@ -110,7 +184,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       CustomText(
-                        subtitle: 'You have access to multiple companies. Please select which company you want to work with.',
+                        subtitle: widget.isFromSettings
+                            ? 'Select which company you want to switch to. All your data will be filtered by the selected company.'
+                            : 'You have access to multiple companies. Please select which company you want to work with.',
                         subtitleColor: Colors.grey.shade600,
                         subtitleFontSize: 14,
                       ),
@@ -125,6 +201,7 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                     itemBuilder: (context, index) {
                       final company = widget.companies[index];
                       final isSelected = selectedIndex == index;
+                      final isCurrent = index == widget.currentIndex;
 
                       return GestureDetector(
                         onTap: () {
@@ -176,15 +253,42 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      company['name'] ?? 'Unknown Company',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected
-                                            ? const Color(0xFF8B4513)
-                                            : Colors.black,
-                                      ),
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            company['name'] ?? 'Unknown Company',
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                              color: isSelected
+                                                  ? const Color(0xFF8B4513)
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                        if (isCurrent) ...[
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.green.shade100,
+                                              borderRadius: BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              'Current',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.green.shade700,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ],
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
@@ -247,9 +351,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Text(
-                              'Continue',
-                              style: TextStyle(
+                          : Text(
+                              widget.isFromSettings ? 'Switch Company' : 'Continue',
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,

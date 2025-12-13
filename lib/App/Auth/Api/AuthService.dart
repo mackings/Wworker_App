@@ -115,90 +115,112 @@ class AuthService {
   }
 
   // 🟢 SAVE USER DATA TO SHARED PREFERENCES
-  Future<void> _saveUserData(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
+// services/auth_api.dart
 
-    // Save token
-    if (data["token"] != null) {
-      await prefs.setString("token", data["token"]);
-      debugPrint("✅ Token saved");
-    }
+// 🟢 SAVE USER DATA TO SHARED PREFERENCES
+Future<void> _saveUserData(Map<String, dynamic> data) async {
+  final prefs = await SharedPreferences.getInstance();
 
-    // Save user data
-    if (data["user"] != null) {
-      final user = data["user"];
-
-      if (user["id"] != null) {
-        await prefs.setString("userId", user["id"]);
-        debugPrint("✅ User ID saved: ${user["id"]}");
-      }
-
-      if (user["fullname"] != null) {
-        await prefs.setString("fullname", user["fullname"]);
-        debugPrint("✅ Fullname saved: ${user["fullname"]}");
-      }
-
-      if (user["email"] != null) {
-        await prefs.setString("email", user["email"]);
-        debugPrint("✅ Email saved: ${user["email"]}");
-      }
-
-      if (user["phoneNumber"] != null) {
-        await prefs.setString("phoneNumber", user["phoneNumber"]);
-        debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
-      }
-
-      // ✅ Save companies array
-      if (user["companies"] != null) {
-        await prefs.setString("companies", jsonEncode(user["companies"]));
-        debugPrint("✅ Companies saved: ${user["companies"].length} companies");
-      }
-
-      // ✅ Save active company index
-      if (user["activeCompanyIndex"] != null) {
-        await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
-        debugPrint("✅ Active company index saved: ${user["activeCompanyIndex"]}");
-      }
-
-      // ✅ Save active company data (MOST IMPORTANT)
-      if (user["activeCompany"] != null) {
-        final activeCompany = user["activeCompany"];
-        await prefs.setString("activeCompany", jsonEncode(activeCompany));
-        
-        // ✅ Save individual company fields for easy access
-        if (activeCompany["name"] != null) {
-          await prefs.setString("companyName", activeCompany["name"]);
-          debugPrint("🏢 Active Company Name saved: ${activeCompany["name"]}");
-        }
-        
-        if (activeCompany["email"] != null) {
-          await prefs.setString("companyEmail", activeCompany["email"]);
-        }
-        
-        if (activeCompany["phoneNumber"] != null) {
-          await prefs.setString("companyPhoneNumber", activeCompany["phoneNumber"]);
-        }
-        
-        if (activeCompany["address"] != null) {
-          await prefs.setString("companyAddress", activeCompany["address"]);
-        }
-        
-        if (activeCompany["role"] != null) {
-          await prefs.setString("userRole", activeCompany["role"]);
-          debugPrint("👤 User role saved: ${activeCompany["role"]}");
-        }
-        
-        if (activeCompany["position"] != null) {
-          await prefs.setString("userPosition", activeCompany["position"]);
-          debugPrint("💼 User position saved: ${activeCompany["position"]}");
-        }
-
-        debugPrint("✅ Full Active Company saved: ${jsonEncode(activeCompany)}");
-      }
-    }
-
-    debugPrint("🎉 All user data saved successfully!");
+  // Save token
+  if (data["token"] != null) {
+    await prefs.setString("token", data["token"]);
+    debugPrint("✅ Token saved");
   }
+
+  // Save user data
+  if (data["user"] != null) {
+    final user = data["user"];
+
+    if (user["id"] != null) {
+      await prefs.setString("userId", user["id"]);
+      debugPrint("✅ User ID saved: ${user["id"]}");
+    }
+
+    if (user["fullname"] != null) {
+      await prefs.setString("fullname", user["fullname"]);
+      debugPrint("✅ Fullname saved: ${user["fullname"]}");
+    }
+
+    if (user["email"] != null) {
+      await prefs.setString("email", user["email"]);
+      debugPrint("✅ Email saved: ${user["email"]}");
+    }
+
+    if (user["phoneNumber"] != null) {
+      await prefs.setString("phoneNumber", user["phoneNumber"]);
+      debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
+    }
+
+    // ✅ Save companies array
+    if (user["companies"] != null) {
+      await prefs.setString("companies", jsonEncode(user["companies"]));
+      debugPrint("✅ Companies saved: ${user["companies"].length} companies");
+    } else {
+      // ✅ Clear companies if null
+      await prefs.remove("companies");
+      debugPrint("🗑️ Companies cleared (user has no companies)");
+    }
+
+    // ✅ Save active company index
+    if (user["activeCompanyIndex"] != null) {
+      await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
+      debugPrint("✅ Active company index saved: ${user["activeCompanyIndex"]}");
+    } else {
+      await prefs.remove("activeCompanyIndex");
+    }
+
+    // ✅ Save active company data OR CLEAR if null
+    if (user["activeCompany"] != null) {
+      final activeCompany = user["activeCompany"];
+      await prefs.setString("activeCompany", jsonEncode(activeCompany));
+      
+      // ✅ Save individual company fields for easy access
+      if (activeCompany["name"] != null) {
+        await prefs.setString("companyName", activeCompany["name"]);
+        debugPrint("🏢 Active Company Name saved: ${activeCompany["name"]}");
+      }
+      
+      if (activeCompany["email"] != null) {
+        await prefs.setString("companyEmail", activeCompany["email"]);
+      }
+      
+      if (activeCompany["phoneNumber"] != null) {
+        await prefs.setString("companyPhoneNumber", activeCompany["phoneNumber"]);
+      }
+      
+      if (activeCompany["address"] != null) {
+        await prefs.setString("companyAddress", activeCompany["address"]);
+      }
+      
+      if (activeCompany["role"] != null) {
+        await prefs.setString("userRole", activeCompany["role"]);
+        debugPrint("👤 User role saved: ${activeCompany["role"]}");
+      }
+      
+      if (activeCompany["position"] != null) {
+        await prefs.setString("userPosition", activeCompany["position"]);
+        debugPrint("💼 User position saved: ${activeCompany["position"]}");
+      }
+
+      debugPrint("✅ Full Active Company saved: ${jsonEncode(activeCompany)}");
+    } else {
+      // ✅ IMPORTANT: Clear all company-related data if user has no active company
+      await prefs.remove("activeCompany");
+      await prefs.remove("companyName");
+      await prefs.remove("companyEmail");
+      await prefs.remove("companyPhoneNumber");
+      await prefs.remove("companyAddress");
+      await prefs.remove("userRole");
+      await prefs.remove("userPosition");
+      debugPrint("🗑️ Active company data cleared (user has no active company)");
+    }
+  }
+
+  debugPrint("🎉 All user data saved successfully!");
+}
+
+
+
 
   // 🟢 GET ACTIVE COMPANY NAME (Helper method)
   Future<String?> getActiveCompanyName() async {

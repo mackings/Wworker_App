@@ -9,6 +9,7 @@ class QuotationResponse {
     this.pagination,
   });
 
+
   factory QuotationResponse.fromJson(Map<String, dynamic> json) {
     return QuotationResponse(
       success: json['success'] ?? false,
