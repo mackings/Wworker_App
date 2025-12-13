@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Staffing/Api/staffService.dart';
 import 'package:wworker/App/Staffing/Model/staffModel.dart';
+import 'package:wworker/App/Staffing/View/StaffPermission.dart';
 import 'package:wworker/App/Staffing/View/addCompany.dart';
 import 'package:wworker/App/Staffing/View/addStaff.dart';
 import 'package:wworker/App/Staffing/Widgets/staffList.dart';
@@ -304,7 +304,7 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
                       builder: (_) => const CreateCompanyScreen(),
                     ),
                   );
-                  _checkCompanyAndLoadStaff(); // Reload after creation
+                  _checkCompanyAndLoadStaff();
                 },
                 icon: const Icon(Icons.add_business, color: Colors.white),
                 label: const Text(
@@ -448,6 +448,22 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
                                 staff: staff,
                                 onToggleAccess: () => _toggleAccess(staff),
                                 onDelete: () => _deleteStaff(staff),
+                                onManagePermissions: staff.isOwner 
+                                    ? null 
+                                    : () async {
+                                        // ✅ Show permissions modal
+                                        final result = await showModalBottomSheet<bool>(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (context) => StaffPermissionsModal(staff: staff),
+                                        );
+
+                                        // Reload staff if permissions were updated
+                                        if (result == true) {
+                                          _loadStaff();
+                                        }
+                                      },
                               );
                             },
                           ),
@@ -461,9 +477,11 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
     );
   }
 
+  // ✅ Updated Table Header
   Widget _buildTableHeader() {
     return Container(
       width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: ShapeDecoration(
         color: const Color(0xFFF5F8F2),
         shape: RoundedRectangleBorder(
@@ -474,39 +492,17 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
       child: Row(
         children: [
           Expanded(
-            flex: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: CustomText(
-                title: 'Staff Name',
-                titleColor: const Color(0xFF8B4513),
-                titleFontSize: 12,
-              ),
+            child: CustomText(
+              title: 'Staff Members',
+              titleColor: const Color(0xFF8B4513),
+              titleFontSize: 13,
+              titleFontWeight: FontWeight.w600,
             ),
           ),
-          Expanded(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: CustomText(
-                  title: 'Access',
-                  titleColor: const Color(0xFF8B4513),
-                  titleFontSize: 12,
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(8),
-                child: CustomText(
-                  title: 'Remove',
-                  titleColor: const Color(0xFF8B4513),
-                  titleFontSize: 12,
-                ),
-              ),
-            ),
+          CustomText(
+            title: '${filteredStaffList.length} ${filteredStaffList.length == 1 ? 'person' : 'people'}',
+            titleColor: const Color(0xFF8B4513),
+            titleFontSize: 12,
           ),
         ],
       ),

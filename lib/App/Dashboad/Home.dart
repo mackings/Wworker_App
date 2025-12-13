@@ -13,12 +13,10 @@ import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/App/Sales/Views/SalesAnalytics.dart';
 import 'package:wworker/App/Sales/Views/salesHome.dart';
+import 'package:wworker/App/Staffing/View/Notification.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
-
-
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -42,10 +40,22 @@ class _HomeState extends ConsumerState<Home> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomText(
-                  title: "Good Evening",
-                  subtitle: "Ready to create amazing woodwork quotation?",
-                  textAlign: TextAlign.left,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    CustomText(
+                      title: "Good Evening",
+                      subtitle: "Ready to create amazing woodwork quotation?",
+                      textAlign: TextAlign.left,
+                    ),
+
+                    GestureDetector(
+                      onTap: () {
+                        Nav.push(NotificationsPage());
+                      },
+                      child: Icon(Icons.notifications),
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 35),

@@ -300,6 +300,226 @@ class CompanyService {
     }
   }
 
+  // ==================== PERMISSIONS METHODS ====================
+
+  // 🟢 GET STAFF PERMISSIONS
+  Future<Map<String, dynamic>> getStaffPermissions({
+    required String staffId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/permission/$staffId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 UPDATE STAFF PERMISSIONS
+  Future<Map<String, dynamic>> updateStaffPermissions({
+    required String staffId,
+    required Map<String, bool> permissions,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.put(
+        "/api/permission/$staffId",
+        data: {"permissions": permissions},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 GRANT SPECIFIC PERMISSION
+  Future<Map<String, dynamic>> grantPermission({
+    required String staffId,
+    required String permission,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.post(
+        "/api/permission/$staffId/grant",
+        data: {"permission": permission},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 REVOKE SPECIFIC PERMISSION
+  Future<Map<String, dynamic>> revokePermission({
+    required String staffId,
+    required String permission,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.post(
+        "/api/permission/$staffId/revoke",
+        data: {"permission": permission},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // ==================== NOTIFICATIONS METHODS ====================
+
+  // 🟢 GET NOTIFICATIONS
+  Future<Map<String, dynamic>> getNotifications({
+    int page = 1,
+    int limit = 20,
+    bool unreadOnly = false,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/notifications",
+        queryParameters: {
+          "page": page,
+          "limit": limit,
+          "unreadOnly": unreadOnly.toString(),
+        },
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 GET UNREAD COUNT
+  Future<Map<String, dynamic>> getUnreadCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/notifications/unread-count",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 MARK NOTIFICATION AS READ
+  Future<Map<String, dynamic>> markNotificationAsRead({
+    required String notificationId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/notifications/$notificationId/read",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 MARK ALL AS READ
+  Future<Map<String, dynamic>> markAllNotificationsAsRead() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.patch(
+        "/api/notifications/read-all",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 DELETE NOTIFICATION
+  Future<Map<String, dynamic>> deleteNotification({
+    required String notificationId,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No auth token found"};
+      }
+
+      final response = await _dio.delete(
+        "/api/notifications/$notificationId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   // 🔴 ERROR HANDLER
   Map<String, dynamic> _handleError(DioException e) {
     debugPrint("⚠️ [COMPANY ERROR] => ${e.response?.data ?? e.message}");

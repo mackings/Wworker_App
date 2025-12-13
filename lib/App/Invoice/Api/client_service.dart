@@ -1,11 +1,11 @@
 import 'dart:io';
-
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Invoice/Model/Client_model.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/Constant/urls.dart';
+
 
 
 
@@ -37,6 +37,9 @@ class ClientService {
     );
   }
 
+
+
+
   /// ✅ Get company name from SharedPreferences
   Future<String?> _getCompanyName() async {
     final prefs = await SharedPreferences.getInstance();
@@ -58,6 +61,9 @@ class ClientService {
     debugPrint("🏢 Active Company: $companyName");
     return null; // No error
   }
+
+
+
 
   // 🟢 GET CLIENTS
   Future<List<ClientModel>> getClients() async {
@@ -100,6 +106,10 @@ class ClientService {
       return [];
     }
   }
+
+
+
+
 
   // 🟢 CREATE INVOICE FROM QUOTATION WITH PDF ATTACHMENT
   Future<Map<String, dynamic>> createInvoice({
@@ -167,6 +177,9 @@ class ClientService {
       };
     }
   }
+
+
+
 
   // 🟢 GET INVOICES
   Future<List<InvoiceModel>> getInvoices() async {
