@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
@@ -35,6 +36,34 @@ class SecQuote extends ConsumerStatefulWidget {
 
 class _SecQuoteState extends ConsumerState<SecQuote> {
   bool isLoading = false;
+  
+  // ✅ Company data from SharedPreferences
+  String companyName = 'Your Company';
+  String companyEmail = '';
+  String companyPhone = '';
+  String companyAddress = '';
+  bool isLoadingCompanyData = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyData();
+  }
+
+  // ✅ Load company data from SharedPreferences
+  Future<void> _loadCompanyData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (!mounted) return;
+    setState(() {
+      companyName = prefs.getString('companyName') ?? 'Your Company';
+      companyEmail = prefs.getString('companyEmail') ?? '';
+      companyPhone = prefs.getString('companyPhoneNumber') ?? '';
+      companyAddress = prefs.getString('companyAddress') ?? '';
+      
+      isLoadingCompanyData = false;
+    });
+  }
 
   // ✅ Get cost price from quotation
   double _getCostPrice(Map<String, dynamic> quotation) {
@@ -74,6 +103,16 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Show loading indicator while company data is loading
+    if (isLoadingCompanyData) {
+      return Scaffold(
+        appBar: AppBar(title: CustomText(title: "Quotation Table")),
+        body: const Center(
+          child: CircularProgressIndicator(color: Color(0xFF8B4513)),
+        ),
+      );
+    }
+
     List<QuotationItem> allItems = [];
 
     for (var quotation in widget.selectedQuotations) {
@@ -110,14 +149,23 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
           child: Column(
             children: [
+              // ✅ Using company data from SharedPreferences
               QuotationInfo(
                 title: "Company Information",
                 contact: ContactInfo(
-                  name: "Sumit Nova Trust Ltd",
-                  address: "K3, plaza, New Garage, Ibadan.",
-                  nearestBusStop: "Alao Akala Expressway",
-                  phone: "07034567890",
-                  email: "admin@sumitnovatrustltd.com",
+                  name: companyName,
+                  address: companyAddress.isNotEmpty 
+                      ? companyAddress 
+                      : "No address provided",
+                  nearestBusStop: companyAddress.isNotEmpty 
+                      ? companyAddress 
+                      : "No address provided",
+                  phone: companyPhone.isNotEmpty 
+                      ? companyPhone 
+                      : "No phone provided",
+                  email: companyEmail.isNotEmpty 
+                      ? companyEmail 
+                      : "No email provided",
                 ),
               ),
               const SizedBox(height: 20),
@@ -149,25 +197,25 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                        text: "Send to Client",
-                        onPressed: () {
-                          // TODO: implement sending functionality
-                        },
-                      ),
-                    ),
+                    // Expanded(
+                    //   child: CustomButton(
+                    //     text: "Send to Client",
+                    //     onPressed: () {
+                    //       // TODO: implement sending functionality
+                    //     },
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
-              CustomButton(
-                text: "Download PDF",
-                outlined: true,
-                onPressed: () {
-                  // TODO: implement PDF download
-                },
-              ),
+              // CustomButton(
+              //   text: "Download PDF",
+              //   outlined: true,
+              //   onPressed: () {
+              //     // TODO: implement PDF download
+              //   },
+              // ),
             ],
           ),
         ),
@@ -297,8 +345,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       );
 
       Nav.pop();
-       Nav.pop();
-        Nav.pop();
+      Nav.pop();
+      Nav.pop();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
