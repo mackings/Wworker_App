@@ -86,6 +86,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   /// Set default units based on material type
+/// Set default units based on material type
 void _setDefaultUnitsForMaterial(MaterialModel material) {
   final materialUnit = material.unit?.toLowerCase() ?? '';
 
@@ -109,17 +110,23 @@ void _setDefaultUnitsForMaterial(MaterialModel material) {
         : 'cm';
   }
 
-  setState(() {
-    unit = defaultUnit;
+  // ✅ Update state AFTER build completes
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {
+      setState(() {
+        unit = defaultUnit;
+      });
+    }
   });
 }
 
 
   /// Load available thicknesses from material data
+/// Load available thicknesses from material data
 void _loadThicknessesForMaterial(MaterialModel material) {
   List<String> thicknesses = [];
 
-  // 1. Foam-specific thicknesses (already exists)
+  // 1. Foam-specific thicknesses
   if (material.foamThicknesses.isNotEmpty) {
     thicknesses.addAll(material.foamThicknesses
         .map((ft) => ft.thickness.toString())
@@ -132,33 +139,34 @@ void _loadThicknessesForMaterial(MaterialModel material) {
         .toList());
   }
 
-  // 2. Common thicknesses (new)
+  // 2. Common thicknesses
   if (material.commonThicknesses.isNotEmpty) {
     thicknesses.addAll(material.commonThicknesses
         .map((ct) => ct.thickness.toString())
         .toList());
   }
 
-  // 3. Size variants (optional)
-  if (material.sizeVariants.isNotEmpty) {
-    // If thickness is implied in sizeVariants (maybe width/length?), add logic if needed
-    // For now, let's assume we don't get thickness from sizeVariants unless explicitly provided
-  }
-
   // Remove duplicates and sort
   thicknesses = thicknesses.toSet().toList();
-  thicknesses.sort((a, b) => double.parse(a).compareTo(double.parse(b)));
+  if (thicknesses.isNotEmpty) {
+    thicknesses.sort((a, b) => double.parse(a).compareTo(double.parse(b)));
+  }
 
-  setState(() {
-    _availableThicknesses = thicknesses;
+  // ✅ Update state AFTER build completes
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    if (mounted) {
+      setState(() {
+        _availableThicknesses = thicknesses;
 
-    // Auto-set the thickness if it's null or invalid
-    if (thicknesses.isNotEmpty) {
-      if (thickness == null || !thicknesses.contains(thickness)) {
-        thickness = thicknesses.first;
-      }
-    } else {
-      thickness = null;
+        // Auto-set the thickness if it's null or invalid
+        if (thicknesses.isNotEmpty) {
+          if (thickness == null || !thicknesses.contains(thickness)) {
+            thickness = thicknesses.first;
+          }
+        } else {
+          thickness = null;
+        }
+      });
     }
   });
 }
