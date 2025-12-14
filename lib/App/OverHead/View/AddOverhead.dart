@@ -55,9 +55,16 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   String pricingMethod = 'Method 1';
   int workingDaysPerMonth = 26;
 
+  // ✅ Track if data needs syncing
+  bool hasUnsyncedData = false;
+  bool isStaff = false;
+  int localItemCount = 0;
+  int serverItemCount = 0;
+
   @override
   void initState() {
     super.initState();
+    _checkUserRole();
     _fetchOverheadCosts();
     _loadPricingSettings();
   }
@@ -67,6 +74,358 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     descriptionController.dispose();
     costController.dispose();
     super.dispose();
+  }
+
+  // ✅ Check if user is staff (not owner/admin)
+  Future<void> _checkUserRole() async {
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('userRole');
+    setState(() {
+      isStaff = role != 'owner' && role != 'admin';
+    });
+    debugPrint("👤 User role: $role (isStaff: $isStaff)");
+  }
+
+  // ✅ Enhanced sync status check - compares local vs server data
+  Future<void> _checkSyncStatus() async {
+    if (!isStaff) return; // Only check for staff members
+
+    try {
+      debugPrint("🔍 Checking sync status...");
+      
+      // Get cached data from local device
+      final cachedItems = await _loadOverheadCostsFromPrefs();
+      localItemCount = cachedItems.length;
+      
+      // Get server data
+      final serverItems = await _service.getOverheadCosts();
+      serverItemCount = serverItems.length;
+      
+      debugPrint("📊 Local: $localItemCount items | Server: $serverItemCount items");
+      
+      // Check for differences
+      bool needsSync = false;
+      
+      // Different counts = needs sync
+      if (localItemCount != serverItemCount) {
+        needsSync = true;
+        debugPrint("⚠️ Count mismatch detected");
+      } else if (localItemCount > 0) {
+        // Same count, but check if IDs match
+        final localIds = cachedItems.map((e) => e.id).toSet();
+        final serverIds = serverItems.map((e) => e.id).toSet();
+        
+        if (!localIds.containsAll(serverIds) || !serverIds.containsAll(localIds)) {
+          needsSync = true;
+          debugPrint("⚠️ Item mismatch detected");
+        }
+        
+        // Also check for different costs/descriptions
+        if (!needsSync) {
+          for (var cachedItem in cachedItems) {
+            final serverItem = serverItems.firstWhere(
+              (item) => item.id == cachedItem.id,
+              orElse: () => cachedItem,
+            );
+            
+            if (serverItem.id != cachedItem.id ||
+                serverItem.cost != cachedItem.cost ||
+                serverItem.description != cachedItem.description) {
+              needsSync = true;
+              debugPrint("⚠️ Item content mismatch detected");
+              break;
+            }
+          }
+        }
+      }
+      
+      if (mounted && needsSync) {
+        setState(() => hasUnsyncedData = true);
+        _showSyncPrompt();
+      } else {
+        debugPrint("✅ Data is in sync");
+      }
+    } catch (e) {
+      debugPrint("⚠️ Error checking sync status: $e");
+    }
+  }
+
+  // ✅ Show enhanced sync prompt with details
+  void _showSyncPrompt() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(
+                Icons.sync_problem,
+                color: Color(0xFFA16438),
+                size: 28,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Sync Required',
+                  style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Your local data is out of sync with the server.',
+                style: GoogleFonts.openSans(fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              
+              // ✅ Show comparison
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Local Device:',
+                          style: GoogleFonts.openSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$localItemCount items',
+                          style: GoogleFonts.openSans(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Server:',
+                          style: GoogleFonts.openSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '$serverItemCount items',
+                          style: GoogleFonts.openSans(
+                            fontSize: 12,
+                            color: Colors.green,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 16),
+              
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E0),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFA16438).withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline,
+                      color: Color(0xFFA16438),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        localItemCount > serverItemCount
+                            ? 'You have ${localItemCount - serverItemCount} more item(s) locally. Sync to update server.'
+                            : serverItemCount > localItemCount
+                            ? 'Server has ${serverItemCount - localItemCount} more item(s). Sync to update local data.'
+                            : 'Items are different. Sync to match server data.',
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          color: const Color(0xFFA16438),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                setState(() => hasUnsyncedData = false);
+              },
+              child: Text(
+                'Later',
+                style: GoogleFonts.openSans(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await _handleSaveAndSync();
+              },
+              icon: const Icon(Icons.sync, size: 18),
+              label: Text(
+                'Sync Now',
+                style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFA16438),
+                foregroundColor: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // ✅ Enhanced save and sync with better feedback
+  Future<void> _handleSaveAndSync() async {
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No data to sync'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Show loading with details
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            margin: const EdgeInsets.symmetric(horizontal: 40),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(
+                  color: Color(0xFFA16438),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Syncing overhead costs...',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Please wait',
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Save current data to local storage
+      await _saveOverheadCostsToPrefs(items);
+      
+      // Refresh from server to get latest data
+      final serverItems = await _service.getOverheadCosts();
+      
+      // Update local state with server data
+      if (mounted) {
+        setState(() {
+          items = serverItems;
+          hasUnsyncedData = false;
+          serverItemCount = serverItems.length;
+          localItemCount = serverItems.length;
+        });
+        
+        // Save synced data to local storage
+        await _saveOverheadCostsToPrefs(serverItems);
+      }
+
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    "✅ Synced successfully! ${serverItems.length} overhead cost items. Total ($selectedViewDuration): ₦${_calculateTotalForDuration().toStringAsFixed(2)}",
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } catch (e) {
+      // Close loading dialog
+      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text('Sync failed: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    }
   }
 
   // Load pricing settings
@@ -257,7 +616,6 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     );
   }
 
-  // Save/Load to SharedPreferences methods remain the same
   Future<void> _saveOverheadCostsToPrefs(List<OverheadCost> costs) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -309,25 +667,41 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         setState(() {
           items = fetchedItems;
           isFetchingItems = false;
+          serverItemCount = fetchedItems.length;
         });
         await _saveOverheadCostsToPrefs(fetchedItems);
+        
+        // ✅ Check sync status after fetching
+        await _checkSyncStatus();
       }
     } catch (e) {
       if (mounted) {
         setState(() => isFetchingItems = false);
         final cachedItems = await _loadOverheadCostsFromPrefs();
-        setState(() => items = cachedItems);
+        setState(() {
+          items = cachedItems;
+          localItemCount = cachedItems.length;
+        });
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               cachedItems.isNotEmpty
-                  ? "Loaded ${cachedItems.length} cached overhead costs"
+                  ? "⚠️ Loaded ${cachedItems.length} cached overhead costs (offline mode)"
                   : "Error fetching overhead costs: ${e.toString()}",
             ),
             backgroundColor: cachedItems.isNotEmpty ? Colors.orange : Colors.redAccent,
           ),
         );
+        
+        // ✅ Check sync status even with cached data
+        if (cachedItems.isNotEmpty && isStaff) {
+          // Staff member with cached data but no server connection
+          setState(() {
+            hasUnsyncedData = true;
+            serverItemCount = 0; // Unknown server count
+          });
+        }
       }
     }
   }
@@ -476,6 +850,94 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     );
   }
 
+  // ✅ Enhanced sync warning banner
+  Widget _buildSyncWarningBanner() {
+    if (!isStaff || !hasUnsyncedData) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.orange.shade100,
+              Colors.orange.shade50,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange, width: 2),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Icon(
+                    Icons.sync_problem,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Data Out of Sync',
+                        style: GoogleFonts.openSans(
+                          fontSize: 13,
+                          color: Colors.orange.shade900,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Local: $localItemCount items • Server: $serverItemCount items',
+                        style: GoogleFonts.openSans(
+                          fontSize: 11,
+                          color: Colors.orange.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: _handleSaveAndSync,
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: Text(
+                    'Sync Now',
+                    style: GoogleFonts.openSans(
+                      fontSize: 12,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -489,7 +951,33 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           ),
         ),
         actions: [
-          // Settings Button
+          // ✅ Enhanced sync indicator for staff
+          if (isStaff && hasUnsyncedData)
+            Container(
+              margin: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                icon: Stack(
+                  children: [
+                    const Icon(Icons.sync_problem, color: Colors.orange),
+                    Positioned(
+                      right: 0,
+                      top: 0,
+                      child: Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                onPressed: _showSyncPrompt,
+                tooltip: "Sync Required - $localItemCount local vs $serverItemCount server",
+              ),
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: _showSettingsDialog,
@@ -507,6 +995,11 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         child: Column(
           children: [
             const SizedBox(height: 15),
+
+            // ✅ Enhanced sync warning banner
+            _buildSyncWarningBanner(),
+
+            if (isStaff && hasUnsyncedData) const SizedBox(height: 15),
 
             // Settings Summary Banner
             Padding(
@@ -621,12 +1114,12 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
 
                     const SizedBox(height: 20),
 
-                    // Save Button
+                    // ✅ Updated Save Button with sync info
                     if (items.isNotEmpty)
                       SizedBox(
                         width: double.infinity,
-                        child: OutlinedButton(
-                          onPressed: () {
+                        child: ElevatedButton.icon(
+                          onPressed: isStaff ? _handleSaveAndSync : () {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -636,22 +1129,27 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                               ),
                             );
                           },
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            side: const BorderSide(
-                              color: Color(0xFFA16438),
-                              width: 1.5,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                          icon: Icon(
+                            isStaff ? Icons.sync : Icons.save,
+                            color: Colors.white,
                           ),
-                          child: Text(
-                            "Save",
+                          label: Text(
+                            isStaff 
+                                ? (hasUnsyncedData ? "Save & Sync ($localItemCount ⇄ $serverItemCount)" : "Save & Sync")
+                                : "Save",
                             style: GoogleFonts.openSans(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
-                              color: const Color(0xFFA16438),
+                              color: Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: hasUnsyncedData && isStaff 
+                                ? Colors.orange 
+                                : const Color(0xFFA16438),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
                             ),
                           ),
                         ),

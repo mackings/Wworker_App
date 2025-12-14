@@ -1,12 +1,8 @@
 // invoice_template_elegant.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class ElegantInvoiceTemplate extends StatelessWidget {
-  final String companyName;
-  final String companyAddress;
-  final String companyBusStop;
-  final String companyPhone;
-  final String companyEmail;
+class ElegantInvoiceTemplate extends StatefulWidget {
   final String clientName;
   final String clientAddress;
   final String clientBusStop;
@@ -26,11 +22,6 @@ class ElegantInvoiceTemplate extends StatelessWidget {
 
   const ElegantInvoiceTemplate({
     super.key,
-    required this.companyName,
-    required this.companyAddress,
-    required this.companyBusStop,
-    required this.companyPhone,
-    required this.companyEmail,
     required this.clientName,
     required this.clientAddress,
     required this.clientBusStop,
@@ -50,7 +41,46 @@ class ElegantInvoiceTemplate extends StatelessWidget {
   });
 
   @override
+  State<ElegantInvoiceTemplate> createState() => _ElegantInvoiceTemplateState();
+}
+
+class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
+  // ✅ Company data from SharedPreferences
+  String companyName = '';
+  String companyAddress = '';
+  String companyPhone = '';
+  String companyEmail = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyData();
+  }
+
+  // ✅ Load company data from SharedPreferences
+  Future<void> _loadCompanyData() async {
+    final prefs = await SharedPreferences.getInstance();
+     if (!mounted) return;
+    
+    setState(() {
+      companyName = prefs.getString('companyName') ?? 'Your Company';
+      companyEmail = prefs.getString('companyEmail') ?? '';
+      companyPhone = prefs.getString('companyPhoneNumber') ?? '';
+      companyAddress = prefs.getString('companyAddress') ?? '';
+      
+      isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF8B9D8A)),
+      );
+    }
+
     return SingleChildScrollView(
       child: Container(
         color: const Color(0xFFFAF8F5),
@@ -62,7 +92,7 @@ class ElegantInvoiceTemplate extends StatelessWidget {
             const SizedBox(height: 32),
             _buildClientInfo(),
             const SizedBox(height: 24),
-            if (description.isNotEmpty) ...[
+            if (widget.description.isNotEmpty) ...[
               _buildDescription(),
               const SizedBox(height: 24),
             ],
@@ -73,7 +103,7 @@ class ElegantInvoiceTemplate extends StatelessWidget {
             _buildFooter(),
             const SizedBox(height: 24),
             _buildBotanicalDecoration(),
-            const SizedBox(height: 40), // Extra padding at bottom
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -106,15 +136,15 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               ),
             ),
             Text(
-              clientName,
+              widget.clientName,
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(height: 8),
-            Text(clientPhone, style: const TextStyle(fontSize: 12)),
-            Text(clientEmail, style: const TextStyle(fontSize: 12)),
+            Text(widget.clientPhone, style: const TextStyle(fontSize: 12)),
+            Text(widget.clientEmail, style: const TextStyle(fontSize: 12)),
           ],
         ),
         Column(
@@ -133,8 +163,8 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildDetailRow('Date :', _formatDate(invoiceDate)),
-            _buildDetailRow('Quotation No.', quotationNumber),
+            _buildDetailRow('Date :', _formatDate(widget.invoiceDate)),
+            _buildDetailRow('Quotation No.', widget.quotationNumber),
           ],
         ),
       ],
@@ -182,13 +212,13 @@ class ElegantInvoiceTemplate extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            clientAddress,
+            widget.clientAddress,
             style: const TextStyle(fontSize: 13),
           ),
-          if (clientBusStop.isNotEmpty) ...[
+          if (widget.clientBusStop.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
-              'Near: $clientBusStop',
+              'Near: ${widget.clientBusStop}',
               style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
           ],
@@ -209,7 +239,7 @@ class ElegantInvoiceTemplate extends StatelessWidget {
         ),
       ),
       child: Text(
-        description,
+        widget.description,
         style: const TextStyle(
           fontSize: 13,
           fontStyle: FontStyle.italic,
@@ -295,9 +325,9 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               ],
             ),
           ),
-          ...items.asMap().entries.map((entry) {
+          ...widget.items.asMap().entries.map((entry) {
             final item = entry.value;
-            final isLast = entry.key == items.length - 1;
+            final isLast = entry.key == widget.items.length - 1;
             return Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -389,9 +419,7 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               Expanded(
                 child: Column(
                   children: [
-                    _buildSummaryRow('Sub-total:', grandTotal),
-                   // _buildSummaryRow('Tax:', 0.0),
-                   // const Divider(height: 24),
+                    _buildSummaryRow('Sub-total:', widget.grandTotal),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -413,7 +441,7 @@ class ElegantInvoiceTemplate extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '₦${grandTotal.toStringAsFixed(2)}',
+                            '₦${widget.grandTotal.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -423,11 +451,11 @@ class ElegantInvoiceTemplate extends StatelessWidget {
                         ],
                       ),
                     ),
-                    if (isExistingInvoice) ...[
+                    if (widget.isExistingInvoice) ...[
                       const SizedBox(height: 16),
-                      _buildSummaryRow('Amount Paid:', amountPaid, isGreen: true),
+                      _buildSummaryRow('Amount Paid:', widget.amountPaid, isGreen: true),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Balance:', balance, isBold: true),
+                      _buildSummaryRow('Balance:', widget.balance, isBold: true),
                     ],
                   ],
                 ),
@@ -505,30 +533,32 @@ class ElegantInvoiceTemplate extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.phone, size: 12),
-                      const SizedBox(width: 6),
-                      Text(companyPhone, style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.email, size: 12),
-                      const SizedBox(width: 6),
-                      Text(companyEmail, style: const TextStyle(fontSize: 10)),
-                    ]
+                  if (companyPhone.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.phone, size: 12),
+                        const SizedBox(width: 6),
+                        Text(companyPhone, style: const TextStyle(fontSize: 10)),
+                      ],
                     ),
-                  
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      const Icon(Icons.language, size: 12),
-                      const SizedBox(width: 6),
-                      Text(companyAddress, style: const TextStyle(fontSize: 10)),
-                    ],
-                  ),
+                  if (companyPhone.isNotEmpty) const SizedBox(height: 4),
+                  if (companyEmail.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.email, size: 12),
+                        const SizedBox(width: 6),
+                        Text(companyEmail, style: const TextStyle(fontSize: 10)),
+                      ],
+                    ),
+                  if (companyEmail.isNotEmpty) const SizedBox(height: 4),
+                  if (companyAddress.isNotEmpty)
+                    Row(
+                      children: [
+                        const Icon(Icons.language, size: 12),
+                        const SizedBox(width: 6),
+                        Text(companyAddress, style: const TextStyle(fontSize: 10)),
+                      ],
+                    ),
                 ],
               ),
             ],

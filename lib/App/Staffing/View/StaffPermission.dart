@@ -30,12 +30,12 @@ class _StaffPermissionsModalState extends State<StaffPermissionsModal> {
       'description': 'Give access for quotation',
       'value': false,
     },
-    {
-      'id': 'sales',
-      'title': 'Sales',
-      'description': 'Give access for sales',
-      'value': false,
-    },
+    // {
+    //   'id': 'sales',
+    //   'title': 'Sales',
+    //   'description': 'Give access for sales',
+    //   'value': false,
+    // },
     {
       'id': 'order',
       'title': 'Order',
@@ -48,18 +48,18 @@ class _StaffPermissionsModalState extends State<StaffPermissionsModal> {
       'description': 'Give access for database',
       'value': false,
     },
-    {
-      'id': 'receipts',
-      'title': 'Receipts',
-      'description': 'View and manage receipts',
-      'value': false,
-    },
-    {
-      'id': 'backupAlerts',
-      'title': 'Backup Alerts',
-      'description': 'Backup status notifications',
-      'value': false,
-    },
+    // {
+    //   'id': 'receipts',
+    //   'title': 'Receipts',
+    //   'description': 'View and manage receipts',
+    //   'value': false,
+    // },
+    // {
+    //   'id': 'backupAlerts',
+    //   'title': 'Backup Alerts',
+    //   'description': 'Backup status notifications',
+    //   'value': false,
+    // },
     {
       'id': 'invoice',
       'title': 'Invoice',
@@ -72,12 +72,12 @@ class _StaffPermissionsModalState extends State<StaffPermissionsModal> {
       'description': 'Manage products and inventory',
       'value': false,
     },
-    {
-      'id': 'boms',
-      'title': 'BOMs',
-      'description': 'Manage Bills of Materials',
-      'value': false,
-    },
+    // {
+    //   'id': 'boms',
+    //   'title': 'BOMs',
+    //   'description': 'Manage Bills of Materials',
+    //   'value': false,
+    // },
   ];
 
   @override

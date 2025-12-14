@@ -232,11 +232,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       context,
       MaterialPageRoute(
         builder: (context) => InvoiceTemplateSelector(
-          companyName: "Sumit Nova Trust Ltd",
-          companyAddress: "K3, plaza, New Garage, Ibadan",
-          companyBusStop: "Alao Akala Expressway",
-          companyPhone: "07034567890",
-          companyEmail: "admin@sumitnovatrustltd.com",
+          // ✅ Removed all company parameters - templates load from SharedPreferences
           clientName: clientName,
           clientAddress: clientAddress,
           clientBusStop: nearestBusStop,
@@ -257,14 +253,13 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           amountPaid: isExistingInvoice ? widget.invoice!.amountPaid : 0,
           balance: isExistingInvoice ? widget.invoice!.balance : 0,
           isExistingInvoice: isExistingInvoice,
-          // 🆕 Updated callback signature to accept File parameter
           onTemplateSend: !isExistingInvoice ? _sendInvoiceToClient : null,
         ),
       ),
     );
   }
 
-  // 🆕 Updated method to accept both templateIndex and pdfFile
+  // Send invoice to client with PDF
   Future<void> _sendInvoiceToClient(int templateIndex, File pdfFile) async {
     setState(() => isLoading = true);
 
@@ -282,7 +277,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         dueDate: dueDate,
         notes: "Payment due within 30 days. Template: $templateIndex",
         amountPaid: 0,
-        pdfFile: pdfFile, // 🆕 Pass the generated PDF file
+        pdfFile: pdfFile,
       );
 
       setState(() => isLoading = false);
@@ -290,7 +285,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       if (response["success"] == true) {
         if (!mounted) return;
 
-        // 🆕 Clean up temporary PDF file after successful upload
+        // Clean up temporary PDF file after successful upload
         try {
           if (await pdfFile.exists()) {
             await pdfFile.delete();
@@ -324,7 +319,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
       } else {
         if (!mounted) return;
 
-        // 🆕 Clean up PDF even on failure
+        // Clean up PDF even on failure
         try {
           if (await pdfFile.exists()) {
             await pdfFile.delete();
@@ -359,7 +354,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
 
       if (!mounted) return;
 
-      // 🆕 Attempt to clean up PDF on error
+      // Attempt to clean up PDF on error
       try {
         if (await pdfFile.exists()) {
           await pdfFile.delete();

@@ -1,12 +1,8 @@
 // invoice_template_minimal.dart
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class MinimalInvoiceTemplate extends StatelessWidget {
-  final String companyName;
-  final String companyAddress;
-  final String companyBusStop;
-  final String companyPhone;
-  final String companyEmail;
+class MinimalInvoiceTemplate extends StatefulWidget {
   final String clientName;
   final String clientAddress;
   final String clientBusStop;
@@ -26,11 +22,6 @@ class MinimalInvoiceTemplate extends StatelessWidget {
 
   const MinimalInvoiceTemplate({
     super.key,
-    required this.companyName,
-    required this.companyAddress,
-    required this.companyBusStop,
-    required this.companyPhone,
-    required this.companyEmail,
     required this.clientName,
     required this.clientAddress,
     required this.clientBusStop,
@@ -50,7 +41,46 @@ class MinimalInvoiceTemplate extends StatelessWidget {
   });
 
   @override
+  State<MinimalInvoiceTemplate> createState() => _MinimalInvoiceTemplateState();
+}
+
+class _MinimalInvoiceTemplateState extends State<MinimalInvoiceTemplate> {
+  // ✅ Company data from SharedPreferences
+  String companyName = '';
+  String companyAddress = '';
+  String companyPhone = '';
+  String companyEmail = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyData();
+  }
+
+  // ✅ Load company data from SharedPreferences
+  Future<void> _loadCompanyData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+     if (!mounted) return;
+    setState(() {
+      companyName = prefs.getString('companyName') ?? 'Your Company';
+      companyEmail = prefs.getString('companyEmail') ?? '';
+      companyPhone = prefs.getString('companyPhoneNumber') ?? '';
+      companyAddress = prefs.getString('companyAddress') ?? '';
+      
+      isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.black),
+      );
+    }
+
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.all(32),
@@ -62,7 +92,7 @@ class MinimalInvoiceTemplate extends StatelessWidget {
             const SizedBox(height: 40),
             _buildClientInfo(),
             const SizedBox(height: 32),
-            if (description.isNotEmpty) ...[
+            if (widget.description.isNotEmpty) ...[
               _buildDescription(),
               const SizedBox(height: 32),
             ],
@@ -85,10 +115,10 @@ class MinimalInvoiceTemplate extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const SizedBox(height: 16),
             Text(companyName, style: const TextStyle(fontSize: 11)),
-            Text(companyAddress, style: const TextStyle(fontSize: 11)),
+            if (companyAddress.isNotEmpty)
+              Text(companyAddress, style: const TextStyle(fontSize: 11)),
           ],
         ),
         Column(
@@ -103,8 +133,8 @@ class MinimalInvoiceTemplate extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow('Date :', _formatDate(invoiceDate)),
-            _buildInfoRow('QT No.', quotationNumber),
+            _buildInfoRow('Date :', _formatDate(widget.invoiceDate)),
+            _buildInfoRow('QT No.', widget.quotationNumber),
           ],
         ),
       ],
@@ -146,16 +176,16 @@ class MinimalInvoiceTemplate extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          clientName,
+          widget.clientName,
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 4),
-        Text(clientAddress, style: const TextStyle(fontSize: 12)),
-        Text(clientPhone, style: const TextStyle(fontSize: 12)),
-        Text(clientEmail, style: const TextStyle(fontSize: 12)),
+        Text(widget.clientAddress, style: const TextStyle(fontSize: 12)),
+        Text(widget.clientPhone, style: const TextStyle(fontSize: 12)),
+        Text(widget.clientEmail, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -171,7 +201,7 @@ class MinimalInvoiceTemplate extends StatelessWidget {
         ),
       ),
       child: Text(
-        description,
+        widget.description,
         style: const TextStyle(
           fontSize: 13,
           fontStyle: FontStyle.italic,
@@ -240,7 +270,7 @@ class MinimalInvoiceTemplate extends StatelessWidget {
             ],
           ),
         ),
-        ...items.map((item) => Container(
+        ...widget.items.map((item) => Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
                 border: Border(
@@ -314,8 +344,8 @@ class MinimalInvoiceTemplate extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  _buildSummaryRow('Sub-Total', grandTotal),
-                  _buildSummaryRow('Tax (30%)', grandTotal * 0.0),
+                  _buildSummaryRow('Sub-Total', widget.grandTotal),
+                  _buildSummaryRow('Tax (30%)', widget.grandTotal * 0.0),
                   const Divider(height: 24, thickness: 2),
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -339,7 +369,7 @@ class MinimalInvoiceTemplate extends StatelessWidget {
                         Padding(
                           padding: const EdgeInsets.only(right: 12),
                           child: Text(
-                            '₦${grandTotal.toStringAsFixed(2)}',
+                            '₦${widget.grandTotal.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -350,11 +380,11 @@ class MinimalInvoiceTemplate extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (isExistingInvoice) ...[
+                  if (widget.isExistingInvoice) ...[
                     const SizedBox(height: 16),
-                    _buildSummaryRow('Amount Paid', amountPaid, isGreen: true),
+                    _buildSummaryRow('Amount Paid', widget.amountPaid, isGreen: true),
                     const SizedBox(height: 8),
-                    _buildSummaryRow('Balance', balance, isBold: true),
+                    _buildSummaryRow('Balance', widget.balance, isBold: true),
                   ],
                 ],
               ),
@@ -433,29 +463,32 @@ class MinimalInvoiceTemplate extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    const Icon(Icons.phone, size: 14),
-                    const SizedBox(width: 6),
-                    Text(companyPhone, style: const TextStyle(fontSize: 11)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.email, size: 14),
-                    const SizedBox(width: 6),
-                    Text(companyEmail, style: const TextStyle(fontSize: 11)),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.location_on, size: 14),
-                    const SizedBox(width: 6),
-                    Text(companyAddress, style: const TextStyle(fontSize: 11)),
-                  ],
-                ),
+                if (companyPhone.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.phone, size: 14),
+                      const SizedBox(width: 6),
+                      Text(companyPhone, style: const TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                if (companyPhone.isNotEmpty) const SizedBox(height: 4),
+                if (companyEmail.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.email, size: 14),
+                      const SizedBox(width: 6),
+                      Text(companyEmail, style: const TextStyle(fontSize: 11)),
+                    ],
+                  ),
+                if (companyEmail.isNotEmpty) const SizedBox(height: 4),
+                if (companyAddress.isNotEmpty)
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 14),
+                      const SizedBox(width: 6),
+                      Text(companyAddress, style: const TextStyle(fontSize: 11)),
+                    ],
+                  ),
               ],
             ),
           ],

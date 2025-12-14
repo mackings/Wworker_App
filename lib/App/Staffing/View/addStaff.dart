@@ -21,37 +21,22 @@ class _AddStaffState extends ConsumerState<AddStaff> {
   final fullnameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
+  final positionController = TextEditingController(); // ✅ Changed to TextEditingController
   
-  final CompanyService _companyService = CompanyService(); // ✅ Changed to CompanyService
+  final CompanyService _companyService = CompanyService();
   
   bool isLoading = false;
-  String? selectedPosition;
   String? selectedRole;
 
   // ✅ List of roles
   final List<String> roles = ["admin", "staff"];
-
-  // ✅ List of positions in a woodwork company
-  final List<String> positions = [
-    "Workshop Manager",
-    "Production Supervisor",
-    "Cabinet Maker",
-    "Furniture Designer",
-    "Wood Finisher",
-    "CNC Operator",
-    "Sales Manager",
-    "Sales Representative",
-    "Quality Control Inspector",
-    "Warehouse Manager",
-    "Delivery Driver",
-    "Administrative Assistant",
-  ];
 
   @override
   void dispose() {
     fullnameController.dispose();
     emailController.dispose();
     phoneController.dispose();
+    positionController.dispose(); // ✅ Dispose position controller
     super.dispose();
   }
 
@@ -61,7 +46,7 @@ class _AddStaffState extends ConsumerState<AddStaff> {
         emailController.text.isEmpty ||
         phoneController.text.isEmpty ||
         selectedRole == null ||
-        selectedPosition == null) {
+        positionController.text.isEmpty) { // ✅ Changed validation
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill all fields"),
@@ -97,12 +82,12 @@ class _AddStaffState extends ConsumerState<AddStaff> {
     setState(() => isLoading = true);
 
     try {
-      final result = await _companyService.inviteStaff( // ✅ Using CompanyService
+      final result = await _companyService.inviteStaff(
         fullname: fullnameController.text.trim(),
         email: emailController.text.trim(),
         phoneNumber: phoneController.text.trim(),
         role: selectedRole!,
-        position: selectedPosition!,
+        position: positionController.text.trim(), // ✅ Using text input
       );
 
       setState(() => isLoading = false);
@@ -128,8 +113,8 @@ class _AddStaffState extends ConsumerState<AddStaff> {
           fullnameController.clear();
           emailController.clear();
           phoneController.clear();
+          positionController.clear(); // ✅ Clear position field
           setState(() {
-            selectedPosition = null;
             selectedRole = null;
           });
 
@@ -222,18 +207,11 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                     ),
                     const SizedBox(height: 20),
 
-                    // ✅ Position Dropdown
+                    // ✅ Position TextField (manual input)
                     CustomTextField(
                       label: "Position",
-                      hintText: "Select position",
-                      isDropdown: true,
-                      dropdownItems: positions,
-                      value: selectedPosition,
-                      onChanged: (value) {
-                        setState(() {
-                          selectedPosition = value;
-                        });
-                      },
+                      hintText: "Enter position (e.g., Cabinet Maker, Sales Manager)",
+                      controller: positionController,
                     ),
                     const SizedBox(height: 40),
 

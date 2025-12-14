@@ -1,12 +1,10 @@
 // invoice_template_modern.dart
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-class ModernInvoiceTemplate extends StatelessWidget {
-  final String companyName;
-  final String companyAddress;
-  final String companyBusStop;
-  final String companyPhone;
-  final String companyEmail;
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ModernInvoiceTemplate extends StatefulWidget {
   final String clientName;
   final String clientAddress;
   final String clientBusStop;
@@ -26,11 +24,6 @@ class ModernInvoiceTemplate extends StatelessWidget {
 
   const ModernInvoiceTemplate({
     super.key,
-    required this.companyName,
-    required this.companyAddress,
-    required this.companyBusStop,
-    required this.companyPhone,
-    required this.companyEmail,
     required this.clientName,
     required this.clientAddress,
     required this.clientBusStop,
@@ -50,7 +43,55 @@ class ModernInvoiceTemplate extends StatelessWidget {
   });
 
   @override
+  State<ModernInvoiceTemplate> createState() => _ModernInvoiceTemplateState();
+}
+
+class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
+  // ✅ Company data from SharedPreferences
+  String companyName = '';
+  String companyAddress = '';
+  String companyBusStop = '';
+  String companyPhone = '';
+  String companyEmail = '';
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompanyData();
+  }
+
+  // ✅ Load company data from SharedPreferences
+  Future<void> _loadCompanyData() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+     if (!mounted) return;
+    setState(() {
+      companyName = prefs.getString('companyName') ?? 'Your Company';
+      companyEmail = prefs.getString('companyEmail') ?? '';
+      companyPhone = prefs.getString('companyPhoneNumber') ?? '';
+      companyAddress = prefs.getString('companyAddress') ?? '';
+      
+      // You can also get the full active company object if you need more data
+      final activeCompanyString = prefs.getString('activeCompany');
+      if (activeCompanyString != null) {
+        final activeCompany = jsonDecode(activeCompanyString);
+        // Use any additional fields you need from activeCompany
+        debugPrint("📋 Active Company: $activeCompany");
+      }
+      
+      isLoading = false;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFFFFB74D)),
+      );
+    }
+
     return SingleChildScrollView(
       child: Container(
         color: Colors.white,
@@ -62,7 +103,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
             const SizedBox(height: 32),
             _buildInfoSection(),
             const SizedBox(height: 24),
-            if (description.isNotEmpty) ...[
+            if (widget.description.isNotEmpty) ...[
               _buildDescription(),
               const SizedBox(height: 24),
             ],
@@ -71,7 +112,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
             _buildFinancialSummary(),
             const SizedBox(height: 32),
             _buildFooter(),
-            const SizedBox(height: 40), // Extra padding at bottom
+            const SizedBox(height: 40),
           ],
         ),
       ),
@@ -108,7 +149,6 @@ class ModernInvoiceTemplate extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -126,9 +166,12 @@ class ModernInvoiceTemplate extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              _buildHeaderInfo('Phone:', companyPhone),
-              _buildHeaderInfo('Web:', companyEmail),
-              _buildHeaderInfo('Area:', companyAddress),
+              if (companyPhone.isNotEmpty)
+                _buildHeaderInfo('Phone:', companyPhone),
+              if (companyEmail.isNotEmpty)
+                _buildHeaderInfo('Email:', companyEmail),
+              if (companyAddress.isNotEmpty)
+                _buildHeaderInfo('Address:', companyAddress),
             ],
           ),
         ],
@@ -186,7 +229,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  clientName,
+                  widget.clientName,
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -194,14 +237,14 @@ class ModernInvoiceTemplate extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  clientAddress,
+                  widget.clientAddress,
                   style: const TextStyle(fontSize: 13),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Phone: $clientPhone',
+                  'Phone: ${widget.clientPhone}',
                   style: const TextStyle(fontSize: 13),
                 ),
               ],
@@ -228,10 +271,10 @@ class ModernInvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInvoiceDetailRow('QT No', quotationNumber),
-                _buildInvoiceDetailRow('Date', _formatDate(invoiceDate)),
-                if (dueDate != null)
-                  _buildInvoiceDetailRow('Due Date', _formatDate(dueDate!)),
+                _buildInvoiceDetailRow('QT No', widget.quotationNumber),
+                _buildInvoiceDetailRow('Date', _formatDate(widget.invoiceDate)),
+                if (widget.dueDate != null)
+                  _buildInvoiceDetailRow('Due Date', _formatDate(widget.dueDate!)),
               ],
             ),
           ),
@@ -286,7 +329,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            description,
+            widget.description,
             style: const TextStyle(fontSize: 13),
           ),
         ],
@@ -358,9 +401,9 @@ class ModernInvoiceTemplate extends StatelessWidget {
               ],
             ),
           ),
-          ...items.asMap().entries.map((entry) {
+          ...widget.items.asMap().entries.map((entry) {
             final item = entry.value;
-            final isLast = entry.key == items.length - 1;
+            final isLast = entry.key == widget.items.length - 1;
             return Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -390,7 +433,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                               color: Colors.grey[600],
                             ),
                           ),
-                        if (isExistingInvoice)
+                        if (widget.isExistingInvoice)
                           Text(
                             '${item.width} × ${item.length} × ${item.thickness} ${item.unit}',
                             style: TextStyle(
@@ -452,7 +495,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                 style: TextStyle(fontSize: 14),
               ),
               Text(
-                '₦${grandTotal.toStringAsFixed(2)}',
+                '₦${widget.grandTotal.toStringAsFixed(2)}',
                 style: const TextStyle(fontSize: 14),
               ),
             ],
@@ -466,7 +509,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                 style: TextStyle(fontSize: 14),
               ),
               Text(
-                '₦${(grandTotal * 0.0).toStringAsFixed(2)}',
+                '₦${(widget.grandTotal * 0.0).toStringAsFixed(2)}',
                 style: const TextStyle(fontSize: 14),
               ),
             ],
@@ -490,7 +533,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '₦${grandTotal.toStringAsFixed(2)}',
+                  '₦${widget.grandTotal.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -500,7 +543,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
               ],
             ),
           ),
-          if (isExistingInvoice) ...[
+          if (widget.isExistingInvoice) ...[
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -510,7 +553,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                   style: TextStyle(color: Colors.green, fontSize: 14),
                 ),
                 Text(
-                  '₦${amountPaid.toStringAsFixed(2)}',
+                  '₦${widget.amountPaid.toStringAsFixed(2)}',
                   style: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -530,7 +573,7 @@ class ModernInvoiceTemplate extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '₦${balance.toStringAsFixed(2)}',
+                  '₦${widget.balance.toStringAsFixed(2)}',
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

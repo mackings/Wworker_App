@@ -622,7 +622,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Foam Variants (Thickness + Density)',
+                'Foam Variants',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,

@@ -28,10 +28,16 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
   final CompanyService _companyService = CompanyService();
   bool isLoading = false;
   int? selectedIndex;
+  late List<dynamic> accessibleCompanies;
 
   @override
   void initState() {
     super.initState();
+    // ✅ Filter companies to only show those with access granted
+    accessibleCompanies = widget.companies
+        .where((company) => company['accessGranted'] == true)
+        .toList();
+    
     selectedIndex = widget.currentIndex;
   }
 
@@ -44,6 +50,20 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
         ),
       );
       return;
+    }
+
+    // ✅ Check if selected company has access
+    if (selectedIndex! >= 0 && selectedIndex! < accessibleCompanies.length) {
+      final selectedCompany = accessibleCompanies[selectedIndex!];
+      if (selectedCompany['accessGranted'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You no longer have access to this company'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+        return;
+      }
     }
 
     // ✅ If same company is selected, just navigate (no API call needed)
@@ -115,8 +135,8 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
   Future<void> _updateLocalCompanyData(int companyIndex) async {
     final prefs = await SharedPreferences.getInstance();
     
-    if (companyIndex >= 0 && companyIndex < widget.companies.length) {
-      final selectedCompany = widget.companies[companyIndex];
+    if (companyIndex >= 0 && companyIndex < accessibleCompanies.length) {
+      final selectedCompany = accessibleCompanies[companyIndex];
       
       // Update active company index
       await prefs.setInt('activeCompanyIndex', companyIndex);
@@ -155,6 +175,49 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Show error if no accessible companies
+    if (accessibleCompanies.isEmpty) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          title: const Text('No Access'),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.block,
+                  size: 80,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'No Accessible Companies',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'You don\'t have access to any company. Please contact your administrator.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -197,9 +260,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    itemCount: widget.companies.length,
+                    itemCount: accessibleCompanies.length,
                     itemBuilder: (context, index) {
-                      final company = widget.companies[index];
+                      final company = accessibleCompanies[index];
                       final isSelected = selectedIndex == index;
                       final isCurrent = index == widget.currentIndex;
 

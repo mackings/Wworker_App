@@ -480,7 +480,7 @@ class _HomeState extends ConsumerState<Home> {
             );
           },
         ),
-        const SizedBox(height: 10),
+       // const SizedBox(height: 10),
       ],
     );
   }
@@ -607,7 +607,7 @@ Widget _buildProductsSection() {
       const SizedBox(height: 10),
 
       SizedBox(
-        height: 170,
+        height: 135,
         child: products.length == 1
             ? Row(
                 children: [

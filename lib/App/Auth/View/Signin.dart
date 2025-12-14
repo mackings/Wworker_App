@@ -61,16 +61,37 @@ class _SigninState extends ConsumerState<Signin> {
               final companies = userData["companies"] as List?;
               final activeCompanyIndex = userData["activeCompanyIndex"] ?? 0;
 
-              if (companies != null && companies.length > 1) {
-                // User has multiple companies - show selection screen
-                Nav.pushReplacement(
-                  CompanySelectionScreen(
-                    companies: companies,
-                    currentIndex: activeCompanyIndex,
-                  ),
-                );
+              if (companies != null && companies.isNotEmpty) {
+                // ✅ Filter out companies with revoked access
+                final accessibleCompanies = companies
+                    .where((company) => company['accessGranted'] == true)
+                    .toList();
+
+                if (accessibleCompanies.isEmpty) {
+                  // ✅ No accessible companies - should not happen due to backend check
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("You don't have access to any company. Contact support."),
+                      backgroundColor: Colors.redAccent,
+                    ),
+                  );
+                  return;
+                }
+
+                if (accessibleCompanies.length > 1) {
+                  // User has multiple accessible companies - show selection screen
+                  Nav.pushReplacement(
+                    CompanySelectionScreen(
+                      companies: accessibleCompanies,
+                      currentIndex: activeCompanyIndex,
+                    ),
+                  );
+                } else {
+                  // User has single accessible company - go to dashboard
+                  Nav.pushReplacement(const DashboardScreen());
+                }
               } else {
-                // User has single company or no company - go to dashboard
+                // No companies - go to dashboard anyway
                 Nav.pushReplacement(const DashboardScreen());
               }
             } else {

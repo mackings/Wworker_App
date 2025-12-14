@@ -12,13 +12,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 
-
 class InvoiceTemplateSelector extends StatefulWidget {
-  final String companyName;
-  final String companyAddress;
-  final String companyBusStop;
-  final String companyPhone;
-  final String companyEmail;
   final String clientName;
   final String clientAddress;
   final String clientBusStop;
@@ -39,11 +33,6 @@ class InvoiceTemplateSelector extends StatefulWidget {
 
   const InvoiceTemplateSelector({
     super.key,
-    required this.companyName,
-    required this.companyAddress,
-    required this.companyBusStop,
-    required this.companyPhone,
-    required this.companyEmail,
     required this.clientName,
     required this.clientAddress,
     required this.clientBusStop,
@@ -74,83 +63,79 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
   bool isGeneratingPdf = false;
   final ScreenshotController _screenshotController = ScreenshotController();
 
+  // ✅ Create templates list once, not as a getter
+  late final List<Widget> templates;
+
+  @override
+  void initState() {
+    super.initState();
+    // ✅ Initialize templates once in initState
+    templates = [
+      ModernInvoiceTemplate(
+        key: const ValueKey('modern_template'), // ✅ Add unique keys
+        clientName: widget.clientName,
+        clientAddress: widget.clientAddress,
+        clientBusStop: widget.clientBusStop,
+        clientPhone: widget.clientPhone,
+        clientEmail: widget.clientEmail,
+        invoiceNumber: widget.invoiceNumber,
+        quotationNumber: widget.quotationNumber,
+        invoiceDate: widget.invoiceDate,
+        dueDate: widget.dueDate,
+        paymentStatus: widget.paymentStatus,
+        description: widget.description,
+        items: widget.items,
+        grandTotal: widget.grandTotal,
+        amountPaid: widget.amountPaid,
+        balance: widget.balance,
+        isExistingInvoice: widget.isExistingInvoice,
+      ),
+      MinimalInvoiceTemplate(
+        key: const ValueKey('minimal_template'), // ✅ Add unique keys
+        clientName: widget.clientName,
+        clientAddress: widget.clientAddress,
+        clientBusStop: widget.clientBusStop,
+        clientPhone: widget.clientPhone,
+        clientEmail: widget.clientEmail,
+        invoiceNumber: widget.invoiceNumber,
+        quotationNumber: widget.quotationNumber,
+        invoiceDate: widget.invoiceDate,
+        dueDate: widget.dueDate,
+        paymentStatus: widget.paymentStatus,
+        description: widget.description,
+        items: widget.items,
+        grandTotal: widget.grandTotal,
+        amountPaid: widget.amountPaid,
+        balance: widget.balance,
+        isExistingInvoice: widget.isExistingInvoice,
+      ),
+      ElegantInvoiceTemplate(
+        key: const ValueKey('elegant_template'), // ✅ Add unique keys
+        clientName: widget.clientName,
+        clientAddress: widget.clientAddress,
+        clientBusStop: widget.clientBusStop,
+        clientPhone: widget.clientPhone,
+        clientEmail: widget.clientEmail,
+        invoiceNumber: widget.invoiceNumber,
+        quotationNumber: widget.quotationNumber,
+        invoiceDate: widget.invoiceDate,
+        dueDate: widget.dueDate,
+        paymentStatus: widget.paymentStatus,
+        description: widget.description,
+        items: widget.items,
+        grandTotal: widget.grandTotal,
+        amountPaid: widget.amountPaid,
+        balance: widget.balance,
+        isExistingInvoice: widget.isExistingInvoice,
+      ),
+    ];
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
-
-  List<Widget> get templates => [
-        ModernInvoiceTemplate(
-          companyName: widget.companyName,
-          companyAddress: widget.companyAddress,
-          companyBusStop: widget.companyBusStop,
-          companyPhone: widget.companyPhone,
-          companyEmail: widget.companyEmail,
-          clientName: widget.clientName,
-          clientAddress: widget.clientAddress,
-          clientBusStop: widget.clientBusStop,
-          clientPhone: widget.clientPhone,
-          clientEmail: widget.clientEmail,
-          invoiceNumber: widget.invoiceNumber,
-          quotationNumber: widget.quotationNumber,
-          invoiceDate: widget.invoiceDate,
-          dueDate: widget.dueDate,
-          paymentStatus: widget.paymentStatus,
-          description: widget.description,
-          items: widget.items,
-          grandTotal: widget.grandTotal,
-          amountPaid: widget.amountPaid,
-          balance: widget.balance,
-          isExistingInvoice: widget.isExistingInvoice,
-        ),
-        MinimalInvoiceTemplate(
-          companyName: widget.companyName,
-          companyAddress: widget.companyAddress,
-          companyBusStop: widget.companyBusStop,
-          companyPhone: widget.companyPhone,
-          companyEmail: widget.companyEmail,
-          clientName: widget.clientName,
-          clientAddress: widget.clientAddress,
-          clientBusStop: widget.clientBusStop,
-          clientPhone: widget.clientPhone,
-          clientEmail: widget.clientEmail,
-          invoiceNumber: widget.invoiceNumber,
-          quotationNumber: widget.quotationNumber,
-          invoiceDate: widget.invoiceDate,
-          dueDate: widget.dueDate,
-          paymentStatus: widget.paymentStatus,
-          description: widget.description,
-          items: widget.items,
-          grandTotal: widget.grandTotal,
-          amountPaid: widget.amountPaid,
-          balance: widget.balance,
-          isExistingInvoice: widget.isExistingInvoice,
-        ),
-        ElegantInvoiceTemplate(
-          companyName: widget.companyName,
-          companyAddress: widget.companyAddress,
-          companyBusStop: widget.companyBusStop,
-          companyPhone: widget.companyPhone,
-          companyEmail: widget.companyEmail,
-          clientName: widget.clientName,
-          clientAddress: widget.clientAddress,
-          clientBusStop: widget.clientBusStop,
-          clientPhone: widget.clientPhone,
-          clientEmail: widget.clientEmail,
-          invoiceNumber: widget.invoiceNumber,
-          quotationNumber: widget.quotationNumber,
-          invoiceDate: widget.invoiceDate,
-          dueDate: widget.dueDate,
-          paymentStatus: widget.paymentStatus,
-          description: widget.description,
-          items: widget.items,
-          grandTotal: widget.grandTotal,
-          amountPaid: widget.amountPaid,
-          balance: widget.balance,
-          isExistingInvoice: widget.isExistingInvoice,
-        ),
-      ];
 
   final List<Map<String, String>> templateInfo = [
     {
