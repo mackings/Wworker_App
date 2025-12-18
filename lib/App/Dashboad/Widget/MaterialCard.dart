@@ -85,6 +85,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     });
   }
 
+
+
   /// Set default units based on material type
 /// Set default units based on material type
 void _setDefaultUnitsForMaterial(MaterialModel material) {

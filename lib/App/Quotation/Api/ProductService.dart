@@ -3,6 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 
+
+
 class ProductService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -30,6 +32,8 @@ class ProductService {
     );
   }
 
+
+
   Future<Map<String, dynamic>> getAllProducts() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -55,4 +59,6 @@ class ProductService {
       };
     }
   }
+
+
 }
