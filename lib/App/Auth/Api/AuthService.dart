@@ -151,6 +151,15 @@ Future<void> _saveUserData(Map<String, dynamic> data) async {
       debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
     }
 
+    // ✅ Save platform owner status
+    if (user["isPlatformOwner"] != null) {
+      await prefs.setBool("isPlatformOwner", user["isPlatformOwner"]);
+      debugPrint("✅ Platform Owner status saved: ${user["isPlatformOwner"]}");
+    } else {
+      await prefs.setBool("isPlatformOwner", false);
+      debugPrint("✅ Platform Owner status set to false (default)");
+    }
+
     // ✅ Save companies array
     if (user["companies"] != null) {
       await prefs.setString("companies", jsonEncode(user["companies"]));
