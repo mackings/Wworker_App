@@ -9,6 +9,7 @@ import 'package:wworker/App/Staffing/View/addCompany.dart';
 import 'package:wworker/App/Staffing/View/addStaff.dart';
 import 'package:wworker/App/Staffing/Widgets/staffList.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -237,6 +238,14 @@ class _StaffManagementState extends ConsumerState<StaffManagement> {
         ),
         actions: hasCompany
             ? [
+                const GuideHelpIcon(
+                  title: "Staff Management",
+                  message:
+                      "Step 1: review your staff list. Step 2: add new staff or "
+                      "open a profile to adjust permissions. Step 3: keep roles "
+                      "aligned with responsibilities. The goal is secure access "
+                      "and clear accountability.",
+                ),
                 IconButton(
                   icon: const Icon(Icons.person_add, color: Colors.black),
                   onPressed: () async {

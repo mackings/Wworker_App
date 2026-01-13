@@ -69,6 +69,15 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
     }
   }
 
+  Future<void> updateMaterial(int index, Map<String, dynamic> item) async {
+    final updated = List<Map<String, dynamic>>.from(state["materials"]);
+    if (index >= 0 && index < updated.length) {
+      updated[index] = item;
+      state = {...state, "materials": updated};
+      await _saveMaterials();
+    }
+  }
+
   Future<void> deleteAdditionalCost(int index) async {
     final updated = List<Map<String, dynamic>>.from(state["additionalCosts"]);
     if (index >= 0 && index < updated.length) {

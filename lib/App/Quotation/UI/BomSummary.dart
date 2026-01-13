@@ -11,6 +11,7 @@ import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -51,6 +52,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     _loadPricingSettings();
   }
 
+
   // Load pricing settings from SharedPreferences
   Future<void> _loadPricingSettings() async {
     final markup = await PricingSettingsManager.getMarkup();
@@ -67,6 +69,302 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     debugPrint("   Markup: $markupPercentage%");
     debugPrint("   Method: $pricingMethod");
     debugPrint("   Working Days/Month: $workingDaysPerMonth");
+  }
+
+  Future<void> _showPricingSettingsDialog() async {
+    final markupController =
+        TextEditingController(text: markupPercentage.toString());
+    final workingDaysController =
+        TextEditingController(text: workingDaysPerMonth.toString());
+    String tempMethod = pricingMethod;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                20 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: StatefulBuilder(
+                builder: (context, setDialogState) => SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 44,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Pricing Settings',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Choose the pricing method and markup used to calculate selling price.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Pricing Method',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7B7B7B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildMethodCard(
+                        title: 'Method 1 — Direct Markup',
+                        description:
+                            'Best for fast quotes. Overhead is not added to cost price; '
+                            'you only apply markup on materials and additional costs.',
+                        selected: tempMethod == 'Method 1',
+                        onTap: () =>
+                            setDialogState(() => tempMethod = 'Method 1'),
+                      ),
+                      const SizedBox(height: 10),
+                      _buildMethodCard(
+                        title: 'Method 2 — With Overhead',
+                        description:
+                            'Best for detailed costing. Manufacturing overhead is added '
+                            'to cost price, then markup is applied to the full total.',
+                        selected: tempMethod == 'Method 2',
+                        onTap: () =>
+                            setDialogState(() => tempMethod = 'Method 2'),
+                      ),
+                      const SizedBox(height: 18),
+                      const Divider(),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Markup Percentage',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7B7B7B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: markupController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          suffixText: '%',
+                          hintText: '30',
+                          filled: true,
+                          fillColor: const Color(0xFFF5F5F5),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Factory Working Days per Month',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF7B7B7B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: workingDaysController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          suffixText: 'days',
+                          hintText: '26',
+                          filled: true,
+                          fillColor: const Color(0xFFF5F5F5),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFFA16438),
+                                side: const BorderSide(
+                                  color: Color(0xFFA16438),
+                                ),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final markup = double.tryParse(
+                                      markupController.text,
+                                    ) ??
+                                    30.0;
+                                final workingDays = int.tryParse(
+                                      workingDaysController.text,
+                                    ) ??
+                                    26;
+
+                                if (markup <= 0 || markup > 1000) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please enter a valid markup percentage (1-1000)',
+                                      ),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                if (workingDays <= 0 || workingDays > 31) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Please enter valid working days (1-31)',
+                                      ),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                await PricingSettingsManager.saveMarkup(markup);
+                                await PricingSettingsManager.savePricingMethod(
+                                  tempMethod,
+                                );
+                                await PricingSettingsManager.saveWorkingDays(
+                                  workingDays,
+                                );
+
+                                setState(() {
+                                  markupPercentage = markup;
+                                  pricingMethod = tempMethod;
+                                  workingDaysPerMonth = workingDays;
+                                });
+
+                                if (mounted) Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFA16438),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text(
+                                'Save Settings',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildMethodCard({
+    required String title,
+    required String description,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFFFF3E0) : const Color(0xFFF7F7F7),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color:
+                selected ? const Color(0xFFA16438) : Colors.grey.shade300,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              selected ? Icons.check_circle : Icons.circle_outlined,
+              color: selected ? const Color(0xFFA16438) : Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2E2E2E),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   // Duration options
@@ -330,6 +628,21 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
+        actions: [
+          IconButton(
+            onPressed: _showPricingSettingsDialog,
+            icon: const Icon(Icons.tune),
+            tooltip: "Pricing Settings",
+          ),
+          const GuideHelpIcon(
+            title: "BOM Summary",
+            message:
+                "Review your BOM totals here before saving. This page combines "
+                "materials, additional costs, and overhead settings to calculate "
+                "final pricing. Adjust values until the totals look correct, then "
+                "save to create a quotation-ready BOM.",
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -582,7 +895,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           )
         else
           Text(
-            "₦${value.toStringAsFixed(0)}",
+            "₦${_formatAmount(value)}",
             style: TextStyle(
               fontSize: 18,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
@@ -591,6 +904,10 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
       ],
     );
+  }
+
+  String _formatAmount(double value) {
+    return NumberFormat.decimalPattern().format(value.round());
   }
 
   // Material and Additional Cost card widgets remain the same...

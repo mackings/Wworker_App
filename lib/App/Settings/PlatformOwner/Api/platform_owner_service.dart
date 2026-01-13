@@ -783,6 +783,7 @@ class PlatformOwnerService {
   Future<Map<String, dynamic>> createGlobalMaterial({
     required String name,
     required String category,
+    String? imagePath,
     double? standardWidth,
     double? standardLength,
     String? standardUnit,
@@ -792,6 +793,7 @@ class PlatformOwnerService {
     List<Map<String, dynamic>>? types,
     List<Map<String, dynamic>>? commonThicknesses,
     List<Map<String, dynamic>>? foamVariants,
+    List<Map<String, dynamic>>? sizeVariants,
     double? wasteThreshold,
     String? notes,
   }) async {
@@ -806,25 +808,41 @@ class PlatformOwnerService {
 
       debugPrint("📤 [CREATE GLOBAL MATERIAL] Name: $name");
 
+      final formPayload = <String, dynamic>{
+        'name': name,
+        'category': category,
+        'isGlobal': true,
+      };
+
+      if (standardWidth != null) formPayload['standardWidth'] = standardWidth;
+      if (standardLength != null) formPayload['standardLength'] = standardLength;
+      if (standardUnit != null) formPayload['standardUnit'] = standardUnit;
+      if (pricePerSqm != null) formPayload['pricePerSqm'] = pricePerSqm;
+      if (pricePerUnit != null) formPayload['pricePerUnit'] = pricePerUnit;
+      if (pricingUnit != null) formPayload['pricingUnit'] = pricingUnit;
+      if (wasteThreshold != null) formPayload['wasteThreshold'] = wasteThreshold;
+      if (notes != null) formPayload['notes'] = notes;
+
+      if (types != null) formPayload['types'] = jsonEncode(types);
+      if (commonThicknesses != null) {
+        formPayload['commonThicknesses'] = jsonEncode(commonThicknesses);
+      }
+      if (foamVariants != null) formPayload['foamVariants'] = jsonEncode(foamVariants);
+      if (sizeVariants != null) formPayload['sizeVariants'] = jsonEncode(sizeVariants);
+
+      if (imagePath != null && imagePath.isNotEmpty) {
+        formPayload['image'] = await MultipartFile.fromFile(imagePath);
+      }
+
       final response = await _dio.post(
         '/api/product/creatematerial',
-        data: {
-          'name': name,
-          'category': category,
-          'isGlobal': true,
-          if (standardWidth != null) 'standardWidth': standardWidth,
-          if (standardLength != null) 'standardLength': standardLength,
-          if (standardUnit != null) 'standardUnit': standardUnit,
-          if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
-          if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
-          if (pricingUnit != null) 'pricingUnit': pricingUnit,
-          if (types != null) 'types': types,
-          if (commonThicknesses != null) 'commonThicknesses': commonThicknesses,
-          if (foamVariants != null) 'foamVariants': foamVariants,
-          if (wasteThreshold != null) 'wasteThreshold': wasteThreshold,
-          if (notes != null) 'notes': notes,
-        },
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        data: FormData.fromMap(formPayload),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "multipart/form-data",
+          },
+        ),
       );
 
       debugPrint("✅ [CREATE GLOBAL MATERIAL SUCCESS]");

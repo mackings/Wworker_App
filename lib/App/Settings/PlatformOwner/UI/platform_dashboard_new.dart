@@ -14,12 +14,16 @@ import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:intl/intl.dart';
 
+
+
+
 class PlatformDashboardNew extends ConsumerStatefulWidget {
   const PlatformDashboardNew({super.key});
 
   @override
   ConsumerState<PlatformDashboardNew> createState() => _PlatformDashboardNewState();
 }
+
 
 class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     with SingleTickerProviderStateMixin {
@@ -64,6 +68,8 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     ));
   }
 
+
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -100,6 +106,8 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,6 +139,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       ),
     );
   }
+
 
   Widget _buildSliverAppBar() {
     return SliverAppBar(

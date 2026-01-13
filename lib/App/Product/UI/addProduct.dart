@@ -16,8 +16,13 @@ import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
 class AddProduct extends ConsumerStatefulWidget {
   final ProductModel? existingProduct;
+  final bool returnToHomeOnSave;
 
-  const AddProduct({super.key, this.existingProduct});
+  const AddProduct({
+    super.key,
+    this.existingProduct,
+    this.returnToHomeOnSave = false,
+  });
 
   @override
   ConsumerState<AddProduct> createState() => _AddProductState();
@@ -73,7 +78,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
     // ✅ If using existing product without edits, just proceed
     if (existing != null && !_isEdited) {
-      _proceedToBOMSummary(existing);
+      _handleAfterSave(existing);
       return;
     }
 
@@ -107,7 +112,7 @@ class _AddProductState extends ConsumerState<AddProduct> {
 
       if (response["success"] == true) {
         final productData = response["data"];
-        _proceedToBOMSummary(productData);
+        _handleAfterSave(productData);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -125,7 +130,14 @@ class _AddProductState extends ConsumerState<AddProduct> {
   }
 
   // ✅ Store product data in provider and navigate to BOM Summary
-  Future<void> _proceedToBOMSummary(dynamic productData) async {
+  Future<void> _handleAfterSave(dynamic productData) async {
+    if (widget.returnToHomeOnSave) {
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
     final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
 
     // ✅ Store product data in provider (but don't create quotation yet)

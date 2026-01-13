@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/OverHead/Api/OCService.dart';
 import 'package:wworker/App/OverHead/Model/OCmodel.dart';
 import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
 import 'package:wworker/App/OverHead/Widget/OCwidgets.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -951,6 +953,16 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           ),
         ),
         actions: [
+          Consumer(
+            builder: (context, ref, _) => const GuideHelpIcon(
+              title: "Overhead Costs",
+              message:
+                  "Step 1: add overhead items like rent, salaries, or utilities. "
+                  "Step 2: choose a period and markup method. "
+                  "Step 3: review totals to see how overhead affects pricing. "
+                  "The goal is to keep overhead accurate for quotations.",
+            ),
+          ),
           // ✅ Enhanced sync indicator for staff
           if (isStaff && hasUnsyncedData)
             Container(

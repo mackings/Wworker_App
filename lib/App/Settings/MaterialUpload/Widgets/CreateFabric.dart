@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 
 
@@ -18,6 +19,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
   final TextEditingController _notesController = TextEditingController();
 
   String _pricingUnit = 'piece';
+  String? _imagePath;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
@@ -28,6 +30,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
     final request = {
       'name': _nameController.text.trim(),
       'category': 'FABRIC',
+      if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
       if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
@@ -73,6 +76,13 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CustomImgBg(
+              placeholderText: 'Add Material Image (Optional)',
+              onImageSelected: (image) {
+                setState(() => _imagePath = image?.path);
+              },
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -230,6 +240,7 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
   final TextEditingController _notesController = TextEditingController();
 
   String _pricingUnit = 'piece';
+  String? _imagePath;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
@@ -240,6 +251,7 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
     final request = {
       'name': _nameController.text.trim(),
       'category': 'HARDWARE',
+      if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
       if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
@@ -285,6 +297,13 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CustomImgBg(
+              placeholderText: 'Add Material Image (Optional)',
+              onImageSelected: (image) {
+                setState(() => _imagePath = image?.path);
+              },
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -444,6 +463,7 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
   final TextEditingController _notesController = TextEditingController();
 
   String _pricingUnit = 'liter';
+  String? _imagePath;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
@@ -454,6 +474,7 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
     final request = {
       'name': _nameController.text.trim(),
       'category': 'OTHER',
+      if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
       if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
@@ -499,6 +520,13 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CustomImgBg(
+              placeholderText: 'Add Material Image (Optional)',
+              onImageSelected: (image) {
+                setState(() => _imagePath = image?.path);
+              },
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

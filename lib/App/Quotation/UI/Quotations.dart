@@ -13,6 +13,7 @@ import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -55,6 +56,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     setState(() {
       quantities[index] = (quantities[index] ?? 1) + 1;
     });
+    _logQuantityChange(index);
   }
 
   void _decreaseQuantity(int index) {
@@ -63,6 +65,25 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
         quantities[index] = (quantities[index] ?? 1) - 1;
       }
     });
+    _logQuantityChange(index);
+  }
+
+  void _logQuantityChange(int index) {
+    if (index < 0 || index >= allQuotations.length) return;
+    final quotation = allQuotations[index];
+    final quantity = quantities[index] ?? 1;
+    final costPrice = _getCostPrice(quotation);
+    final sellingPrice = _getSellingPrice(quotation);
+    final totalCost = _calculateTotalCost(quotation, quantity);
+    final totalSelling = _calculateTotalSellingPrice(quotation, quantity);
+
+    debugPrint(
+      "📊 [QUOTE QTY] index=$index qty=$quantity "
+      "costUnit=${costPrice.toStringAsFixed(2)} "
+      "sellUnit=${sellingPrice.toStringAsFixed(2)} "
+      "costTotal=${totalCost.toStringAsFixed(2)} "
+      "sellTotal=${totalSelling.toStringAsFixed(2)}",
+    );
   }
 
   Future<void> _deleteQuotation(String quotationId, int index) async {
@@ -124,7 +145,32 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
 
   // ✅ Calculate total with quantity multiplier
   double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
-    return _getCostPrice(quotation) * quantity;
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    double materialTotal = 0.0;
+    for (final material in materials) {
+      final price =
+          double.tryParse((material["Price"] ?? "0").toString()) ?? 0.0;
+      final materialQty =
+          int.tryParse((material["quantity"] ?? "1").toString()) ?? 1;
+      final disableIncrement = material["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quantity;
+      materialTotal += price * materialQty * multiplier;
+    }
+
+    double additionalTotal = 0.0;
+    for (final cost in additionalCosts) {
+      final amount =
+          double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      additionalTotal += amount * quantity;
+    }
+
+    return materialTotal + additionalTotal;
   }
 
   // ✅ Calculate total selling price with quantity multiplier
@@ -132,7 +178,12 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     Map<String, dynamic> quotation,
     int quantity,
   ) {
-    return _getSellingPrice(quotation) * quantity;
+    final baseCost = _getCostPrice(quotation);
+    final baseSelling = _getSellingPrice(quotation);
+    if (baseCost <= 0) return 0.0;
+    final totalCost = _calculateTotalCost(quotation, quantity);
+    final ratio = baseSelling / baseCost;
+    return totalCost * ratio;
   }
 
   @override
@@ -147,6 +198,17 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         title: CustomText(title: "Quotations"),
+        actions: const [
+          GuideHelpIcon(
+            title: "Quotations",
+            message:
+                "Quotations are created from your BOMs and used to agree on price "
+                "before work starts. Review each quote, adjust quantity, and confirm "
+                "pricing with the client. Once approved, you can create an Order to "
+                "track production and payments, or create an Invoice to request payment. "
+                "Materials marked 'disable increment' keep a fixed price when quantity changes.",
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(

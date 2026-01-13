@@ -21,6 +21,10 @@ class ModernInvoiceTemplate extends StatefulWidget {
   final double amountPaid;
   final double balance;
   final bool isExistingInvoice;
+  final String bankName;
+  final String accountName;
+  final String accountNumber;
+  final String bankCode;
 
   const ModernInvoiceTemplate({
     super.key,
@@ -40,6 +44,10 @@ class ModernInvoiceTemplate extends StatefulWidget {
     this.amountPaid = 0,
     this.balance = 0,
     this.isExistingInvoice = false,
+    this.bankName = "Your Bank",
+    this.accountName = "Account Name",
+    this.accountNumber = "0000000000",
+    this.bankCode = "000000",
   });
 
   @override
@@ -603,6 +611,23 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
         const Text(
           'TERMS: Payment is due within 30 days',
           style: TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Bank: ${widget.bankName}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        Text(
+          'Account: ${widget.accountNumber}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        Text(
+          'Account Name: ${widget.accountName}',
+          style: const TextStyle(fontSize: 12),
+        ),
+        Text(
+          'Bank Code: ${widget.bankCode}',
+          style: const TextStyle(fontSize: 12),
         ),
       ],
     );

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
 import 'package:wworker/App/Order/Widget/AssignStaffSheet.dart';
 import 'package:wworker/App/Order/Widget/Order_card.dart';
 import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
 import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
+class _FilterOption {
+  final String value;
+  final String label;
 
-
+  const _FilterOption({required this.value, required this.label});
+}
 
 class AllOrdersPage extends StatefulWidget {
   const AllOrdersPage({super.key});
@@ -23,6 +29,8 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
   String? errorMessage;
   int currentPage = 1;
   int totalPages = 1;
+  String? paymentFilter;
+  String? statusFilter;
 
   @override
   void initState() {
@@ -125,6 +133,66 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     );
   }
 
+  List<OrderModel> _filteredOrders() {
+    return orders.where((order) {
+      final payment = _normalize(order.paymentStatus);
+      final status = _normalize(order.status);
+
+      final paymentOk =
+          paymentFilter == null || payment == _normalize(paymentFilter!);
+      final statusOk = statusFilter == null || status == _normalize(statusFilter!);
+
+      return paymentOk && statusOk;
+    }).toList();
+  }
+
+  String _normalize(String value) {
+    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
+  }
+
+  List<_FilterOption> _availablePaymentFilters() {
+    final options = <String, String>{};
+    for (final order in orders) {
+      final normalized = _normalize(order.paymentStatus);
+      if (normalized.isEmpty) {
+        continue;
+      }
+      options.putIfAbsent(normalized, () => _prettyLabel(order.paymentStatus));
+    }
+    final list = options.entries.toList()
+      ..sort((a, b) => a.value.compareTo(b.value));
+    return list
+        .map((entry) => _FilterOption(value: entry.key, label: entry.value))
+        .toList();
+  }
+
+  List<_FilterOption> _availableStatusFilters() {
+    return const [
+      _FilterOption(value: 'pending', label: 'Pending'),
+      _FilterOption(value: 'inprogress', label: 'In Progress'),
+      _FilterOption(value: 'completed', label: 'Completed'),
+      _FilterOption(value: 'onhold', label: 'On Hold'),
+      _FilterOption(value: 'cancelled', label: 'Cancelled'),
+    ];
+  }
+
+  String _prettyLabel(String value) {
+    final normalized = value.trim().replaceAll(RegExp(r'[_-]+'), ' ');
+    if (normalized.isEmpty) {
+      return value;
+    }
+    return normalized
+        .split(RegExp(r'\s+'))
+        .map((word) {
+          if (word.isEmpty) {
+            return word;
+          }
+          final lower = word.toLowerCase();
+          return '${lower[0].toUpperCase()}${lower.substring(1)}';
+        })
+        .join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -139,6 +207,18 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
             fontWeight: FontWeight.w600,
           ),
         ),
+        actions: [
+          Consumer(
+            builder: (context, ref, _) => const GuideHelpIcon(
+              title: "Orders",
+              message:
+                  "Orders are created after a quotation is approved. Use this "
+                  "screen to track progress, assign staff, update status, and "
+                  "record payments. The goal is to keep each job’s timeline "
+                  "and payment state accurate.",
+            ),
+          ),
+        ],
       ),
       body: _buildBody(),
     );
@@ -221,14 +301,32 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
       );
     }
 
+    final filteredOrders = _filteredOrders();
+
     return RefreshIndicator(
       onRefresh: _loadOrders,
       color: const Color(0xFFA16438),
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: orders.length,
+        itemCount: filteredOrders.isEmpty ? 2 : filteredOrders.length + 1,
         itemBuilder: (context, index) {
-          final order = orders[index];
+          if (index == 0) {
+            return _buildFilterBar();
+          }
+
+          if (filteredOrders.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: Center(
+                child: Text(
+                  "No orders match these filters",
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+            );
+          }
+
+          final order = filteredOrders[index - 1];
           return OrderCard(
             order: order,
             onTap: () {
@@ -243,6 +341,126 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
             showFinancialInfo: false, // Hide financial info in All Orders
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    final paymentOptions = _availablePaymentFilters();
+    final statusOptions = _availableStatusFilters();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: const [
+              Text(
+                "Filters",
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _buildFilterRow(
+            title: "Payment",
+            options: paymentOptions,
+            selected: paymentFilter,
+            onSelected: (value) => setState(() => paymentFilter = value),
+          ),
+          const SizedBox(height: 8),
+          _buildFilterRow(
+            title: "Status",
+            options: statusOptions,
+            selected: statusFilter,
+            onSelected: (value) => setState(() => statusFilter = value),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterRow({
+    required String title,
+    required List<_FilterOption> options,
+    required String? selected,
+    required ValueChanged<String?> onSelected,
+  }) {
+    if (options.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 64,
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip(
+                  label: "All",
+                  selected: selected == null,
+                  onTap: () => onSelected(null),
+                ),
+                const SizedBox(width: 6),
+                ...options.map(
+                  (option) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: _buildFilterChip(
+                      label: option.label,
+                      selected: selected == option.value,
+                      onTap: () => onSelected(option.value),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFFA16438) : Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: selected ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

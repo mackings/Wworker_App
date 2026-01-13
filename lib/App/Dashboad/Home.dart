@@ -304,7 +304,7 @@ class _HomeState extends ConsumerState<Home> {
                             _showNoCompanyDialog(context);
                             return;
                           }
-                          Nav.push(AddProduct());
+                          Nav.push(const AddProduct(returnToHomeOnSave: true));
                         },
                       ),
                       DashboardIcon(
@@ -633,6 +633,7 @@ Widget _buildProductsSection() {
                       MaterialPageRoute(
                         builder: (context) => AddProduct(
                           existingProduct: products[0] as ProductModel?,
+                          returnToHomeOnSave: true,
                         ),
                       ),
                     );
@@ -684,6 +685,7 @@ Widget _buildProductsSection() {
                             MaterialPageRoute(
                               builder: (context) => AddProduct(
                                 existingProduct: product as ProductModel?,
+                                returnToHomeOnSave: true,
                               ),
                             ),
                           );

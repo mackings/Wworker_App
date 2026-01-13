@@ -118,13 +118,36 @@ class MaterialService {
       final companyName = await _getCompanyName();
       request['companyName'] = companyName;
 
-      debugPrint("📤 [CREATE MATERIAL] => $request");
+      final imagePath = request.remove('imagePath');
+      final formPayload = <String, dynamic>{};
+
+      request.forEach((key, value) {
+        if (value == null) return;
+        if (value is List || value is Map) {
+          formPayload[key] = jsonEncode(value);
+        } else {
+          formPayload[key] = value.toString();
+        }
+      });
+
+      if (imagePath is String && imagePath.isNotEmpty) {
+        formPayload['image'] = await MultipartFile.fromFile(imagePath);
+      }
+
+      final formData = FormData.fromMap(formPayload);
+
+      debugPrint("📤 [CREATE MATERIAL] => $formPayload");
       debugPrint("🏢 [COMPANY] => $companyName");
 
       final response = await _dio.post(
-        '/api/product/creatematerial', 
-        data: request,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        '/api/product/creatematerial',
+        data: formData,
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "multipart/form-data",
+          },
+        ),
       );
 
       debugPrint("✅ [CREATE MATERIAL SUCCESS] => ${response.data}");

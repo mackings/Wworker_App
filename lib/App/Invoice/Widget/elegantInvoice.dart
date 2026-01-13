@@ -19,6 +19,10 @@ class ElegantInvoiceTemplate extends StatefulWidget {
   final double amountPaid;
   final double balance;
   final bool isExistingInvoice;
+  final String bankName;
+  final String accountName;
+  final String accountNumber;
+  final String bankCode;
 
   const ElegantInvoiceTemplate({
     super.key,
@@ -38,6 +42,10 @@ class ElegantInvoiceTemplate extends StatefulWidget {
     this.amountPaid = 0,
     this.balance = 0,
     this.isExistingInvoice = false,
+    this.bankName = "Your Bank",
+    this.accountName = "Account Name",
+    this.accountNumber = "0000000000",
+    this.bankCode = "000000",
   });
 
   @override
@@ -520,12 +528,20 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Bank name    : $companyName Bank',
+                      'Bank name    : ${widget.bankName}',
                       style: const TextStyle(fontSize: 11),
                     ),
-                    const Text(
-                      'Bank code    : 12345678999',
-                      style: TextStyle(fontSize: 11),
+                    Text(
+                      'Account No  : ${widget.accountNumber}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    Text(
+                      'Account Name: ${widget.accountName}',
+                      style: const TextStyle(fontSize: 11),
+                    ),
+                    Text(
+                      'Bank code   : ${widget.bankCode}',
+                      style: const TextStyle(fontSize: 11),
                     ),
                   ],
                 ),

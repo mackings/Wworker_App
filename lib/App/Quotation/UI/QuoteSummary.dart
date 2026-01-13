@@ -119,12 +119,51 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
 
   // ✅ Calculate total cost with quantity multiplier
   double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
-    return _getCostPrice(quotation) * quantity;
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    double materialTotal = 0.0;
+    int disabledCount = 0;
+    for (final material in materials) {
+      final price =
+          double.tryParse((material["Price"]?.toString() ?? "0")) ?? 0.0;
+      final materialQty =
+          int.tryParse((material["quantity"]?.toString() ?? "1")) ?? 1;
+      final disableIncrement = material["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quantity;
+      if (disableIncrement) disabledCount += 1;
+      materialTotal += price * materialQty * multiplier;
+    }
+
+    double additionalTotal = 0.0;
+    for (final cost in additionalCosts) {
+      final amount =
+          double.tryParse((cost["amount"]?.toString() ?? "0")) ?? 0.0;
+      additionalTotal += amount * quantity;
+    }
+
+    final total = materialTotal + additionalTotal;
+    debugPrint(
+      "📊 [QUOTE SUMMARY] qty=$quantity materials=${materials.length} "
+      "disabled=$disabledCount materialTotal=${materialTotal.toStringAsFixed(2)} "
+      "additionalTotal=${additionalTotal.toStringAsFixed(2)} "
+      "total=${total.toStringAsFixed(2)}",
+    );
+    return total;
   }
 
   // ✅ Calculate total selling price with quantity multiplier
   double _calculateTotalSellingPrice(Map<String, dynamic> quotation, int quantity) {
-    return _getSellingPrice(quotation) * quantity;
+    final baseCost = _getCostPrice(quotation);
+    final baseSelling = _getSellingPrice(quotation);
+    if (baseCost <= 0) return 0.0;
+    final totalCost = _calculateTotalCost(quotation, quantity);
+    final ratio = baseSelling / baseCost;
+    return totalCost * ratio;
   }
 
   @override

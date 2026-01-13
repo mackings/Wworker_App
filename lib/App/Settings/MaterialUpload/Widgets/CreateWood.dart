@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 
 class CreateWoodMaterialPage extends StatefulWidget {
@@ -21,6 +22,7 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
 
   String _standardUnit = 'inches';
   String _thicknessUnit = 'inches';
+  String? _imagePath;
   bool isCreating = false;
 
   // Wood types and thicknesses
@@ -80,6 +82,7 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
     final request = {
       'name': _nameController.text.trim(),
       'category': 'WOOD',
+      if (_imagePath != null) 'imagePath': _imagePath,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
@@ -319,6 +322,13 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CustomImgBg(
+              placeholderText: 'Add Material Image (Optional)',
+              onImageSelected: (image) {
+                setState(() => _imagePath = image?.path);
+              },
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

@@ -19,6 +19,10 @@ class MinimalInvoiceTemplate extends StatefulWidget {
   final double amountPaid;
   final double balance;
   final bool isExistingInvoice;
+  final String bankName;
+  final String accountName;
+  final String accountNumber;
+  final String bankCode;
 
   const MinimalInvoiceTemplate({
     super.key,
@@ -38,6 +42,10 @@ class MinimalInvoiceTemplate extends StatefulWidget {
     this.amountPaid = 0,
     this.balance = 0,
     this.isExistingInvoice = false,
+    this.bankName = "Your Bank",
+    this.accountName = "Account Name",
+    this.accountNumber = "0000000000",
+    this.bankCode = "000000",
   });
 
   @override
@@ -449,13 +457,21 @@ class _MinimalInvoiceTemplateState extends State<MinimalInvoiceTemplate> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Bank: First Bank Nigeria',
-                    style: TextStyle(fontSize: 11),
+                  Text(
+                    'Bank: ${widget.bankName}',
+                    style: const TextStyle(fontSize: 11),
                   ),
-                  const Text(
-                    'Account No: 0123 4567 8901',
-                    style: TextStyle(fontSize: 11),
+                  Text(
+                    'Account: ${widget.accountNumber}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  Text(
+                    'Account Name: ${widget.accountName}',
+                    style: const TextStyle(fontSize: 11),
+                  ),
+                  Text(
+                    'Bank Code: ${widget.bankCode}',
+                    style: const TextStyle(fontSize: 11),
                   ),
                 ],
               ),

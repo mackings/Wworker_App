@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Dashboad/Widget/MaterialCard.dart';
 import 'package:wworker/App/Dashboad/Widget/OthercostCard.dart';
@@ -16,6 +17,7 @@ import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -45,6 +47,23 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
       userId = savedUserId;
       isUserLoading = false;
     });
+  }
+
+  Map<String, dynamic> _buildDisplayItem(
+    Map<String, dynamic> item,
+    bool isPriceIncrementDisabled,
+  ) {
+    final displayItem = Map<String, dynamic>.from(item);
+    displayItem.remove("disableIncrement");
+    final price =
+        double.tryParse((item["Price"] ?? "0").toString()) ?? 0.0;
+    final quantity =
+        int.tryParse((item["quantity"] ?? "1").toString()) ?? 1;
+    final total = isPriceIncrementDisabled ? price : price * quantity;
+    final totalRounded = total.round();
+    displayItem["Total"] =
+        NumberFormat.decimalPattern().format(totalRounded);
+    return displayItem;
   }
 
   @override
@@ -77,147 +96,89 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     );
 
     return Scaffold(
-      appBar: AppBar(),
+      backgroundColor: const Color(0xFFF7F7F7),
+      appBar: AppBar(
+        title: const Text("Materials"),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: const [
+          GuideHelpIcon(
+            title: "Add Materials",
+            message:
+                "Step 1: add materials with sizes and units. "
+                "Step 2: add extra costs if needed. "
+                "Step 3: review the list below and continue to create a BOM. "
+                "The goal is to capture every cost item used in a quotation.",
+          ),
+        ],
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 8.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               /// --- MATERIAL SECTION ---
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 19,
-                  vertical: 19,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: InkWell(
-                  onTap: () => setState(() => isExpanded = !isExpanded),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isExpanded ? Icons.remove : Icons.add,
-                        color: Colors.brown,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        "Add Material",
-                        style: GoogleFonts.openSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF302E2E),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 250),
-                firstChild: const SizedBox.shrink(),
-                secondChild: AddMaterialCard(
-                  title: "Add Material",
-                  icon: Icons.add,
+              _buildSectionCard(
+                title: "Add Material",
+                icon: Icons.layers_outlined,
+                isExpanded: isExpanded,
+                onChanged: (value) => setState(() => isExpanded = value),
+                child: AddMaterialCard(
+                  title: "Material Details",
+                  icon: Icons.add_circle_outline,
                   onAddItem: (item) async {
                     await notifier.addMaterial(item);
                   },
                 ),
-                crossFadeState: isExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
               ),
 
               const SizedBox(height: 25),
 
               /// --- ADDITIONAL COST SECTION ---
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 19,
-                  vertical: 19,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey.shade400),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: InkWell(
-                  onTap: () => setState(
-                    () => isAdditionalExpanded = !isAdditionalExpanded,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isAdditionalExpanded ? Icons.remove : Icons.add,
-                        color: Colors.brown,
-                        size: 26,
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        "Additional Cost",
-                        style: GoogleFonts.openSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF302E2E),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 10),
-
-              AnimatedCrossFade(
-                duration: const Duration(milliseconds: 250),
-                firstChild: const SizedBox.shrink(),
-                secondChild: OtherCostsCard(
-                  title: "Additional Cost",
-                  icon: Icons.attach_money,
+              _buildSectionCard(
+                title: "Additional Cost",
+                icon: Icons.attach_money_outlined,
+                isExpanded: isAdditionalExpanded,
+                onChanged: (value) =>
+                    setState(() => isAdditionalExpanded = value),
+                child: OtherCostsCard(
+                  title: "Cost Details",
+                  icon: Icons.add_circle_outline,
                   onAddItem: (item) async {
                     await notifier.addAdditionalCost(item);
                   },
                 ),
-                crossFadeState: isAdditionalExpanded
-                    ? CrossFadeState.showSecond
-                    : CrossFadeState.showFirst,
               ),
 
               const SizedBox(height: 25),
 
               /// --- MATERIAL LIST ---
-              Text(
-                "Materials (${materials.length})",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _buildSectionHeader("Materials", materials.length),
               const SizedBox(height: 12),
               ...materials.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
+                final isDisabled = item["disableIncrement"] == true;
+                final displayItem = _buildDisplayItem(item, isDisabled);
                 return ItemsCard(
-                  item: item,
-                  onDelete: () => notifier.deleteMaterial(index),
+                  item: displayItem,
+                  showPriceIncrementToggle: true,
+                  isPriceIncrementDisabled: isDisabled,
+                  onPriceIncrementToggle: (value) {
+                    final updated = {...item, "disableIncrement": value};
+                    notifier.updateMaterial(index, updated);
+                  },
+                  onDelete: () {
+                    notifier.deleteMaterial(index);
+                  },
                 );
               }),
 
               const SizedBox(height: 25),
 
               /// --- ADDITIONAL COST LIST ---
-              Text(
-                "Additional Costs (${additionalCosts.length})",
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              _buildSectionHeader("Additional Costs", additionalCosts.length),
               const SizedBox(height: 12),
               ...additionalCosts.asMap().entries.map((entry) {
                 final index = entry.key;
@@ -365,6 +326,77 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
               const SizedBox(height: 100),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, int count) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.openSans(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF302E2E),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE0E0E0)),
+          ),
+          child: Text(
+            "$count",
+            style: GoogleFonts.openSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF8B4513),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required bool isExpanded,
+    required ValueChanged<bool> onChanged,
+    required Widget child,
+  }) {
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade300),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: isExpanded,
+          onExpansionChanged: onChanged,
+          leading: Icon(icon, color: const Color(0xFF8B4513)),
+          title: Text(
+            title,
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF302E2E),
+            ),
+          ),
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 0, 10, 16),
+              child: child,
+            ),
+          ],
         ),
       ),
     );

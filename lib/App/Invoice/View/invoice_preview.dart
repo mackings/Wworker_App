@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/InvoiceSelector.dart';
+import 'package:wworker/App/Invoice/Widget/invoice_bank_prefs.dart';
+import 'package:wworker/App/Invoice/Widget/invoice_template_prefs.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 import 'dart:io';
 
 class InvoicePreview extends StatefulWidget {
@@ -22,6 +27,13 @@ class InvoicePreview extends StatefulWidget {
 class _InvoicePreviewState extends State<InvoicePreview> {
   bool isLoading = false;
   final ClientService _clientService = ClientService();
+  int _templateIndex = 0;
+  bool _isTemplateLoading = true;
+  bool _isBankLoading = true;
+  String _bankName = "Your Bank";
+  String _accountName = "Account Name";
+  String _accountNumber = "0000000000";
+  String _bankCode = "000000";
 
   // Check if viewing existing invoice
   bool get isExistingInvoice => widget.invoice != null;
@@ -57,6 +69,108 @@ class _InvoicePreviewState extends State<InvoicePreview> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadTemplateIndex();
+    _loadBankDetails();
+  }
+
+  Future<void> _loadTemplateIndex() async {
+    final index = await InvoiceTemplatePrefs.getTemplateIndex();
+    if (!mounted) return;
+    setState(() {
+      _templateIndex = index;
+      _isTemplateLoading = false;
+    });
+  }
+
+  Future<void> _loadBankDetails() async {
+    final details = await InvoiceBankPrefs.getBankDetails();
+    if (!mounted) return;
+    setState(() {
+      _bankName = details["bankName"] ?? _bankName;
+      _accountName = details["accountName"] ?? _accountName;
+      _accountNumber = details["accountNumber"] ?? _accountNumber;
+      _bankCode = details["bankCode"] ?? _bankCode;
+      _isBankLoading = false;
+    });
+  }
+
+  Future<void> _editBankDetails() async {
+    final bankNameController = TextEditingController(text: _bankName);
+    final accountNameController = TextEditingController(text: _accountName);
+    final accountNumberController = TextEditingController(text: _accountNumber);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              24,
+              20,
+              24 + MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Add Bank Details",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: "Bank Name",
+                  hintText: "Enter bank name",
+                  controller: bankNameController,
+                ),
+                const SizedBox(height: 12),
+                CustomTextField(
+                  label: "Account Name",
+                  hintText: "Enter account name",
+                  controller: accountNameController,
+                ),
+                const SizedBox(height: 12),
+                CustomTextField(
+                  label: "Account Number",
+                  hintText: "Enter account number",
+                  controller: accountNumberController,
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 20),
+                CustomButton(
+                  text: "Save",
+                  onPressed: () async {
+                    await InvoiceBankPrefs.saveBankDetails(
+                      bankName: bankNameController.text.trim(),
+                      accountName: accountNameController.text.trim(),
+                      accountNumber: accountNumberController.text.trim(),
+                      bankCode: _bankCode,
+                    );
+                    if (!mounted) return;
+                    setState(() {
+                      _bankName = bankNameController.text.trim();
+                      _accountName = accountNameController.text.trim();
+                      _accountNumber = accountNumberController.text.trim();
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
@@ -64,6 +178,14 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         backgroundColor: Colors.white,
         title: Text(isExistingInvoice ? "Invoice Details" : "Invoice Preview"),
         elevation: 0,
+        actions: const [
+          GuideHelpIcon(
+            title: "Invoice Preview",
+            message:
+                "Invoices use your default template from Settings. "
+                "You can preview the layout here, then send the invoice when ready.",
+          ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -155,11 +277,63 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                 ),
                 const SizedBox(height: 40),
 
+                if (!_isBankLoading)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              "Bank Details",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _editBankDetails,
+                              child: const Text("Add Bank Details"),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        _buildDetailRow(Icons.account_balance, "Bank", _bankName),
+                        _buildDetailRow(
+                          Icons.person_outline,
+                          "Account Name",
+                          _accountName,
+                        ),
+                        _buildDetailRow(
+                          Icons.numbers,
+                          "Account No",
+                          _accountNumber,
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 24),
+
                 // Action button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: isLoading ? null : _navigateToTemplateSelector,
+                    onPressed: (isLoading || _isTemplateLoading)
+                        ? null
+                        : _navigateToTemplateSelector,
                     icon: isLoading
                         ? const SizedBox(
                             width: 20,
@@ -168,12 +342,10 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
-                          )
+                        )
                         : const Icon(Icons.style),
                     label: Text(
-                      isExistingInvoice
-                          ? 'View Templates'
-                          : 'Choose Template',
+                      isExistingInvoice ? 'View Invoice' : 'Preview Invoice',
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -254,6 +426,12 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           balance: isExistingInvoice ? widget.invoice!.balance : 0,
           isExistingInvoice: isExistingInvoice,
           onTemplateSend: !isExistingInvoice ? _sendInvoiceToClient : null,
+          initialTemplateIndex: _templateIndex,
+          allowSelection: false,
+          bankName: _bankName,
+          accountName: _accountName,
+          accountNumber: _accountNumber,
+          bankCode: _bankCode,
         ),
       ),
     );

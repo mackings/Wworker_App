@@ -8,8 +8,8 @@ import 'package:screenshot/screenshot.dart';
 import 'package:wworker/App/Invoice/Widget/DarkInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/elegantInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/minimalInvoice.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 import 'dart:io';
-import 'package:flutter/material.dart';
 
 
 class InvoiceTemplateSelector extends StatefulWidget {
@@ -30,6 +30,12 @@ class InvoiceTemplateSelector extends StatefulWidget {
   final double balance;
   final bool isExistingInvoice;
   final Future<void> Function(int templateIndex, File pdfFile)? onTemplateSend;
+  final int? initialTemplateIndex;
+  final bool allowSelection;
+  final String bankName;
+  final String accountName;
+  final String accountNumber;
+  final String bankCode;
 
   const InvoiceTemplateSelector({
     super.key,
@@ -50,6 +56,12 @@ class InvoiceTemplateSelector extends StatefulWidget {
     this.balance = 0,
     this.isExistingInvoice = false,
     this.onTemplateSend,
+    this.initialTemplateIndex,
+    this.allowSelection = true,
+    this.bankName = "Your Bank",
+    this.accountName = "Account Name",
+    this.accountNumber = "0000000000",
+    this.bankCode = "000000",
   });
 
   @override
@@ -59,7 +71,7 @@ class InvoiceTemplateSelector extends StatefulWidget {
 
 class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
   int selectedTemplate = 0;
-  final PageController _pageController = PageController();
+  late final PageController _pageController;
   bool isGeneratingPdf = false;
   final ScreenshotController _screenshotController = ScreenshotController();
 
@@ -69,6 +81,12 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialTemplateIndex != null &&
+        widget.initialTemplateIndex! >= 0 &&
+        widget.initialTemplateIndex! <= 2) {
+      selectedTemplate = widget.initialTemplateIndex!;
+    }
+    _pageController = PageController(initialPage: selectedTemplate);
     // ✅ Initialize templates once in initState
     templates = [
       ModernInvoiceTemplate(
@@ -89,6 +107,10 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
         amountPaid: widget.amountPaid,
         balance: widget.balance,
         isExistingInvoice: widget.isExistingInvoice,
+        bankName: widget.bankName,
+        accountName: widget.accountName,
+        accountNumber: widget.accountNumber,
+        bankCode: widget.bankCode,
       ),
       MinimalInvoiceTemplate(
         key: const ValueKey('minimal_template'), // ✅ Add unique keys
@@ -108,6 +130,10 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
         amountPaid: widget.amountPaid,
         balance: widget.balance,
         isExistingInvoice: widget.isExistingInvoice,
+        bankName: widget.bankName,
+        accountName: widget.accountName,
+        accountNumber: widget.accountNumber,
+        bankCode: widget.bankCode,
       ),
       ElegantInvoiceTemplate(
         key: const ValueKey('elegant_template'), // ✅ Add unique keys
@@ -127,6 +153,10 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
         amountPaid: widget.amountPaid,
         balance: widget.balance,
         isExistingInvoice: widget.isExistingInvoice,
+        bankName: widget.bankName,
+        accountName: widget.accountName,
+        accountNumber: widget.accountNumber,
+        bankCode: widget.bankCode,
       ),
     ];
   }
@@ -269,6 +299,7 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
 
   @override
   Widget build(BuildContext context) {
+    final canSelect = widget.allowSelection;
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -280,105 +311,136 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
               : "Choose Invoice Template",
         ),
         centerTitle: true,
+        actions: const [
+          GuideHelpIcon(
+            title: "Invoice Templates",
+            message:
+                "Browse available invoice layouts and preview how your "
+                "invoice will look. In normal flow, your default template "
+                "is picked from Settings.",
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Template selector tabs
-          Container(
-            height: 80,
-            color: Colors.white,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              itemCount: templateInfo.length,
-              itemBuilder: (context, index) {
-                final isSelected = selectedTemplate == index;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => selectedTemplate = index);
-                    _pageController.animateToPage(
-                      index,
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  },
-                  child: Container(
-                    margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFFA16438)
-                          : Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
+          if (canSelect)
+            // Template selector tabs
+            Container(
+              height: 80,
+              color: Colors.white,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                itemCount: templateInfo.length,
+                itemBuilder: (context, index) {
+                  final isSelected = selectedTemplate == index;
+                  return GestureDetector(
+                    onTap: () {
+                      setState(() => selectedTemplate = index);
+                      _pageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFFA16438)
-                            : Colors.grey[300]!,
-                        width: 2,
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isSelected
+                              ? const Color(0xFFA16438)
+                              : Colors.grey[300]!,
+                          width: 2,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            templateInfo[index]['name']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color:
+                                  isSelected ? Colors.white : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            templateInfo[index]['description']!,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: isSelected
+                                  ? Colors.white70
+                                  : Colors.grey[600],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          templateInfo[index]['name']!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: isSelected ? Colors.white : Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          templateInfo[index]['description']!,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: isSelected
-                                ? Colors.white70
-                                : Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
 
           // Template preview
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() => selectedTemplate = index);
-              },
-              itemCount: templates.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
+            child: canSelect
+                ? PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => selectedTemplate = index);
+                    },
+                    itemCount: templates.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: templates[index],
+                        ),
+                      );
+                    },
+                  )
+                : Container(
+                    margin: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 20,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: templates[selectedTemplate],
+                    ),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: templates[index],
-                  ),
-                );
-              },
-            ),
           ),
 
           // Action buttons - Only show for new invoices

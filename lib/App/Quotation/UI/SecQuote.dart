@@ -101,6 +101,53 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     return _getCostPrice(quotation);
   }
 
+  double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    double materialTotal = 0.0;
+    int disabledCount = 0;
+    for (final material in materials) {
+      final price =
+          double.tryParse((material["Price"] ?? "0").toString()) ?? 0.0;
+      final materialQty =
+          int.tryParse((material["quantity"] ?? "1").toString()) ?? 1;
+      final disableIncrement = material["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quantity;
+      if (disableIncrement) disabledCount += 1;
+      materialTotal += price * materialQty * multiplier;
+    }
+
+    double additionalTotal = 0.0;
+    for (final cost in additionalCosts) {
+      final amount =
+          double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      additionalTotal += amount * quantity;
+    }
+
+    final total = materialTotal + additionalTotal;
+    debugPrint(
+      "📊 [SEC QUOTE] qty=$quantity materials=${materials.length} "
+      "disabled=$disabledCount materialTotal=${materialTotal.toStringAsFixed(2)} "
+      "additionalTotal=${additionalTotal.toStringAsFixed(2)} "
+      "total=${total.toStringAsFixed(2)}",
+    );
+    return total;
+  }
+
+  double _calculateTotalSellingPrice(Map<String, dynamic> quotation, int quantity) {
+    final baseCost = _getCostPrice(quotation);
+    final baseSelling = _getSellingPrice(quotation);
+    if (baseCost <= 0) return 0.0;
+    final totalCost = _calculateTotalCost(quotation, quantity);
+    final ratio = baseSelling / baseCost;
+    return totalCost * ratio;
+  }
+
   @override
   Widget build(BuildContext context) {
     // ✅ Show loading indicator while company data is loading
@@ -121,8 +168,13 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       final product = quotation["product"] ?? {};
 
       // Get the selling price (includes overhead)
-      final sellingPricePerUnit = _getSellingPrice(quotation);
-      final totalSellingPrice = sellingPricePerUnit * quantity;
+      final totalSellingPrice = _calculateTotalSellingPrice(
+        quotation,
+        quantity,
+      );
+      final sellingPricePerUnit = quantity > 0
+          ? totalSellingPrice / quantity
+          : 0.0;
 
       allItems.add(
         QuotationItem(
@@ -251,7 +303,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                 int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
             final unitPrice =
                 double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
-            final totalQuantity = materialQty * quantity;
+            final disableIncrement = m["disableIncrement"] == true;
+            final totalQuantity = materialQty * (disableIncrement ? 1 : quantity);
 
             // Calculate proportional selling price for this material
             final materialCostShare = costPricePerUnit > 0
@@ -292,13 +345,14 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     for (var quotation in widget.selectedQuotations) {
       final costPrice = _getCostPrice(quotation);
       final sellingPrice = _getSellingPrice(quotation);
-      final overhead = sellingPrice - costPrice;
 
       final quantity =
           widget.quotationQuantities[quotation["id"] as String] ?? 1;
 
-      totalCostPrice += costPrice * quantity;
-      totalOverheadCost += overhead * quantity;
+      final adjustedCost = _calculateTotalCost(quotation, quantity);
+      final adjustedSelling = _calculateTotalSellingPrice(quotation, quantity);
+      totalCostPrice += adjustedCost;
+      totalOverheadCost += adjustedSelling - adjustedCost;
 
       // Get duration data (only from first quotation)
       if (expectedDurationValue == null &&

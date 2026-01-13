@@ -6,6 +6,9 @@ class ItemsCard extends StatelessWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onAdd;
   final bool showAddButton;
+  final bool showPriceIncrementToggle;
+  final bool isPriceIncrementDisabled;
+  final ValueChanged<bool>? onPriceIncrementToggle;
 
   const ItemsCard({
     super.key,
@@ -14,6 +17,9 @@ class ItemsCard extends StatelessWidget {
     this.onAdd,
     this.showAddButton =
         false, // default = false (so existing pages won't break)
+    this.showPriceIncrementToggle = false,
+    this.isPriceIncrementDisabled = false,
+    this.onPriceIncrementToggle,
   });
 
   @override
@@ -65,6 +71,28 @@ class ItemsCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
+
+          if (showPriceIncrementToggle) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Disable price increment",
+                  style: GoogleFonts.openSans(
+                    color: const Color(0xFF302E2E),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Switch.adaptive(
+                  value: isPriceIncrementDisabled,
+                  onChanged: onPriceIncrementToggle,
+                  activeColor: const Color(0xFF8B4513),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
 
           /// 🔹 Action button (Add or Delete)
           GestureDetector(

@@ -8,6 +8,7 @@ import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/Widget/AddListedBom.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 
@@ -40,6 +41,16 @@ class _BOMListState extends ConsumerState<BOMList> {
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
+        actions: const [
+          GuideHelpIcon(
+            title: "BOM List",
+            message:
+                "This is your Bill of Materials list. Add materials and extra "
+                "costs that make up a product, then review or adjust the list. "
+                "When ready, you’ll use this list to generate a quotation. "
+                "The goal is to build a clean, reusable cost breakdown.",
+          ),
+        ],
       ),
       body: SafeArea(
         child: (materials.isEmpty && additionalCosts.isEmpty)

@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.dart';
 import 'package:wworker/Constant/colors.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 class PendingMaterialsPage extends ConsumerStatefulWidget {
   const PendingMaterialsPage({super.key});
@@ -91,7 +92,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       helperText: 'Add optional notes for the company.',
       optional: true,
       confirmLabel: 'Approve',
-      confirmColor: Colors.green,
+      confirmColor: ColorsApp.btnColor,
     );
     if (notes == null) return;
 
@@ -123,7 +124,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       helperText: 'Provide a clear reason for rejection.',
       optional: false,
       confirmLabel: 'Reject',
-      confirmColor: Colors.red,
+      confirmColor: ColorsApp.btnColor.withOpacity(0.9),
     );
     if (reason == null || reason.isEmpty) return;
 
@@ -161,100 +162,130 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
     return showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 44,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                ),
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.35,
+          maxChildSize: 0.85,
+          builder: (context, scrollController) {
+            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                style: GoogleFonts.openSans(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: ColorsApp.textColor,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                helperText,
-                style: GoogleFonts.openSans(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: controller,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  hintText: optional ? 'Optional notes...' : 'Rejection reason *',
-                  filled: true,
-                  fillColor: Colors.grey.shade100,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: ColorsApp.btnColor,
-                        side: BorderSide(color: ColorsApp.btnColor),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 44,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
-                      child: const Text('Cancel'),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () {
-                        final text = controller.text.trim();
-                        Navigator.pop(context, text);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: confirmColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      style: GoogleFonts.openSans(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: ColorsApp.textColor,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      helperText,
+                      style: GoogleFonts.openSans(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: controller,
+                      maxLines: 4,
+                      decoration: InputDecoration(
+                        hintText:
+                            optional ? 'Optional notes...' : 'Rejection reason *',
+                        filled: true,
+                        fillColor: Colors.grey.shade100,
+                        border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
                         ),
                       ),
-                      child: Text(confirmLabel),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: ColorsApp.btnColor,
+                              side: BorderSide(color: ColorsApp.btnColor),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: CustomButton(
+                            text: confirmLabel,
+                            backgroundColor: confirmColor,
+                            onPressed: () {
+                              final text = controller.text.trim();
+                              Navigator.pop(context, text);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  void _openImagePreview(PendingMaterial material) {
+    final imageUrl = material.image;
+    if (imageUrl == null || imageUrl.isEmpty) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: Hero(
+              tag: 'material-image-${material.id}',
+              child: InteractiveViewer(
+                child: Image.network(imageUrl),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -486,6 +517,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildMaterialImage(material),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Column(
@@ -596,7 +628,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                     icon: const Icon(Icons.check, size: 18),
                     label: const Text('Approve'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: ColorsApp.btnColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -612,8 +644,8 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                     icon: const Icon(Icons.close, size: 18),
                     label: const Text('Reject'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: ColorsApp.btnColor,
+                      side: BorderSide(color: ColorsApp.btnColor),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
@@ -625,6 +657,58 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMaterialImage(PendingMaterial material) {
+    final imageUrl = material.image;
+    return ClipRRect(
+      borderRadius: const BorderRadius.only(
+        topLeft: Radius.circular(16),
+        topRight: Radius.circular(16),
+      ),
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: imageUrl != null && imageUrl.isNotEmpty
+            ? GestureDetector(
+                onTap: () => _openImagePreview(material),
+                child: Hero(
+                  tag: 'material-image-${material.id}',
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey.shade200,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.grey,
+                          size: 32,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              )
+            : Container(
+                color: Colors.grey.shade100,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.image_not_supported,
+                        color: Colors.grey.shade400, size: 28),
+                    const SizedBox(height: 6),
+                    Text(
+                      'No image uploaded',
+                      style: GoogleFonts.openSans(
+                        fontSize: 12,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
       ),
     );
   }

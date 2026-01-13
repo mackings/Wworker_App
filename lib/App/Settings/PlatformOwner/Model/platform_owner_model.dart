@@ -978,6 +978,7 @@ class PendingMaterial {
   final String id;
   final String name;
   final String category;
+  final String? image;
   final String companyName;
   final String status;
   final bool isGlobal;
@@ -1004,6 +1005,7 @@ class PendingMaterial {
     required this.id,
     required this.name,
     required this.category,
+    this.image,
     required this.companyName,
     required this.status,
     required this.isGlobal,
@@ -1032,6 +1034,7 @@ class PendingMaterial {
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       category: json['category'] ?? '',
+      image: json['image'],
       companyName: json['companyName'] ?? '',
       status: json['status'] ?? 'pending',
       isGlobal: json['isGlobal'] ?? false,

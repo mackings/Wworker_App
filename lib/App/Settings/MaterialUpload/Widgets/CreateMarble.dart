@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 
 class CreateMarbleMaterialPage extends StatefulWidget {
@@ -19,6 +20,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
 
   String _standardUnit = 'inches';
+  String? _imagePath;
   bool isCreating = false;
 
   // Size variants (different sheet sizes)
@@ -65,6 +67,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
     final request = {
       'name': _nameController.text.trim(),
       'category': 'MARBLE',
+      if (_imagePath != null) 'imagePath': _imagePath,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
@@ -241,6 +244,13 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            CustomImgBg(
+              placeholderText: 'Add Material Image (Optional)',
+              onImageSelected: (image) {
+                setState(() => _imagePath = image?.path);
+              },
+            ),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

@@ -334,11 +334,19 @@ void _loadThicknessesForMaterial(MaterialModel material) {
     final hasFoamVariants = _selectedMaterial?.foamVariants.isNotEmpty ?? false;
 
     return Container(
-      width: MediaQuery.of(context).size.width - 35,
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        border: Border.all(color: const Color(0xFFD3D3D3)),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        border: Border.all(color: const Color(0xFFE6E6E6)),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -525,19 +533,23 @@ void _loadThicknessesForMaterial(MaterialModel material) {
           // Thickness (Auto from API) + Unit (Dropdown)
           Row(
             children: [
-              _buildDropdown(
-                "Thickness",
-                _availableThicknesses.isNotEmpty 
-                    ? _availableThicknesses 
-                    : ["No thickness available"],
-                thickness,
-                (v) => setState(() => thickness = v),
+              Expanded(
+                child: _buildDropdown(
+                  "Thickness",
+                  _availableThicknesses.isNotEmpty
+                      ? _availableThicknesses
+                      : ["No thickness available"],
+                  thickness,
+                  (v) => setState(() => thickness = v),
+                ),
               ),
               const SizedBox(width: 12),
-              _buildDropdown("Unit", linearUnits, unit, (v) {
-                setState(() => unit = v);
-                _calculateCosts();
-              }),
+              Expanded(
+                child: _buildDropdown("Unit", linearUnits, unit, (v) {
+                  setState(() => unit = v);
+                  _calculateCosts();
+                }),
+              ),
             ],
           ),
 
@@ -927,43 +939,42 @@ void _loadThicknessesForMaterial(MaterialModel material) {
     String? value,
     ValueChanged<String?> onChanged,
   ) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.openSans(
-              fontSize: 14,
-              color: const Color(0xFF7B7B7B),
+    final normalizedValue = items.contains(value) ? value : null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.openSans(
+            fontSize: 14,
+            color: const Color(0xFF7B7B7B),
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          key: ValueKey<String>("${label}_${items.join('|')}"),
+          value: normalizedValue,
+          isExpanded: true,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.all(12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
             ),
           ),
-          const SizedBox(height: 6),
-          DropdownButtonFormField<String>(
-            value: value,
-            isExpanded: true,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-              ),
-            ),
-            items: items
-                .map((v) => DropdownMenuItem(
-                      value: v,
-                      child: Text(
-                        v,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ))
-                .toList(),
-            onChanged: items.first == "No thickness available" 
-                ? null 
-                : onChanged,
-          ),
-        ],
-      ),
+          items: items
+              .map((v) => DropdownMenuItem(
+                    value: v,
+                    child: Text(
+                      v,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ))
+              .toList(),
+          onChanged:
+              items.first == "No thickness available" ? null : onChanged,
+        ),
+      ],
     );
   }
 }

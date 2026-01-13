@@ -3,14 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/OverHead/View/AddOverhead.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/selectCategory.dart';
+import 'package:wworker/App/Settings/Api/company_settings_service.dart';
+import 'package:wworker/App/Settings/Model/company_settings_model.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/platform_dashboard_new.dart';
 import 'package:wworker/App/Staffing/Widgets/database.dart';
 import 'package:wworker/App/Staffing/Widgets/notification.dart';
 import 'package:wworker/App/Staffing/Widgets/staffaccess.dart';
+import 'package:wworker/App/Invoice/View/invoice_template_settings.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Settings extends ConsumerStatefulWidget {
   const Settings({super.key});
@@ -21,13 +26,19 @@ class Settings extends ConsumerStatefulWidget {
 
 class _SettingsState extends ConsumerState<Settings> {
   final PlatformOwnerService _platformService = PlatformOwnerService();
+  final CompanySettingsService _settingsService = CompanySettingsService();
   bool isPlatformOwner = false;
   bool isLoadingPlatformStatus = true;
+  bool isLoadingSettings = true;
+  bool canEditSettings = false;
+  CompanySettings? companySettings;
+  String? settingsError;
 
   @override
   void initState() {
     super.initState();
     _checkPlatformOwnerStatus();
+    _loadCompanySettings();
   }
 
   Future<void> _checkPlatformOwnerStatus() async {
@@ -38,8 +49,82 @@ class _SettingsState extends ConsumerState<Settings> {
     });
   }
 
+  Future<void> _loadCompanySettings() async {
+    setState(() {
+      isLoadingSettings = true;
+      settingsError = null;
+    });
+
+    debugPrint("🔄 Loading company settings...");
+    final prefs = await SharedPreferences.getInstance();
+    final role = prefs.getString('userRole') ?? '';
+    canEditSettings = role == 'owner' || role == 'admin';
+
+    final settings = await _settingsService.getSettings();
+    if (!mounted) return;
+
+    setState(() {
+      companySettings = settings;
+      isLoadingSettings = false;
+      if (settings == null) {
+        settingsError = "Failed to load company settings";
+      }
+    });
+    debugPrint(
+      settings == null
+          ? "⚠️ Company settings load failed"
+          : "✅ Company settings loaded",
+    );
+  }
+
+  Future<void> _updateSetting({
+    required CompanySettings current,
+    bool? cloudSyncEnabled,
+    bool? autoBackupEnabled,
+    NotificationSettings? notifications,
+  }) async {
+    if (!canEditSettings) return;
+
+    final updatedNotifications = notifications ?? current.notifications;
+    final updates = {
+      if (cloudSyncEnabled != null) "cloudSyncEnabled": cloudSyncEnabled,
+      if (autoBackupEnabled != null) "autoBackupEnabled": autoBackupEnabled,
+      if (notifications != null) "notifications": notifications.toJson(),
+    };
+
+    setState(() {
+      companySettings = CompanySettings(
+        id: current.id,
+        companyName: current.companyName,
+        cloudSyncEnabled: cloudSyncEnabled ?? current.cloudSyncEnabled,
+        autoBackupEnabled: autoBackupEnabled ?? current.autoBackupEnabled,
+        notifications: updatedNotifications,
+      );
+    });
+
+    debugPrint("🔄 Updating company settings: $updates");
+    final success = await _settingsService.updateSettings(updates);
+    if (!mounted) return;
+
+    if (!success) {
+      setState(() {
+        companySettings = current;
+      });
+      debugPrint("❌ Settings update failed");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to update settings"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+    } else {
+      debugPrint("✅ Settings update succeeded");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final guideEnabled = ref.watch(guideProvider);
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
@@ -52,6 +137,15 @@ class _SettingsState extends ConsumerState<Settings> {
           titleFontWeight: FontWeight.bold,
         ),
         centerTitle: false,
+        actions: const [
+          GuideHelpIcon(
+            title: "Settings Help",
+            message:
+                "Use Settings to configure your company, staff access, and system tools. "
+                "Turn on Guided Help here to reveal step-by-step tips in key sections "
+                "(Quotations, Orders, BOMs, Sales). Turn it off to hide the icons.",
+          ),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -64,11 +158,11 @@ class _SettingsState extends ConsumerState<Settings> {
                 _buildSectionTitle('Company Management'),
                 const SizedBox(height: 12),
 
-                DatabaseWidget(),
+               // DatabaseWidget(),
 
                 const SizedBox(height: 12),
 
-                NotificationsWidget(),
+                //NotificationsWidget(),
 
                 const SizedBox(height: 12),
 
@@ -96,6 +190,28 @@ class _SettingsState extends ConsumerState<Settings> {
                   icon: Icons.settings_applications,
                   iconColor: Colors.blue,
                   onTap: () => Nav.push(SelectMaterialCategoryPage()),
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildModernSettingCard(
+                  title: 'Invoice Template',
+                  subtitle: 'Choose your default invoice layout',
+                  icon: Icons.receipt_long,
+                  iconColor: Colors.deepOrange,
+                  onTap: () => Nav.push(const InvoiceTemplateSettings()),
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildCompanySettingsSection(),
+
+                const SizedBox(height: 12),
+
+                _buildGuideToggleCard(
+                  isEnabled: guideEnabled,
+                  onChanged: (value) =>
+                      ref.read(guideProvider.notifier).setEnabled(value),
                 ),
 
                 // Platform Owner Dashboard (only shown for platform owners)
@@ -126,6 +242,71 @@ class _SettingsState extends ConsumerState<Settings> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildGuideToggleCard({
+    required bool isEnabled,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: ColorsApp.btnColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.help_outline,
+              color: ColorsApp.btnColor,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Guided Help",
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Show or hide help icons across the app",
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    color: ColorsApp.textColor.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch.adaptive(
+            value: isEnabled,
+            onChanged: onChanged,
+            activeColor: ColorsApp.btnColor,
+          ),
+        ],
       ),
     );
   }
@@ -213,6 +394,198 @@ class _SettingsState extends ConsumerState<Settings> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCompanySettingsSection() {
+    if (isLoadingSettings) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (companySettings == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                settingsError ?? "Company settings unavailable",
+                style: GoogleFonts.openSans(fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: _loadCompanySettings,
+              child: const Text("Retry"),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final settings = companySettings!;
+    final notifications = settings.notifications;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionTitle("Company Settings"),
+          const SizedBox(height: 12),
+          _buildSwitchRow(
+            title: "Cloud Sync",
+            value: settings.cloudSyncEnabled,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              cloudSyncEnabled: value,
+            ),
+          ),
+          _buildSwitchRow(
+            title: "Auto Backup",
+            value: settings.autoBackupEnabled,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              autoBackupEnabled: value,
+            ),
+          ),
+          const Divider(height: 24),
+          Text(
+            "Notifications",
+            style: GoogleFonts.openSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: ColorsApp.textColor.withOpacity(0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _buildSwitchRow(
+            title: "Push Notification",
+            value: notifications.pushNotification,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              notifications: NotificationSettings(
+                pushNotification: value,
+                emailNotification: notifications.emailNotification,
+                quotationReminders: notifications.quotationReminders,
+                projectDeadlines: notifications.projectDeadlines,
+                backupAlerts: notifications.backupAlerts,
+              ),
+            ),
+          ),
+          _buildSwitchRow(
+            title: "Email Notification",
+            value: notifications.emailNotification,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              notifications: NotificationSettings(
+                pushNotification: notifications.pushNotification,
+                emailNotification: value,
+                quotationReminders: notifications.quotationReminders,
+                projectDeadlines: notifications.projectDeadlines,
+                backupAlerts: notifications.backupAlerts,
+              ),
+            ),
+          ),
+          _buildSwitchRow(
+            title: "Quotation Reminders",
+            value: notifications.quotationReminders,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              notifications: NotificationSettings(
+                pushNotification: notifications.pushNotification,
+                emailNotification: notifications.emailNotification,
+                quotationReminders: value,
+                projectDeadlines: notifications.projectDeadlines,
+                backupAlerts: notifications.backupAlerts,
+              ),
+            ),
+          ),
+          _buildSwitchRow(
+            title: "Project Deadlines",
+            value: notifications.projectDeadlines,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              notifications: NotificationSettings(
+                pushNotification: notifications.pushNotification,
+                emailNotification: notifications.emailNotification,
+                quotationReminders: notifications.quotationReminders,
+                projectDeadlines: value,
+                backupAlerts: notifications.backupAlerts,
+              ),
+            ),
+          ),
+          _buildSwitchRow(
+            title: "Backup Alerts",
+            value: notifications.backupAlerts,
+            onChanged: (value) => _updateSetting(
+              current: settings,
+              notifications: NotificationSettings(
+                pushNotification: notifications.pushNotification,
+                emailNotification: notifications.emailNotification,
+                quotationReminders: notifications.quotationReminders,
+                projectDeadlines: notifications.projectDeadlines,
+                backupAlerts: value,
+              ),
+            ),
+          ),
+          if (!canEditSettings) ...[
+            const SizedBox(height: 8),
+            Text(
+              "Only owners or admins can change these settings.",
+              style: GoogleFonts.openSans(
+                fontSize: 12,
+                color: ColorsApp.textColor.withOpacity(0.6),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSwitchRow({
+    required String title,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.openSans(
+            fontSize: 14,
+            color: ColorsApp.textColor,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        Switch.adaptive(
+          value: value,
+          onChanged: canEditSettings ? onChanged : null,
+          activeColor: ColorsApp.btnColor,
+        ),
+      ],
     );
   }
 }

@@ -1,38 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
-import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
+import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
+import 'package:wworker/Constant/colors.dart';
 
-class CreateBoardMaterialPage extends StatefulWidget {
-  const CreateBoardMaterialPage({super.key});
+class CreateGlobalBoardMaterialPage extends StatefulWidget {
+  const CreateGlobalBoardMaterialPage({super.key});
 
   @override
-  State<CreateBoardMaterialPage> createState() => _CreateBoardMaterialPageState();
+  State<CreateGlobalBoardMaterialPage> createState() =>
+      _CreateGlobalBoardMaterialPageState();
 }
 
-class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
+class _CreateGlobalBoardMaterialPageState
+    extends State<CreateGlobalBoardMaterialPage> {
   final _formKey = GlobalKey<FormState>();
-  final MaterialService _materialService = MaterialService();
+  final PlatformOwnerService _service = PlatformOwnerService();
 
-  // Controllers
-  final TextEditingController _nameController = TextEditingController(text: 'Board');
-  final TextEditingController _standardWidthController = TextEditingController();
-  final TextEditingController _standardLengthController = TextEditingController();
-  final TextEditingController _pricePerSqmController = TextEditingController();
-  final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
+  final TextEditingController _nameController =
+      TextEditingController(text: 'Board');
+  final TextEditingController _standardWidthController =
+      TextEditingController();
+  final TextEditingController _standardLengthController =
+      TextEditingController();
+  final TextEditingController _pricePerSqmController =
+      TextEditingController();
+  final TextEditingController _wasteThresholdController =
+      TextEditingController(text: '0.75');
 
   String _standardUnit = 'inches';
   String _thicknessUnit = 'mm';
   String? _imagePath;
   bool isCreating = false;
 
-  // Board types and thicknesses
   List<BoardType> boardTypes = [];
   List<ThicknessOption> commonThicknesses = [];
 
   @override
   void initState() {
     super.initState();
-    // Pre-populate common board types
     boardTypes = [
       BoardType(name: 'Mdf', pricePerSqm: null),
       BoardType(name: 'Hdf', pricePerSqm: null),
@@ -48,7 +53,6 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       BoardType(name: 'Halfinch_plywood', pricePerSqm: null),
     ];
 
-    // Pre-populate common thicknesses for boards
     commonThicknesses = [
       ThicknessOption(thickness: 6),
       ThicknessOption(thickness: 9),
@@ -62,7 +66,8 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   Future<void> _createMaterial() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final typesWithPrices = boardTypes.where((t) => t.pricePerSqm != null).toList();
+    final typesWithPrices =
+        boardTypes.where((t) => t.pricePerSqm != null).toList();
     if (typesWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -85,29 +90,31 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
 
     setState(() => isCreating = true);
 
-    final request = {
-      'name': _nameController.text.trim(),
-      'category': 'BOARD',
-      if (_imagePath != null) 'imagePath': _imagePath,
-      'standardWidth': double.parse(_standardWidthController.text),
-      'standardLength': double.parse(_standardLengthController.text),
-      'standardUnit': _standardUnit,
-      'pricePerSqm': _pricePerSqmController.text.isNotEmpty 
-          ? double.parse(_pricePerSqmController.text) 
+    final result = await _service.createGlobalMaterial(
+      name: _nameController.text.trim(),
+      category: 'BOARD',
+      imagePath: _imagePath,
+      standardWidth: double.parse(_standardWidthController.text),
+      standardLength: double.parse(_standardLengthController.text),
+      standardUnit: _standardUnit,
+      pricePerSqm: _pricePerSqmController.text.isNotEmpty
+          ? double.parse(_pricePerSqmController.text)
           : 0,
-      'pricingUnit': 'sqm',
-      'wasteThreshold': double.parse(_wasteThresholdController.text),
-      'types': boardTypes.map((t) => {
-        'name': t.name,
-        if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
-      }).toList(),
-      'commonThicknesses': commonThicknesses.map((t) => {
-        'thickness': t.thickness,
-        'unit': _thicknessUnit,
-      }).toList(),
-    };
-
-    final result = await _materialService.createMaterial(request);
+      pricingUnit: 'sqm',
+      wasteThreshold: double.parse(_wasteThresholdController.text),
+      types: boardTypes
+          .map((t) => {
+                'name': t.name,
+                if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
+              })
+          .toList(),
+      commonThicknesses: commonThicknesses
+          .map((t) => {
+                'thickness': t.thickness,
+                'unit': _thicknessUnit,
+              })
+          .toList(),
+    );
 
     setState(() => isCreating = false);
 
@@ -140,10 +147,10 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             decoration: InputDecoration(
               labelText: 'Thickness *',
               border: const OutlineInputBorder(),
-              hintText: 'e.g., 12',
+              hintText: _thicknessUnit == 'mm' ? 'e.g., 18' : 'e.g., 0.75',
               suffix: Text(_thicknessUnit),
             ),
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
           ),
           actions: [
             TextButton(
@@ -156,13 +163,14 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                 if (value != null) {
                   setState(() {
                     commonThicknesses.add(ThicknessOption(thickness: value));
-                    commonThicknesses.sort((a, b) => a.thickness.compareTo(b.thickness));
+                    commonThicknesses
+                        .sort((a, b) => a.thickness.compareTo(b.thickness));
                   });
                   Navigator.pop(context);
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
+                backgroundColor: ColorsApp.btnColor,
                 foregroundColor: Colors.white,
               ),
               child: const Text('Add'),
@@ -173,139 +181,12 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
     );
   }
 
-  void _addBoardType() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final nameController = TextEditingController();
-        final priceController = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('Add Board Type'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Type Name *',
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., Plywood',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price per m² (optional)',
-                  border: OutlineInputBorder(),
-                  prefixText: '₦',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  setState(() {
-                    boardTypes.add(
-                      BoardType(
-                        name: nameController.text.trim(),
-                        pricePerSqm: priceController.text.isNotEmpty
-                            ? double.tryParse(priceController.text)
-                            : null,
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _editBoardType(int index) {
-    final type = boardTypes[index];
-    final nameController = TextEditingController(text: type.name);
-    final priceController = TextEditingController(
-      text: type.pricePerSqm?.toString() ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Board Type'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Type Name *',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price per m²',
-                  border: OutlineInputBorder(),
-                  prefixText: '₦',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() => boardTypes.removeAt(index));
-                Navigator.pop(context);
-              },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  boardTypes[index] = BoardType(
-                    name: nameController.text.trim(),
-                    pricePerSqm: priceController.text.isNotEmpty
-                        ? double.tryParse(priceController.text)
-                        : null,
-                  );
-                });
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
+  void _updateTypePrice(int index, String value) {
+    setState(() {
+      boardTypes[index] = boardTypes[index].copyWith(
+        pricePerSqm: value.isEmpty ? null : double.tryParse(value),
+      );
+    });
   }
 
   @override
@@ -313,12 +194,12 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Board Material",
           style: TextStyle(
-            color: Color(0xFF302E2E),
+            color: Colors.white,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -346,7 +227,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.view_module, color: const Color(0xFFD2691E)),
+                  const Icon(Icons.view_module, color: Color(0xFFD2691E)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -361,7 +242,6 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
               ),
             ),
             const SizedBox(height: 20),
-
             _buildSectionCard(
               'Basic Information',
               [
@@ -377,7 +257,6 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
               ],
             ),
             const SizedBox(height: 16),
-
             _buildSectionCard(
               'Standard Sheet Size',
               [
@@ -426,15 +305,14 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                     DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
                     DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
                   ],
-                  onChanged: (value) => setState(() => _standardUnit = value!),
+                  onChanged: (value) =>
+                      setState(() => _standardUnit = value!),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-
             _buildThicknessSection(),
             const SizedBox(height: 16),
-
             _buildSectionCard(
               'Base Pricing (Optional)',
               [
@@ -461,16 +339,14 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
               ],
             ),
             const SizedBox(height: 16),
-
             _buildBoardTypesSection(),
             const SizedBox(height: 32),
-
             SizedBox(
               height: 50,
               child: ElevatedButton(
                 onPressed: isCreating ? null : _createMaterial,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFA16438),
+                  backgroundColor: ColorsApp.btnColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -496,92 +372,6 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildThicknessSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Available Thicknesses',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF302E2E),
-                ),
-              ),
-              Row(
-                children: [
-                  DropdownButton<String>(
-                    value: _thicknessUnit,
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'mm', child: Text('mm')),
-                      DropdownMenuItem(value: 'inches', child: Text('inches')),
-                    ],
-                    onChanged: (value) => setState(() => _thicknessUnit = value!),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: _addThickness,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (commonThicknesses.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'No thicknesses added',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: commonThicknesses.asMap().entries.map((entry) {
-                final index = entry.key;
-                final thickness = entry.value;
-                return Chip(
-                  label: Text('${thickness.thickness}$_thicknessUnit'),
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () {
-                    setState(() => commonThicknesses.removeAt(index));
-                  },
-                  backgroundColor: const Color(0xFFA16438).withOpacity(0.1),
-                  labelStyle: const TextStyle(
-                    color: Color(0xFFA16438),
-                    fontWeight: FontWeight.w500,
-                  ),
-                );
-              }).toList(),
-            ),
-        ],
       ),
     );
   }
@@ -618,7 +408,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
     );
   }
 
-  Widget _buildBoardTypesSection() {
+  Widget _buildThicknessSection() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -639,7 +429,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Board Types',
+                'Available Thicknesses',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -647,97 +437,112 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                 ),
               ),
               TextButton.icon(
-                onPressed: _addBoardType,
+                onPressed: _addThickness,
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add Type'),
+                label: const Text('Add'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFD2691E),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          if (boardTypes.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'No board types added',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              ),
+          DropdownButtonFormField<String>(
+            value: _thicknessUnit,
+            decoration: const InputDecoration(
+              labelText: 'Thickness Unit',
+              border: OutlineInputBorder(),
+            ),
+            items: const [
+              DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
+              DropdownMenuItem(value: 'inches', child: Text('Inches')),
+              DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
+            ],
+            onChanged: (value) => setState(() => _thicknessUnit = value!),
+          ),
+          const SizedBox(height: 12),
+          if (commonThicknesses.isEmpty)
+            const Text(
+              'No thickness added yet.',
+              style: TextStyle(color: Colors.grey),
             )
           else
-            ...boardTypes.asMap().entries.map((entry) {
-              final index = entry.key;
-              final type = entry.value;
-              return GestureDetector(
-                onTap: () => _editBoardType(index),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  margin: const EdgeInsets.only(bottom: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey[200]!),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              type.name,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (type.pricePerSqm != null)
-                              Text(
-                                '₦${_formatNumber(type.pricePerSqm!)} per m²',
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: Color(0xFFA16438),
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              )
-                            else
-                              const Text(
-                                'No price set',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      Icon(Icons.edit, size: 18, color: Colors.grey[600]),
-                    ],
-                  ),
-                ),
-              );
-            }),
+            Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: commonThicknesses.map((thickness) {
+                return Chip(
+                  label: Text('${thickness.thickness} $_thicknessUnit'),
+                  onDeleted: () => setState(() {
+                    commonThicknesses.remove(thickness);
+                  }),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
   }
 
-  String _formatNumber(double number) {
-    return number.toStringAsFixed(2).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]},',
-        );
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _standardWidthController.dispose();
-    _standardLengthController.dispose();
-    _pricePerSqmController.dispose();
-    _wasteThresholdController.dispose();
-    super.dispose();
+  Widget _buildBoardTypesSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Board Types & Prices',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF302E2E),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Column(
+            children: boardTypes.asMap().entries.map((entry) {
+              final index = entry.key;
+              final type = entry.value;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(type.name),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 120,
+                      child: TextFormField(
+                        initialValue: type.pricePerSqm?.toString() ?? '',
+                        decoration: const InputDecoration(
+                          prefixText: '₦',
+                          hintText: 'Price',
+                          border: OutlineInputBorder(),
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (value) => _updateTypePrice(index, value),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -746,6 +551,10 @@ class BoardType {
   final double? pricePerSqm;
 
   BoardType({required this.name, this.pricePerSqm});
+
+  BoardType copyWith({double? pricePerSqm}) {
+    return BoardType(name: name, pricePerSqm: pricePerSqm);
+  }
 }
 
 class ThicknessOption {
