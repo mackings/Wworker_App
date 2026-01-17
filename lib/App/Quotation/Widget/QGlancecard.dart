@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class QuoteGlanceCard extends StatelessWidget {
   final String imageUrl;
@@ -76,6 +77,9 @@ class QuoteGlanceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final formatter = NumberFormat.decimalPattern();
+    final costLabel = formatter.format(costPrice.round());
+    final sellingLabel = formatter.format(sellingPrice.round());
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
@@ -134,7 +138,7 @@ class QuoteGlanceCard extends StatelessWidget {
                   // 💰 Cost Price
                   _buildRow(
                     'Cost Price',
-                    "₦${costPrice.toStringAsFixed(2)}",
+                    "₦$costLabel",
                     bold: true,
                   ),
                   
@@ -164,7 +168,7 @@ class QuoteGlanceCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          "₦${sellingPrice.toStringAsFixed(2)}",
+                          "₦$sellingLabel",
                           style: const TextStyle(
                             color: Color(0xFFA16438),
                             fontSize: 14,

@@ -13,7 +13,6 @@ import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/App/Quotation/Providers/ProductProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
-import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
@@ -21,6 +20,7 @@ import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/App/Sales/Views/salesHome.dart';
 import 'package:wworker/App/Staffing/View/Notification.dart';
 import 'package:wworker/App/Staffing/View/addCompany.dart';
+import 'package:wworker/App/Database/View/database_home.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -326,7 +326,7 @@ class _HomeState extends ConsumerState<Home> {
                             _showNoCompanyDialog(context);
                             return;
                           }
-                          Nav.push(AllClientQuotations());
+                          Nav.push(const DatabaseHomePage());
                         },
                       ),
                       DashboardIcon(

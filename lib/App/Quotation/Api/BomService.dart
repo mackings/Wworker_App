@@ -34,13 +34,15 @@ class BOMService {
   }
 
   // 🟢 1️⃣ CREATE BOM (Materials)
-  // 🟢 1️⃣ CREATE BOM (Materials)
   Future<Map<String, dynamic>> createBOM({
+    required Map<String, dynamic> product,
     required String name,
     required String description,
-    required String productId, // ✅ Added required productId
     required List<Map<String, dynamic>> materials,
     List<Map<String, dynamic>>? additionalCosts, // ✅ Optional additionalCosts
+    required Map<String, dynamic> pricing,
+    Map<String, dynamic>? expectedDuration,
+    String? dueDate,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -51,19 +53,22 @@ class BOMService {
       }
 
       final body = {
+        "product": product,
         "name": name,
         "description": description,
-        "productId": productId, // ✅ Added productId to request body
         "materials": materials,
         if (additionalCosts != null && additionalCosts.isNotEmpty)
           "additionalCosts": additionalCosts, // ✅ Include if provided
+        "pricing": pricing,
+        if (expectedDuration != null) "expectedDuration": expectedDuration,
+        if (dueDate != null) "dueDate": dueDate,
       };
 
-      print("📤 [REQUEST] => POST ${_dio.options.baseUrl}/api/bom/");
+      print("📤 [REQUEST] => POST ${_dio.options.baseUrl}/api/bom");
       print("📦 [DATA] => $body");
 
       final response = await _dio.post(
-        "/api/bom/",
+        "/api/bom",
         data: body,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -108,7 +113,11 @@ class BOMService {
   }
 
   // 🟢 3️⃣ GET ALL BOMs
-  Future<Map<String, dynamic>> getAllBOMs() async {
+  Future<Map<String, dynamic>> getAllBOMs({
+    int page = 1,
+    int limit = 50,
+    String? search,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
@@ -118,7 +127,12 @@ class BOMService {
       }
 
       final response = await _dio.get(
-        "/api/bom/",
+        "/api/bom",
+        queryParameters: {
+          "page": page,
+          "limit": limit,
+          if (search != null && search.trim().isNotEmpty) "search": search.trim(),
+        },
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -186,49 +200,3 @@ Future<Map<String, dynamic>> createQuotation({
   }
 }
 
-
-
-
-
-  // Future<Map<String, dynamic>> createQuotation({
-  //   required String clientName,
-  //   required String clientAddress,
-  //   required String nearestBusStop,
-  //   required String phoneNumber,
-  //   required String email,
-  //   required String description,
-  //   required List<Map<String, dynamic>> items,
-  //   required Map<String, dynamic> service,
-  //   required double discount,
-  // }) async {
-  //   try {
-  //     final prefs = await SharedPreferences.getInstance();
-  //     final token = prefs.getString("token");
-
-  //     if (token == null) {
-  //       return {"success": false, "message": "No auth token found"};
-  //     }
-
-  //     final body = {
-  //       "clientName": clientName,
-  //       "clientAddress": clientAddress,
-  //       "nearestBusStop": nearestBusStop,
-  //       "phoneNumber": phoneNumber,
-  //       "email": email,
-  //       "description": description,
-  //       "items": items,
-  //       "service": service,
-  //       "discount": discount,
-  //     };
-
-  //     final response = await _dio.post(
-  //       "/api/quotation",
-  //       data: body,
-  //       options: Options(headers: {"Authorization": "Bearer $token"}),
-  //     );
-
-  //     return response.data;
-  //   } on DioException catch (e) {
-  //     return _handleError(e);
-  //   }
-  // }

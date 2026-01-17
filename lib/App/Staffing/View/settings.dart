@@ -185,7 +185,7 @@ class _SettingsState extends ConsumerState<Settings> {
                 const SizedBox(height: 12),
 
                 _buildModernSettingCard(
-                  title: 'System Settings',
+                  title: 'Material Upload',
                   subtitle: 'Configure materials and categories',
                   icon: Icons.settings_applications,
                   iconColor: Colors.blue,

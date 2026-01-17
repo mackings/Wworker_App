@@ -106,6 +106,32 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     }
   }
 
+  int _statsCrossAxisCount(double width) {
+    if (width >= 1000) return 4;
+    if (width >= 700) return 3;
+    return 2;
+  }
+
+  double _statsAspectRatio(double width) {
+    if (width >= 1000) return 1.6;
+    if (width >= 700) return 1.35;
+    if (width >= 400) return 1.2;
+    return 1.05;
+  }
+
+  int _actionsCrossAxisCount(double width) {
+    if (width >= 1000) return 4;
+    if (width >= 700) return 3;
+    return 2;
+  }
+
+  double _actionsAspectRatio(double width, int columns) {
+    final spacing = 12.0;
+    final tileWidth = (width - (columns - 1) * spacing) / columns;
+    final tileHeight = width < 360 ? 56.0 : width < 700 ? 62.0 : 70.0;
+    return tileWidth / tileHeight;
+  }
+
 
 
   @override
@@ -253,19 +279,19 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       child: SlideTransition(
         position: _slideAnimation,
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Stats Overview Cards
               _buildStatsOverview(),
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 0),
 
               // Quick Actions Grid
               _buildQuickActionsGrid(),
 
-              const SizedBox(height: 24),
+            //  const SizedBox(height: 6),
 
               // Pending Products Section
               if (activity != null && activity!.pendingProducts.isNotEmpty) ...[
@@ -275,9 +301,9 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   icon: Icons.pending_actions,
                   onSeeAll: () => Nav.push(const PendingProductsPage()),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 2),
                 _buildPendingProductsList(),
-                const SizedBox(height: 24),
+              const SizedBox(height: 0),
               ],
 
               // Recent Companies
@@ -288,11 +314,11 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   icon: Icons.business,
                   onSeeAll: () => Nav.push(const AllCompaniesPage()),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 2),
                 _buildRecentCompaniesList(),
               ],
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -302,64 +328,69 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
 
   Widget _buildStatsOverview() {
     final numberFormat = NumberFormat.compact();
-    final screenWidth = MediaQuery.of(context).size.width;
-    final cardAspectRatio = screenWidth < 360 ? 0.95 : 1.2;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = _statsCrossAxisCount(width);
+        final cardAspectRatio = _statsAspectRatio(width);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Platform Overview',
-          style: GoogleFonts.openSans(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: ColorsApp.textColor,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: cardAspectRatio,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildAnimatedStatCard(
-              'Companies',
-              numberFormat.format(stats!.companies.total),
-              '${stats!.companies.active} active',
-              Icons.business_center,
-              const Color(0xFF667EEA),
-              0,
-            ),
-            _buildAnimatedStatCard(
-              'Products',
-              numberFormat.format(stats!.products.total),
-              '${stats!.products.pending} pending',
-              Icons.inventory_2_outlined,
-              const Color(0xFFF59E0B),
-              100,
-            ),
-            _buildAnimatedStatCard(
-              'Orders',
-              numberFormat.format(stats!.orders),
-              'Total orders',
-              Icons.shopping_cart_outlined,
-              const Color(0xFF10B981),
-              200,
-            ),
-            _buildAnimatedStatCard(
-              'Users',
-              numberFormat.format(stats!.users),
-              'Platform users',
-              Icons.people_outline,
-              const Color(0xFF8B5CF6),
-              300,
+            // Text(
+            //   'Platform Overview',
+            //   style: GoogleFonts.openSans(
+            //     fontSize: 20,
+            //     fontWeight: FontWeight.bold,
+            //     color: ColorsApp.textColor,
+            //   ),
+            // ),
+            // const SizedBox(height: 0),
+            GridView.count(
+              crossAxisCount: columns,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+              childAspectRatio: cardAspectRatio,
+              children: [
+                _buildAnimatedStatCard(
+                  'Companies',
+                  numberFormat.format(stats!.companies.total),
+                  '${stats!.companies.active} active',
+                  Icons.business_center,
+                  const Color(0xFF667EEA),
+                  0,
+                ),
+                _buildAnimatedStatCard(
+                  'Products',
+                  numberFormat.format(stats!.products.total),
+                  '${stats!.products.pending} pending',
+                  Icons.inventory_2_outlined,
+                  const Color(0xFFF59E0B),
+                  100,
+                ),
+                _buildAnimatedStatCard(
+                  'Orders',
+                  numberFormat.format(stats!.orders),
+                  'Total orders',
+                  Icons.shopping_cart_outlined,
+                  const Color(0xFF10B981),
+                  200,
+                ),
+                _buildAnimatedStatCard(
+                  'Users',
+                  numberFormat.format(stats!.users),
+                  'Platform users',
+                  Icons.people_outline,
+                  const Color(0xFF8B5CF6),
+                  300,
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -446,72 +477,81 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
   }
 
   Widget _buildQuickActionsGrid() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Quick Actions',
-          style: GoogleFonts.openSans(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: ColorsApp.textColor,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 2.5,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        final columns = _actionsCrossAxisCount(width);
+        final aspectRatio = _actionsAspectRatio(width, columns);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildActionCard(
-              'Review Products',
-              Icons.approval,
-              const Color(0xFFF59E0B),
-              () => Nav.push(const PendingProductsPage()),
-              badge: stats!.products.pending > 0 ? stats!.products.pending : null,
+            Text(
+              'Quick Actions',
+              style: GoogleFonts.openSans(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: ColorsApp.textColor,
+              ),
             ),
-            _buildActionCard(
-              'All Products',
-              Icons.grid_view,
-              const Color(0xFF667EEA),
-              () => Nav.push(const AllProductsView()),
-            ),
-            _buildActionCard(
-              'Companies',
-              Icons.business,
-              const Color(0xFF10B981),
-              () => Nav.push(const AllCompaniesPage()),
-            ),
-            _buildActionCard(
-              'Analytics',
-              Icons.analytics,
-              const Color(0xFF8B5CF6),
-              () => Nav.push(const PlatformAnalytics()),
-            ),
-            _buildActionCard(
-              'Review Materials',
-              Icons.science,
-              const Color(0xFFEC4899),
-              () => Nav.push(const PendingMaterialsPage()),
-            ),
-            _buildActionCard(
-              'Create Material',
-              Icons.add_circle,
-              const Color(0xFFEC4899),
-              () => Nav.push(const CreateGlobalMaterial()),
-            ),
-            _buildActionCard(
-              'Create Product',
-              Icons.add_box,
-              const Color(0xFF06B6D4),
-              () => Nav.push(const CreateGlobalProduct()),
+           // const SizedBox(height: 0),
+            GridView.count(
+              crossAxisCount: columns,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: aspectRatio,
+              children: [
+                _buildActionCard(
+                  'Review Products',
+                  Icons.approval,
+                  const Color(0xFFF59E0B),
+                  () => Nav.push(const PendingProductsPage()),
+                  badge:
+                      stats!.products.pending > 0 ? stats!.products.pending : null,
+                ),
+                _buildActionCard(
+                  'All Products',
+                  Icons.grid_view,
+                  const Color(0xFF667EEA),
+                  () => Nav.push(const AllProductsView()),
+                ),
+                _buildActionCard(
+                  'Companies',
+                  Icons.business,
+                  const Color(0xFF10B981),
+                  () => Nav.push(const AllCompaniesPage()),
+                ),
+                _buildActionCard(
+                  'Analytics',
+                  Icons.analytics,
+                  const Color(0xFF8B5CF6),
+                  () => Nav.push(const PlatformAnalytics()),
+                ),
+                _buildActionCard(
+                  'Review Materials',
+                  Icons.science,
+                  const Color(0xFFEC4899),
+                  () => Nav.push(const PendingMaterialsPage()),
+                ),
+                _buildActionCard(
+                  'Create Material',
+                  Icons.add_circle,
+                  const Color(0xFFEC4899),
+                  () => Nav.push(const CreateGlobalMaterial()),
+                ),
+                _buildActionCard(
+                  'Create Product',
+                  Icons.add_box,
+                  const Color(0xFF06B6D4),
+                  () => Nav.push(const CreateGlobalProduct()),
+                ),
+              ],
             ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 

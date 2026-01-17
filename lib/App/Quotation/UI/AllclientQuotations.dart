@@ -15,11 +15,13 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 class AllClientQuotations extends ConsumerStatefulWidget {
   final bool isForInvoice;
   final String? clientName;
+  final bool isImportMode;
 
   const AllClientQuotations({
     super.key,
     this.isForInvoice = false,
     this.clientName,
+    this.isImportMode = false,
   });
 
   @override
@@ -83,7 +85,9 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
         title: CustomText(
           title: widget.isForInvoice
               ? "Select Quotation for Invoice"
-              : "Quotations",
+              : widget.isImportMode
+                  ? "Import BOMs"
+                  : "Quotations",
         ),
       ),
       body: _buildBody(),
@@ -153,7 +157,9 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
             Text(
               widget.isForInvoice
                   ? 'No quotations found for ${widget.clientName}'
-                  : 'No quotations found.',
+                  : widget.isImportMode
+                      ? 'No quotations available for import.'
+                      : 'No quotations found.',
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
@@ -164,7 +170,9 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
             Text(
               widget.isForInvoice
                   ? 'Create a quotation for this client first'
-                  : 'Create a quotation to get started',
+                  : widget.isImportMode
+                      ? 'Create quotations to import them here'
+                      : 'Create a quotation to get started',
               style: TextStyle(fontSize: 14, color: Colors.grey[600]),
             ),
           ],

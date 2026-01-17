@@ -30,6 +30,7 @@ class BOMSummary extends ConsumerStatefulWidget {
 class _BOMSummaryState extends ConsumerState<BOMSummary> {
   final BOMService _bomService = BOMService();
   bool isLoading = false;
+  bool isSavingBom = false;
 
   // Overhead Cost State
   List<Map<String, dynamic>> overheadCosts = [];
@@ -588,7 +589,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("✅ Quotation created successfully!"),
+            content: Text("BOM created successfully!"),
             backgroundColor: Colors.green,
           ),
         );
@@ -607,6 +608,132 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
         );
       }
+    }
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString());
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  Future<void> _saveBom(
+    List<Map<String, dynamic>> materials,
+    List<Map<String, dynamic>> additionalCosts,
+  ) async {
+    if (isSavingBom) return;
+
+    final pricing = calculatePricing(materials, additionalCosts);
+    final quotationState = ref.read(quotationSummaryProvider);
+    final productData = quotationState["product"] as Map<String, dynamic>?;
+
+    if (productData == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Product data not found."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final productId =
+        productData["id"] ?? productData["_id"] ?? productData["productId"];
+
+    if (productId == null || productId.toString().trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("❌ Product ID not found."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
+
+    final mappedMaterials = materials.map((item) {
+      final price = _toDouble(item["Price"]);
+      final qty = _toInt(item["quantity"]) ?? 1;
+      return {
+        "name": item["Materialname"] ?? item["Product"] ?? "Material",
+        "type": item["Product"] ?? item["Materialname"] ?? "",
+        "width": _toDouble(item["Width"]),
+        "length": _toDouble(item["Length"]),
+        "thickness": _toDouble(item["Thickness"]),
+        "unit": item["Unit"],
+        "squareMeter": _toDouble(item["Sqm"]),
+        "price": price,
+        "quantity": qty,
+        "description": item["description"] ?? item["Materialname"] ?? "",
+        "subtotal": price != null ? price * qty : null,
+      };
+    }).toList();
+
+    final mappedCosts = additionalCosts.map((cost) {
+      return {
+        "name": cost["name"] ?? "",
+        "amount": _toDouble(cost["amount"]) ?? 0,
+        "description": cost["description"] ?? "",
+      };
+    }).toList();
+
+    final pricingPayload = {
+      "pricingMethod": pricingMethod,
+      "markupPercentage": markupPercentage,
+      "materialsTotal": pricing["materialTotal"] ?? 0,
+      "additionalTotal": pricing["additionalTotal"] ?? 0,
+      "overheadCost": pricing["overheadCost"] ?? 0,
+      "costPrice": pricing["costPrice"] ?? 0,
+      "sellingPrice": pricing["sellingPrice"] ?? 0,
+    };
+
+    final expectedDuration = selectedDuration == null
+        ? null
+        : {
+            "value": int.tryParse(selectedDuration!) ?? 1,
+            "unit": selectedPeriod,
+          };
+
+    setState(() => isSavingBom = true);
+
+    final response = await _bomService.createBOM(
+      product: {
+        "productId": productId.toString(),
+        "name": productData["name"] ?? "Product",
+        "description": productData["description"] ?? "",
+        "image": productData["image"] ?? "",
+      },
+      name: productData["name"] ?? "BOM",
+      description: productData["description"] ?? "",
+      materials: mappedMaterials,
+      additionalCosts: mappedCosts,
+      pricing: pricingPayload,
+      expectedDuration: expectedDuration,
+    );
+
+    if (!mounted) return;
+    setState(() => isSavingBom = false);
+
+    if (response["success"] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("✅ BOM saved successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(response["message"] ?? "❌ Failed to save BOM"),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     }
   }
 
@@ -715,6 +842,17 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               _buildCostBreakdownSection(pricing),
 
               const SizedBox(height: 40),
+
+              CustomButton(
+                text: "Save BOM",
+                loading: isSavingBom,
+                outlined: true,
+                onPressed: isSavingBom
+                    ? null
+                    : () => _saveBom(materials, additionalCosts),
+              ),
+
+              const SizedBox(height: 12),
 
               CustomButton(
                 text: "Continue",
