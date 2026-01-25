@@ -22,7 +22,9 @@ import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
 class AddMaterial extends ConsumerStatefulWidget {
-  const AddMaterial({super.key});
+  final bool autoPopAfterAdd;
+
+  const AddMaterial({super.key, this.autoPopAfterAdd = false});
 
   @override
   ConsumerState<ConsumerStatefulWidget> createState() => _AddMaterialState();
@@ -127,8 +129,12 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 child: AddMaterialCard(
                   title: "Material Details",
                   icon: Icons.add_circle_outline,
+                  showHeader: false,
                   onAddItem: (item) async {
                     await notifier.addMaterial(item);
+                    if (widget.autoPopAfterAdd && mounted) {
+                      Navigator.pop(context);
+                    }
                   },
                 ),
               ),
@@ -164,6 +170,7 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 return ItemsCard(
                   item: displayItem,
                   showPriceIncrementToggle: true,
+                  useBomStyle: true,
                   isPriceIncrementDisabled: isDisabled,
                   onPriceIncrementToggle: (value) {
                     final updated = {...item, "disableIncrement": value};

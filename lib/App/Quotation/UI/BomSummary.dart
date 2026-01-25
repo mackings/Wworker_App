@@ -594,9 +594,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
         );
 
-        Nav.pop();
-        Nav.pop();
-        Nav.pop();
+        Nav.offAll(const AllQuotations());
       }
     } catch (e) {
       debugPrint("⚠️ Error creating quotation: $e");

@@ -197,4 +197,29 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
 
     await prefs.setString(key, jsonEncode(quotations));
   }
+
+  Future<bool> updateQuotationById(
+    String id,
+    Map<String, dynamic> updatedQuotation,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    if (data == null) return false;
+
+    final quotations = List<Map<String, dynamic>>.from(jsonDecode(data));
+    final index = quotations.indexWhere((q) => q["id"] == id);
+    if (index == -1) return false;
+
+    quotations[index] = {
+      ...quotations[index],
+      ...updatedQuotation,
+      "id": id,
+    };
+
+    await prefs.setString(key, jsonEncode(quotations));
+    return true;
+  }
 }

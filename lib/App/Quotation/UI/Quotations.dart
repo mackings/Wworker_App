@@ -8,14 +8,19 @@ import 'package:wworker/App/Quotation/UI/AddMaterial.dart';
 import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
+import 'package:wworker/App/Quotation/Api/materialService.dart';
+import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
+import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
 import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 
@@ -354,6 +359,915 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     return totalCost * ratio;
   }
 
+  Future<void> _showBomBreakdownSheet(
+    Map<String, dynamic> quotation,
+    int index,
+  ) async {
+    final product = Map<String, dynamic>.from(quotation["product"] ?? {});
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.7,
+          maxChildSize: 0.98,
+          builder: (context, scrollController) {
+            return StatefulBuilder(
+              builder: (context, setSheetState) {
+                return Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                product["name"]?.toString().isNotEmpty == true
+                                    ? product["name"].toString()
+                                    : "Edit BOM",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF302E2E),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          children: [
+                            _buildEditSectionHeader(
+                              title: "Materials",
+                              count: materials.length,
+                              icon: Icons.layers_outlined,
+                              onAdd: () async {
+                                Navigator.pop(context);
+                                await _openMaterialEditorForBom(quotation);
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            if (materials.isEmpty)
+                              _buildEmptySection("No materials added yet.")
+                            else
+                              ...materials.asMap().entries.map((entry) {
+                                final idx = entry.key;
+                                final item = entry.value;
+                                return ItemsCard(
+                                  item: item,
+                                  useBomStyle: true,
+                                  showPriceIncrementToggle: true,
+                                  isPriceIncrementDisabled:
+                                      item["disableIncrement"] == true,
+                                  onPriceIncrementToggle: (value) {
+                                    setSheetState(() {
+                                      materials[idx] = {
+                                        ...item,
+                                        "disableIncrement": value,
+                                      };
+                                    });
+                                  },
+                                  onEdit: () async {
+                                    final updated =
+                                        await _showMaterialFormSheet(
+                                      initial: item,
+                                    );
+                                    if (updated == null) return;
+                                    setSheetState(() {
+                                      materials[idx] = updated;
+                                    });
+                                  },
+                                  onDelete: () {
+                                    setSheetState(() {
+                                      materials.removeAt(idx);
+                                    });
+                                  },
+                                );
+                              }),
+                            const SizedBox(height: 16),
+                            _buildEditSectionHeader(
+                              title: "Additional Costs",
+                              count: additionalCosts.length,
+                              icon: Icons.attach_money_outlined,
+                              onAdd: () async {
+                                final newItem =
+                                    await _showAdditionalCostFormSheet();
+                                if (newItem == null) return;
+                                setSheetState(() {
+                                  additionalCosts.add(newItem);
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 8),
+                            if (additionalCosts.isEmpty)
+                              _buildEmptySection("No additional costs added.")
+                            else
+                              ...additionalCosts.asMap().entries.map((entry) {
+                                final idx = entry.key;
+                                final item = entry.value;
+                                return ItemsCard(
+                                  item: item,
+                                  useBomStyle: true,
+                                  onEdit: () async {
+                                    final updated =
+                                        await _showAdditionalCostFormSheet(
+                                      initial: item,
+                                    );
+                                    if (updated == null) return;
+                                    setSheetState(() {
+                                      additionalCosts[idx] = updated;
+                                    });
+                                  },
+                                  onDelete: () {
+                                    setSheetState(() {
+                                      additionalCosts.removeAt(idx);
+                                    });
+                                  },
+                                );
+                              }),
+                            const SizedBox(height: 24),
+                            CustomButton(
+                              text: "Save Changes",
+                              onPressed: () async {
+                                final updated =
+                                    _buildUpdatedQuotationForSave(
+                                  quotation,
+                                  materials,
+                                  additionalCosts,
+                                );
+                                final id = quotation["id"] as String? ?? "";
+                                if (id.isEmpty) return;
+
+                                final success = await ref
+                                    .read(quotationSummaryProvider.notifier)
+                                    .updateQuotationById(id, updated);
+
+                                if (!mounted) return;
+                                Navigator.pop(context);
+                                if (success) {
+                                  await _loadAllQuotations();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("✅ BOM updated"),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Failed to update BOM"),
+                                    ),
+                                  );
+                                }
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _openMaterialEditorForBom(
+    Map<String, dynamic> quotation,
+  ) async {
+    final materialNotifier = ref.read(materialProvider.notifier);
+    final quotationId = quotation["id"] as String?;
+    if (quotationId == null || quotationId.isEmpty) return;
+
+    await materialNotifier.clearAll();
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+
+    for (final item in materials) {
+      await materialNotifier.addMaterial(item);
+    }
+    for (final cost in additionalCosts) {
+      await materialNotifier.addAdditionalCost(cost);
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddMaterial(autoPopAfterAdd: true),
+      ),
+    );
+
+    final updatedState = ref.read(materialProvider);
+    final updatedMaterials = List<Map<String, dynamic>>.from(
+      updatedState["materials"] ?? [],
+    );
+    final updatedCosts = List<Map<String, dynamic>>.from(
+      updatedState["additionalCosts"] ?? [],
+    );
+
+    final updatedPayload = _buildUpdatedQuotationForSave(
+      quotation,
+      updatedMaterials,
+      updatedCosts,
+    );
+
+    await ref
+        .read(quotationSummaryProvider.notifier)
+        .updateQuotationById(quotationId, updatedPayload);
+
+    await _loadAllQuotations();
+    if (!mounted) return;
+    final updatedIndex = allQuotations.indexWhere(
+      (q) => q["id"] == quotationId,
+    );
+    if (updatedIndex == -1) return;
+    final updatedQuotation = allQuotations[updatedIndex];
+    await _showBomBreakdownSheet(updatedQuotation, updatedIndex);
+  }
+
+  Map<String, dynamic> _buildUpdatedQuotationForSave(
+    Map<String, dynamic> quotation,
+    List<Map<String, dynamic>> materials,
+    List<Map<String, dynamic>> additionalCosts,
+  ) {
+    final updated = Map<String, dynamic>.from(quotation);
+    updated["materials"] = materials;
+    updated["additionalCosts"] = additionalCosts;
+
+    final baseCost = _getCostPrice({
+      ...quotation,
+      "materials": materials,
+      "additionalCosts": additionalCosts,
+    });
+    updated["costPrice"] = baseCost;
+
+    final existingCost =
+        (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
+    final existingSell =
+        (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
+    if (existingCost > 0 && existingSell > 0) {
+      final ratio = existingSell / existingCost;
+      updated["sellingPrice"] = baseCost * ratio;
+    } else {
+      updated["sellingPrice"] = baseCost;
+    }
+
+    return updated;
+  }
+
+  Widget _buildEditSectionHeader({
+    required String title,
+    required int count,
+    required IconData icon,
+    required VoidCallback onAdd,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, color: ColorsApp.btnColor, size: 18),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            "$title ($count)",
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF302E2E),
+            ),
+          ),
+        ),
+        TextButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, size: 18),
+          label: const Text("Add"),
+          style: TextButton.styleFrom(
+            foregroundColor: ColorsApp.btnColor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFormSectionLabel({
+    required IconData icon,
+    required String title,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: ColorsApp.btnColor),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: GoogleFonts.openSans(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF302E2E),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptySection(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        message,
+        textAlign: TextAlign.center,
+        style: const TextStyle(color: Colors.black54),
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showMaterialFormSheet({
+    Map<String, dynamic>? initial,
+  }) async {
+    final materialService = MaterialService();
+    MaterialCostModel? costCalculation;
+    bool isCalculating = false;
+    List<MaterialModel> availableMaterials = [];
+    String? resolvedMaterialId;
+
+    final nameController = TextEditingController(
+      text: initial?["Materialname"]?.toString() ?? "",
+    );
+    final widthController = TextEditingController(
+      text: initial?["Width"]?.toString() ?? "",
+    );
+    final lengthController = TextEditingController(
+      text: initial?["Length"]?.toString() ?? "",
+    );
+    final thicknessController = TextEditingController(
+      text: initial?["Thickness"]?.toString() ?? "",
+    );
+    final unitController = TextEditingController(
+      text: initial?["Unit"]?.toString() ?? "",
+    );
+    final sqmController = TextEditingController(
+      text: initial?["Sqm"]?.toString() ?? "",
+    );
+    final priceController = TextEditingController(
+      text: initial?["Price"]?.toString() ?? "",
+    );
+    final quantityController = TextEditingController(
+      text: initial?["quantity"]?.toString() ?? "1",
+    );
+    bool disableIncrement = initial?["disableIncrement"] == true;
+    String? unitValue =
+        unitController.text.trim().isEmpty ? null : unitController.text.trim();
+    const linearUnits = ["mm", "cm", "m", "ft", "in"];
+    double? latestPriceValue;
+
+    Future<String?> _resolveMaterialId() async {
+      if (resolvedMaterialId != null) return resolvedMaterialId;
+      if (availableMaterials.isEmpty) {
+        availableMaterials = await materialService.getMaterials();
+      }
+      final productName = initial?["Product"]?.toString() ?? "";
+      if (productName.isEmpty) return null;
+      try {
+        final match = availableMaterials.firstWhere(
+          (m) => m.name.toLowerCase() == productName.toLowerCase(),
+        );
+        resolvedMaterialId = match.id;
+      } catch (_) {
+        resolvedMaterialId = null;
+      }
+      return resolvedMaterialId;
+    }
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.6,
+          maxChildSize: 0.98,
+          expand: false,
+          builder: (context, scrollController) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(20),
+                  ),
+                ),
+                child: StatefulBuilder(
+                  builder: (context, setModalState) {
+                    Future<void> calculateCost() async {
+                      if (isCalculating) return;
+                      setModalState(() => isCalculating = true);
+                      final width =
+                          double.tryParse(widthController.text.trim());
+                      final length =
+                          double.tryParse(lengthController.text.trim());
+                      final unit = unitValue ?? unitController.text.trim();
+                      final quantity =
+                          int.tryParse(quantityController.text.trim()) ?? 1;
+
+                      if (width == null || length == null || unit.isEmpty) {
+                        setModalState(() => isCalculating = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content:
+                                Text("Enter width, length, and unit first."),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final materialId = await _resolveMaterialId();
+                      if (materialId == null || materialId.isEmpty) {
+                        setModalState(() => isCalculating = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              "Material not found. Please check the material name.",
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      final result = await materialService.calculateMaterialCost(
+                        materialId: materialId,
+                        requiredWidth: width,
+                        requiredLength: length,
+                        requiredUnit: unit,
+                        materialType:
+                            nameController.text.trim().isEmpty
+                                ? null
+                                : nameController.text.trim(),
+                        foamThickness:
+                            double.tryParse(thicknessController.text.trim()),
+                        quantity: quantity,
+                      );
+
+                      setModalState(() {
+                        isCalculating = false;
+                        costCalculation = result;
+                        if (result != null) {
+                          sqmController.text =
+                              result.dimensions.projectAreaSqm
+                                  .toStringAsFixed(2);
+                          latestPriceValue =
+                              result.pricing.totalMaterialCost.roundToDouble();
+                          priceController.text = NumberFormat.decimalPattern()
+                              .format(latestPriceValue!.toInt());
+                        }
+                      });
+                    }
+
+                    return Column(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: Text(
+                                "Edit Material",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF302E2E),
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(Icons.close),
+                              color: Colors.grey.shade600,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Expanded(
+                          child: SingleChildScrollView(
+                            controller: scrollController,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildFormSectionLabel(
+                                  icon: Icons.layers_outlined,
+                                  title: "Material Details",
+                                ),
+                                const SizedBox(height: 10),
+                                CustomTextField(
+                                  label: "Material Name",
+                                  controller: nameController,
+                                ),
+                                const SizedBox(height: 16),
+                                _buildFormSectionLabel(
+                                  icon: Icons.straighten_outlined,
+                                  title: "Dimensions",
+                                ),
+                                const SizedBox(height: 10),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Width",
+                                        controller: widthController,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Length",
+                                        controller: lengthController,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Thickness",
+                                        controller: thicknessController,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Unit",
+                                        isDropdown: true,
+                                        dropdownItems: linearUnits,
+                                        value: unitValue,
+                                        onChanged: (value) {
+                                          setModalState(() {
+                                            unitValue = value;
+                                            unitController.text =
+                                                value ?? "";
+                                          });
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Sqm",
+                                        controller: sqmController,
+                                        enabled: false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Quantity",
+                                        controller: quantityController,
+                                        keyboardType: TextInputType.number,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: CustomTextField(
+                                        label: "Price",
+                                        controller: priceController,
+                                        enabled: false,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text(
+                                      "Disable price increment",
+                                      style: TextStyle(
+                                        color: Color(0xFF302E2E),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Switch.adaptive(
+                                      value: disableIncrement,
+                                      onChanged: (value) {
+                                        setModalState(() {
+                                          disableIncrement = value;
+                                        });
+                                      },
+                                      activeColor: const Color(0xFF8B4513),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                if (isCalculating)
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF5F5F5),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Text(
+                                          "Calculating costs...",
+                                          style: GoogleFonts.openSans(
+                                            fontSize: 13,
+                                            color: const Color(0xFF7B7B7B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (!isCalculating)
+                                  CustomButton(
+                                    text: "Calculate",
+                                    outlined: true,
+                                    onPressed: calculateCost,
+                                  ),
+                                if (costCalculation != null) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFF3E0),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFFA16438),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          "Calculated Price",
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF302E2E),
+                                          ),
+                                        ),
+                                        Text(
+                                          "₦${priceController.text}",
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: Color(0xFFA16438),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 16),
+                                CustomButton(
+                                  text: "Save Changes",
+                                  onPressed: costCalculation == null
+                                      ? () {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                "Please calculate cost before saving.",
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      : () {
+                                          Navigator.pop(
+                                            context,
+                                            {
+                                              "Product":
+                                                  initial?["Product"] ?? "",
+                                              "Materialname":
+                                                  nameController.text.trim(),
+                                              "Width":
+                                                  widthController.text.trim(),
+                                              "Length":
+                                                  lengthController.text.trim(),
+                                              "Thickness": thicknessController
+                                                  .text
+                                                  .trim(),
+                                              "Unit":
+                                                  unitValue ??
+                                                      unitController.text
+                                                          .trim(),
+                                              "Sqm":
+                                                  sqmController.text.trim(),
+                                              "Price":
+                                                  latestPriceValue != null
+                                                      ? latestPriceValue!
+                                                          .toStringAsFixed(0)
+                                                      : priceController.text
+                                                          .trim()
+                                                          .replaceAll(
+                                                            ",",
+                                                            "",
+                                                          ),
+                                              "quantity": quantityController
+                                                      .text
+                                                      .trim()
+                                                      .isEmpty
+                                                  ? "1"
+                                                  : quantityController.text
+                                                      .trim(),
+                                              "disableIncrement":
+                                                  disableIncrement,
+                                            },
+                                          );
+                                        },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    return result;
+  }
+
+  Future<Map<String, dynamic>?> _showAdditionalCostFormSheet({
+    Map<String, dynamic>? initial,
+  }) async {
+    final typeController = TextEditingController(
+      text: initial?["type"]?.toString() ?? "",
+    );
+    final descriptionController = TextEditingController(
+      text: initial?["description"]?.toString() ?? "",
+    );
+    final amountController = TextEditingController(
+      text: initial?["amount"]?.toString() ?? "",
+    );
+
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    initial == null
+                        ? "Add Additional Cost"
+                        : "Edit Additional Cost",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF302E2E),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    label: "Cost Type",
+                    controller: typeController,
+                  ),
+                  const SizedBox(height: 12),
+                  CustomTextField(
+                    label: "Description",
+                    controller: descriptionController,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
+                  CustomTextField(
+                    label: "Amount",
+                    controller: amountController,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomButton(
+                    text:
+                        initial == null ? "Add Cost" : "Save Changes",
+                    onPressed: () {
+                      Navigator.pop(
+                        context,
+                        {
+                          "type": typeController.text.trim(),
+                          "description": descriptionController.text.trim(),
+                          "amount": amountController.text.trim(),
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen for provider updates
@@ -422,6 +1336,10 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                 currentQuantity,
                               ),
                               quantity: currentQuantity,
+                              onEdit: () => _showBomBreakdownSheet(
+                                quotation,
+                                index,
+                              ),
                               onIncrease: () => _increaseQuantity(index),
                               onDecrease: () => _decreaseQuantity(index),
                               onDelete: () =>

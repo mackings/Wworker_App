@@ -12,6 +12,7 @@ class AddMaterialCard extends StatefulWidget {
   final String title;
   final IconData? icon;
   final Color? color;
+  final bool showHeader;
   final void Function(Map<String, dynamic>)? onAddItem;
 
   const AddMaterialCard({
@@ -19,6 +20,7 @@ class AddMaterialCard extends StatefulWidget {
     this.title = "Add Materials",
     this.icon,
     this.color,
+    this.showHeader = true,
     this.onAddItem,
   });
 
@@ -335,48 +337,58 @@ void _loadThicknessesForMaterial(MaterialModel material) {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFE6E6E6)),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: const Color(0xFFF5F8F2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  if (widget.icon != null)
-                    Icon(widget.icon, color: widget.color),
-                  if (widget.icon != null) const SizedBox(width: 8),
-                  Text(
-                    widget.title,
-                    style: GoogleFonts.openSans(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF302E2E),
-                    ),
+          if (widget.showHeader || _isLoadingMaterials)
+            Row(
+              mainAxisAlignment: widget.showHeader
+                  ? MainAxisAlignment.spaceBetween
+                  : MainAxisAlignment.end,
+              children: [
+                if (widget.showHeader)
+                  Row(
+                    children: [
+                      if (widget.icon != null)
+                        Icon(widget.icon, color: widget.color),
+                      if (widget.icon != null) const SizedBox(width: 8),
+                      Text(
+                        widget.title,
+                        style: GoogleFonts.openSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF302E2E),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              if (_isLoadingMaterials)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
+                if (_isLoadingMaterials)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  IconButton(
+                    icon: const Icon(Icons.refresh, size: 20),
+                    onPressed: _loadMaterials,
+                    tooltip: "Refresh materials",
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+              ],
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
                 IconButton(
                   icon: const Icon(Icons.refresh, size: 20),
                   onPressed: _loadMaterials,
@@ -384,10 +396,11 @@ void _loadThicknessesForMaterial(MaterialModel material) {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
-            ],
-          ),
+              ],
+            ),
 
-          const SizedBox(height: 16),
+          if (widget.showHeader || _isLoadingMaterials)
+            const SizedBox(height: 16),
 
           // Material type selection (horizontal scroll tabs from API)
           if (_isLoadingMaterials)

@@ -6,6 +6,8 @@ import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
+
+
 class DatabaseHomePage extends StatelessWidget {
   const DatabaseHomePage({super.key});
 
@@ -1252,12 +1254,14 @@ class _DatabaseProductsTabState extends State<DatabaseProductsTab> {
                           categoryController.text,
                           product.category,
                         );
+
                         _setIfChanged(
                           updates,
                           'subCategory',
                           subCategoryController.text,
                           product.subCategory,
                         );
+
                         _setIfChanged(
                           updates,
                           'description',

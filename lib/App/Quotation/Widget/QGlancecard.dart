@@ -9,6 +9,7 @@ class QuoteGlanceCard extends StatelessWidget {
   final double costPrice;
   final double sellingPrice;
   final int quantity;
+  final VoidCallback? onEdit;
   final VoidCallback onIncrease;
   final VoidCallback onDecrease;
   final VoidCallback onDelete;
@@ -22,6 +23,7 @@ class QuoteGlanceCard extends StatelessWidget {
     required this.costPrice,
     required this.sellingPrice,
     required this.quantity,
+    this.onEdit,
     required this.onIncrease,
     required this.onDecrease,
     required this.onDelete,
@@ -90,195 +92,225 @@ class QuoteGlanceCard extends StatelessWidget {
                 ? screenWidth * 0.6
                 : screenWidth * 0.95,
           ),
-          child: Card(
-            color: const Color(0xFFF5F8F2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            elevation: 1,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // 🖼️ Product image
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      imageUrl.isNotEmpty
-                          ? imageUrl
-                          : "https://placehold.co/400x250",
-                      height: 180,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          height: 180,
-                          width: double.infinity,
-                          color: Colors.grey[300],
-                          child: const Icon(
-                            Icons.image_not_supported,
-                            size: 50,
-                            color: Colors.grey,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // 📋 Product details
-                  _buildRow('Product Name', productName),
-                  _buildRow('BOM NO', bomNo),
-                  _buildRow('Description', description),
-                  
-                  const SizedBox(height: 8),
-                  
-                  // 💰 Cost Price
-                  _buildRow(
-                    'Cost Price',
-                    "₦$costLabel",
-                    bold: true,
-                  ),
-                  
-                  // 💵 Selling Price (highlighted differently)
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF3E0),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: const Color(0xFFA16438),
-                        width: 1,
+          child: Stack(
+            children: [
+              Card(
+                color: const Color(0xFFF5F8F2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 1,
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                    // 🖼️ Product image
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imageUrl.isNotEmpty
+                            ? imageUrl
+                            : "https://placehold.co/400x250",
+                        height: 180,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            height: 180,
+                            width: double.infinity,
+                            color: Colors.grey[300],
+                            child: const Icon(
+                              Icons.image_not_supported,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    child: Row(
+                    const SizedBox(height: 12),
+
+                    // 📋 Product details
+                    _buildRow('Product Name', productName),
+                    _buildRow('BOM NO', bomNo),
+                    _buildRow('Description', description),
+                    
+                    const SizedBox(height: 8),
+                    
+                    // 💰 Cost Price
+                    _buildRow(
+                      'Cost Price',
+                      "₦$costLabel",
+                      bold: true,
+                    ),
+                    
+                    // 💵 Selling Price (highlighted differently)
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: const Color(0xFFA16438),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Selling Price',
+                            style: TextStyle(
+                              color: Color(0xFF302E2E),
+                              fontSize: 13,
+                              fontFamily: 'Open Sans',
+                              fontWeight: FontWeight.w600,
+                              height: 1.33,
+                            ),
+                          ),
+                          Text(
+                            "₦$sellingLabel",
+                            style: const TextStyle(
+                              color: Color(0xFFA16438),
+                              fontSize: 14,
+                              fontFamily: 'Open Sans',
+                              fontWeight: FontWeight.w700,
+                              height: 1.33,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 🔢 Quantity control
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          'Selling Price',
+                          'Quantity',
                           style: TextStyle(
-                            color: Color(0xFF302E2E),
+                            color: Color(0xFF7B7B7B),
                             fontSize: 13,
                             fontFamily: 'Open Sans',
                             fontWeight: FontWeight.w600,
                             height: 1.33,
                           ),
                         ),
-                        Text(
-                          "₦$sellingLabel",
-                          style: const TextStyle(
-                            color: Color(0xFFA16438),
-                            fontSize: 14,
-                            fontFamily: 'Open Sans',
-                            fontWeight: FontWeight.w700,
-                            height: 1.33,
-                          ),
+                        Row(
+                          children: [
+                            GestureDetector(
+                              onTap: onDecrease,
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD3D3D3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.remove, size: 18),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              quantity.toString(),
+                              style: const TextStyle(
+                                color: Color(0xFF7B7B7B),
+                                fontSize: 14,
+                                fontFamily: 'Open Sans',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: onIncrease,
+                              child: Container(
+                                width: 28,
+                                height: 28,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFD3D3D3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.add, size: 18),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
-                  // 🔢 Quantity control
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Quantity',
-                        style: TextStyle(
-                          color: Color(0xFF7B7B7B),
-                          fontSize: 13,
-                          fontFamily: 'Open Sans',
-                          fontWeight: FontWeight.w600,
-                          height: 1.33,
+                    GestureDetector(
+                      onTap: onDelete,
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        decoration: ShapeDecoration(
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(
+                              width: 1,
+                              color: Color(0xFF8B4513),
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.delete_outline, color: Color(0xFF8B4513)),
+                            SizedBox(width: 8),
+                            Text(
+                              'Delete Item',
+                              style: TextStyle(
+                                color: Color(0xFF8B4513),
+                                fontSize: 15,
+                                fontFamily: 'Open Sans',
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: onDecrease,
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD3D3D3),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.remove, size: 18),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            quantity.toString(),
-                            style: const TextStyle(
-                              color: Color(0xFF7B7B7B),
-                              fontSize: 14,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          GestureDetector(
-                            onTap: onIncrease,
-                            child: Container(
-                              width: 28,
-                              height: 28,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFD3D3D3),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: const Icon(Icons.add, size: 18),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
-
-                  GestureDetector(
-                    onTap: onDelete,
-                    child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: ShapeDecoration(
-                        shape: RoundedRectangleBorder(
-                          side: const BorderSide(
-                            width: 1,
-                            color: Color(0xFF8B4513),
-                          ),
-                          borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              if (onEdit != null)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.delete_outline, color: Color(0xFF8B4513)),
-                          SizedBox(width: 8),
-                          Text(
-                            'Delete Item',
-                            style: TextStyle(
-                              color: Color(0xFF8B4513),
-                              fontSize: 15,
-                              fontFamily: 'Open Sans',
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.edit, size: 18),
+                      color: const Color(0xFF8B4513),
+                      onPressed: onEdit,
+                      tooltip: "Edit BOM",
+                      padding: const EdgeInsets.all(6),
+                      constraints: const BoxConstraints(),
                     ),
                   ),
-                ],
-              ),
-            ),
+                ),
+            ],
           ),
-        ),
       ),
+      )
     );
   }
 }
