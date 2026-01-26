@@ -7,7 +7,7 @@ import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
-import 'package:wworker/App/Quotation/UI/Quotations.dart';
+import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -594,7 +594,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
         );
 
-        Nav.offAll(const AllQuotations());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          Nav.offAll(const DashboardScreen(initialIndex: 1));
+        });
       }
     } catch (e) {
       debugPrint("⚠️ Error creating quotation: $e");
@@ -841,16 +843,16 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
               const SizedBox(height: 40),
 
-              CustomButton(
-                text: "Save BOM",
-                loading: isSavingBom,
-                outlined: true,
-                onPressed: isSavingBom
-                    ? null
-                    : () => _saveBom(materials, additionalCosts),
-              ),
+              // CustomButton(
+              //   text: "Save BOM",
+              //   loading: isSavingBom,
+              //   outlined: true,
+              //   onPressed: isSavingBom
+              //       ? null
+              //       : () => _saveBom(materials, additionalCosts),
+              // ),
 
-              const SizedBox(height: 12),
+              // const SizedBox(height: 12),
 
               CustomButton(
                 text: "Continue",

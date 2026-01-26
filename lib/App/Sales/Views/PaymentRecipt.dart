@@ -1,19 +1,73 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
-import 'package:wworker/App/Order/Model/orderModel.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:wworker/App/Order/Api/OrderService.dart';
+import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
+import 'package:shared_preferences/shared_preferences.dart';
 
 
 
-class PaymentReceiptPage extends StatelessWidget {
+class PaymentReceiptPage extends StatefulWidget {
   final OrderModel order;
 
   const PaymentReceiptPage({
     super.key,
     required this.order,
   });
+
+  @override
+  State<PaymentReceiptPage> createState() => _PaymentReceiptPageState();
+}
+
+class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
+  late DateTime _receiptDate;
+  String _companyName = 'Wood Worker';
+  final OrderService _orderService = OrderService();
+
+  @override
+  void initState() {
+    super.initState();
+    _receiptDate = widget.order.updatedAt;
+    _loadCompanyName();
+  }
+
+  Future<void> _loadCompanyName() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getString('companyName');
+    if (saved != null && saved.trim().isNotEmpty) {
+      setState(() => _companyName = saved.trim());
+    }
+  }
+
+  Future<void> _pickReceiptDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _receiptDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2035),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFFA16438),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF302E2E),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() => _receiptDate = picked);
+    }
+  }
 
   Future<void> _downloadReceipt(BuildContext context) async {
     try {
@@ -32,9 +86,15 @@ class PaymentReceiptPage extends StatelessWidget {
       // Close loading
       Navigator.pop(context);
 
-      // Show print/share dialog
-      await Printing.layoutPdf(
-        onLayout: (PdfPageFormat format) async => pdf.save(),
+      final directory = await getTemporaryDirectory();
+      final filePath =
+          '${directory.path}/receipt_${widget.order.orderNumber}.pdf';
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+
+      await Share.shareXFiles(
+        [XFile(filePath)],
+        text: 'Receipt #${widget.order.orderNumber}',
       );
     } catch (e) {
       Navigator.pop(context);
@@ -47,9 +107,232 @@ class PaymentReceiptPage extends StatelessWidget {
     }
   }
 
+  Future<void> _sendReceipt(BuildContext context) async {
+    final amountController = TextEditingController();
+    final notesController = TextEditingController();
+    String paymentMethod = 'cash';
+    final reference = _buildPaymentReference();
+    bool isSending = false;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: StatefulBuilder(
+              builder: (context, setModalState) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Send Receipt',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF302E2E),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          if (newValue.text.isEmpty) return newValue;
+                          final number = int.parse(newValue.text);
+                          final formatted = NumberFormat.decimalPattern()
+                              .format(number);
+                          return TextEditingValue(
+                            text: formatted,
+                            selection: TextSelection.collapsed(
+                              offset: formatted.length,
+                            ),
+                          );
+                        }),
+                      ],
+                      decoration: InputDecoration(
+                        labelText: 'Amount',
+                        prefixText: '₦ ',
+                        prefixIcon: const Icon(Icons.payments_outlined),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFA16438),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: paymentMethod,
+                      items: const [
+                        DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                        DropdownMenuItem(
+                          value: 'bank_transfer',
+                          child: Text('Bank Transfer'),
+                        ),
+                        DropdownMenuItem(value: 'pos', child: Text('POS')),
+                        DropdownMenuItem(value: 'card', child: Text('Card')),
+                      ],
+                      onChanged: (value) {
+                        if (value != null) {
+                          setModalState(() => paymentMethod = value);
+                        }
+                      },
+                      decoration: InputDecoration(
+                        labelText: 'Payment Method',
+                        prefixIcon: const Icon(Icons.account_balance_wallet),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFA16438),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        labelText: 'Notes',
+                        prefixIcon: const Icon(Icons.sticky_note_2_outlined),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(
+                            color: Color(0xFFA16438),
+                            width: 1.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: isSending
+                            ? null
+                            : () async {
+                                setModalState(() => isSending = true);
+                                final amount = double.tryParse(
+                                      amountController.text
+                                          .replaceAll(',', '')
+                                          .trim(),
+                                    ) ??
+                                    0;
+                                final response = await _orderService.addPayment(
+                                  orderId: widget.order.id,
+                                  amount: amount,
+                                  paymentMethod: paymentMethod,
+                                  reference: reference,
+                                  notes: notesController.text.trim(),
+                                  paymentDate: _receiptDate.toIso8601String(),
+                                );
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      response['success'] == true
+                                          ? 'Receipt sent successfully'
+                                          : (response['message'] ??
+                                              'Failed to send receipt'),
+                                    ),
+                                    backgroundColor: response['success'] == true
+                                        ? Colors.green
+                                        : Colors.red,
+                                  ),
+                                );
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA16438),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: isSending
+                            ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Send Receipt'),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<pw.Document> _generatePdf() async {
     final pdf = pw.Document();
-    final dateFormat = DateFormat('MMMM d, yyyy');
+    final dateFormat = DateFormat('d MMM yyyy');
     final timeFormat = DateFormat('h:mm a');
 
     pdf.addPage(
@@ -70,7 +353,7 @@ class PaymentReceiptPage extends StatelessWidget {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      'PAYMENT RECEIPT',
+                      _companyName,
                       style: pw.TextStyle(
                         fontSize: 24,
                         fontWeight: pw.FontWeight.bold,
@@ -79,7 +362,7 @@ class PaymentReceiptPage extends StatelessWidget {
                     ),
                     pw.SizedBox(height: 8),
                     pw.Text(
-                      'Receipt #${order.orderNumber}',
+                      'Receipt #${widget.order.orderNumber}',
                       style: const pw.TextStyle(
                         fontSize: 14,
                         color: PdfColors.white,
@@ -102,7 +385,7 @@ class PaymentReceiptPage extends StatelessWidget {
                     ),
                   ),
                   pw.Text(
-                    dateFormat.format(order.updatedAt),
+                    dateFormat.format(_receiptDate),
                     style: const pw.TextStyle(fontSize: 14),
                   ),
                 ],
@@ -127,10 +410,10 @@ class PaymentReceiptPage extends StatelessWidget {
                       ),
                     ),
                     pw.SizedBox(height: 10),
-                    _buildPdfRow('Name:', order.clientName),
-                    _buildPdfRow('Email:', order.email),
-                    _buildPdfRow('Phone:', order.phoneNumber),
-                    _buildPdfRow('Address:', order.clientAddress),
+                    _buildPdfRow('Name:', widget.order.clientName),
+                    _buildPdfRow('Email:', widget.order.email),
+                    _buildPdfRow('Phone:', widget.order.phoneNumber),
+                    _buildPdfRow('Address:', widget.order.clientAddress),
                   ],
                 ),
               ),
@@ -147,7 +430,7 @@ class PaymentReceiptPage extends StatelessWidget {
               pw.SizedBox(height: 10),
               
               // Check if items exist
-              if (order.items.isNotEmpty)
+              if (widget.order.items.isNotEmpty)
                 pw.Table(
                   border: pw.TableBorder.all(color: PdfColors.grey400),
                   children: [
@@ -163,7 +446,7 @@ class PaymentReceiptPage extends StatelessWidget {
                       ],
                     ),
                     // Items
-                    ...order.items.map((item) {
+                    ...widget.order.items.map((item) {
                       // Get the woodType for the item name
                       final name = item['woodType']?.toString() ?? 'N/A';
                       final quantity = item['quantity'] ?? 0;
@@ -209,21 +492,21 @@ class PaymentReceiptPage extends StatelessWidget {
                 ),
                 child: pw.Column(
                   children: [
-                    _buildSummaryRow('Subtotal:', '₦${_formatNumber(order.totalSellingPrice)}'),
+                    _buildSummaryRow('Subtotal:', '₦${_formatNumber(widget.order.totalSellingPrice)}'),
                     pw.SizedBox(height: 8),
-                    _buildSummaryRow('Discount:', '-₦${_formatNumber(order.discountAmount)}'),
+                    _buildSummaryRow('Discount:', '-₦${_formatNumber(widget.order.discountAmount)}'),
                     pw.Divider(thickness: 2),
                     _buildSummaryRow(
                       'Total Amount:',
-                      '₦${_formatNumber(order.totalAmount)}',
+                      '₦${_formatNumber(widget.order.totalAmount)}',
                       isBold: true,
                     ),
                     pw.SizedBox(height: 8),
-                    _buildSummaryRow('Amount Paid:', '₦${_formatNumber(order.amountPaid)}'),
+                    _buildSummaryRow('Amount Paid:', '₦${_formatNumber(widget.order.amountPaid)}'),
                     pw.Divider(thickness: 2),
                     _buildSummaryRow(
                       'Balance:',
-                      '₦${_formatNumber(order.balance)}',
+                      '₦${_formatNumber(widget.order.balance)}',
                       isBold: true,
                       color: PdfColor.fromHex('#A16438'),
                     ),
@@ -242,6 +525,16 @@ class PaymentReceiptPage extends StatelessWidget {
                     fontSize: 12,
                     fontStyle: pw.FontStyle.italic,
                     color: PdfColors.grey700,
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 6),
+              pw.Center(
+                child: pw.Text(
+                  'Woodworker',
+                  style: pw.TextStyle(
+                    fontSize: 9,
+                    color: PdfColors.grey600,
                   ),
                 ),
               ),
@@ -320,14 +613,33 @@ class PaymentReceiptPage extends StatelessWidget {
     return formatter.format(number);
   }
 
+  String _buildPaymentReference() {
+    if (widget.order.boms.isNotEmpty) {
+      final name = widget.order.boms.first.name.trim();
+      if (name.isNotEmpty) {
+        return name;
+      }
+    }
+    if (widget.order.items.isNotEmpty) {
+      final itemName = widget.order.items.first['woodType']?.toString() ?? '';
+      if (itemName.trim().isNotEmpty) {
+        return itemName.trim();
+      }
+    }
+    if (widget.order.quotationNumber.trim().isNotEmpty) {
+      return 'Quotation ${widget.order.quotationNumber}';
+    }
+    return 'Order ${widget.order.orderNumber}';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMMM d, yyyy');
+    final dateFormat = DateFormat('d MMM yyyy');
     final timeFormat = DateFormat('h:mm a');
 
     // Debug: Print order items
-    print('Order items count: ${order.items.length}');
-    print('Order items: ${order.items}');
+    print('Order items count: ${widget.order.items.length}');
+    print('Order items: ${widget.order.items}');
 
     return Scaffold(
       backgroundColor: Colors.grey[100],
@@ -344,9 +656,9 @@ class PaymentReceiptPage extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.download, color: Color(0xFFA16438)),
+            icon: const Icon(Icons.share, color: Color(0xFFA16438)),
             onPressed: () => _downloadReceipt(context),
-            tooltip: 'Download Receipt',
+            tooltip: 'Share Receipt',
           ),
         ],
       ),
@@ -382,8 +694,8 @@ class PaymentReceiptPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Wood Worker',
+                      Text(
+                        _companyName,
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -392,7 +704,7 @@ class PaymentReceiptPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Receipt #${order.orderNumber}',
+                        'Receipt #${widget.order.orderNumber}',
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white70,
@@ -419,13 +731,27 @@ class PaymentReceiptPage extends StatelessWidget {
                               color: Color(0xFF302E2E),
                             ),
                           ),
-                          Text(
-                            '${dateFormat.format(order.updatedAt)} at ${timeFormat.format(order.updatedAt)}',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF302E2E),
-                            ),
+                        InkWell(
+                          onTap: _pickReceiptDate,
+                          borderRadius: BorderRadius.circular(6),
+                          child: Row(
+                            children: [
+                              Text(
+                                '${dateFormat.format(_receiptDate)} at ${timeFormat.format(_receiptDate)}',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Color(0xFF302E2E),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.edit_calendar,
+                                size: 16,
+                                color: Color(0xFFA16438),
+                              ),
+                            ],
                           ),
+                        ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -450,13 +776,13 @@ class PaymentReceiptPage extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            _buildDetailRow('Name:', order.clientName),
+                            _buildDetailRow('Name:', widget.order.clientName),
                             const SizedBox(height: 8),
-                            _buildDetailRow('Email:', order.email),
+                            _buildDetailRow('Email:', widget.order.email),
                             const SizedBox(height: 8),
-                            _buildDetailRow('Phone:', order.phoneNumber),
+                            _buildDetailRow('Phone:', widget.order.phoneNumber),
                             const SizedBox(height: 8),
-                            _buildDetailRow('Address:', order.clientAddress),
+                            _buildDetailRow('Address:', widget.order.clientAddress),
                           ],
                         ),
                       ),
@@ -474,7 +800,7 @@ class PaymentReceiptPage extends StatelessWidget {
                       // const SizedBox(height: 12),
                       
                       // // Check if items exist
-                      // if (order.items.isEmpty)
+                      // if (widget.order.items.isEmpty)
                       //   Container(
                       //     padding: const EdgeInsets.all(40),
                       //     decoration: BoxDecoration(
@@ -555,7 +881,7 @@ class PaymentReceiptPage extends StatelessWidget {
                       //           ),
                       //         ),
                       //         // Table Items
-                      //         ...order.items.asMap().entries.map((entry) {
+                      //         ...widget.order.items.asMap().entries.map((entry) {
                       //           final index = entry.key;
                       //           final item = entry.value;
                                 
@@ -573,7 +899,7 @@ class PaymentReceiptPage extends StatelessWidget {
                       //             padding: const EdgeInsets.all(12),
                       //             decoration: BoxDecoration(
                       //               border: Border(
-                      //                 bottom: index < order.items.length - 1
+                      //                 bottom: index < widget.order.items.length - 1
                       //                     ? BorderSide(color: Colors.grey[300]!)
                       //                     : BorderSide.none,
                       //               ),
@@ -624,28 +950,28 @@ class PaymentReceiptPage extends StatelessWidget {
                           children: [
                             _buildSummaryRows(
                               'Subtotal:',
-                              '₦${_formatNumber(order.totalSellingPrice)}',
+                              '₦${_formatNumber(widget.order.totalSellingPrice)}',
                             ),
                             const SizedBox(height: 8),
                             _buildSummaryRows(
                               'Discount:',
-                              '-₦${_formatNumber(order.discountAmount)}',
+                              '-₦${_formatNumber(widget.order.discountAmount)}',
                             ),
                             const Divider(height: 24, thickness: 2),
                             _buildSummaryRows(
                               'Total Amount:',
-                              '₦${_formatNumber(order.totalAmount)}',
+                              '₦${_formatNumber(widget.order.totalAmount)}',
                               isBold: true,
                             ),
                             const SizedBox(height: 8),
                             _buildSummaryRows(
                               'Amount Paid:',
-                              '₦${_formatNumber(order.amountPaid)}',
+                              '₦${_formatNumber(widget.order.amountPaid)}',
                             ),
                             const Divider(height: 24, thickness: 2),
                             _buildSummaryRows(
                               'Balance:',
-                              '₦${_formatNumber(order.balance)}',
+                              '₦${_formatNumber(widget.order.balance)}',
                               isBold: true,
                               color: const Color(0xFFA16438),
                             ),
@@ -655,25 +981,65 @@ class PaymentReceiptPage extends StatelessWidget {
                       const SizedBox(height: 32),
 
                       // Download Button
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => _downloadReceipt(context),
-                          icon: const Icon(Icons.download, size: 20),
-                          label: const Text(
-                            'Download Receipt',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _sendReceipt(context),
+                              icon: const Icon(Icons.send, size: 18),
+                              label: const Text(
+                                'Send Receipt',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFA16438),
+                                foregroundColor: Colors.white,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
                             ),
                           ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFA16438),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () => _downloadReceipt(context),
+                              icon: const Icon(Icons.share, size: 18),
+                              label: const Text(
+                                'Share Receipt',
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFA16438),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(
+                                    color: Color(0xFFA16438),
+                                  ),
+                                ),
+                              ),
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Center(
+                        child: Text(
+                          'Woodworker',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
                           ),
                         ),
                       ),

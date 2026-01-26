@@ -1481,7 +1481,24 @@ class _BomImportItem {
   });
 
   factory _BomImportItem.fromJson(Map<String, dynamic> json) {
-    final product = Map<String, dynamic>.from(json["product"] ?? {});
+    final rawProduct = json["product"];
+    final rawProductId = json["productId"];
+    Map<String, dynamic> product = {};
+
+    if (rawProduct is Map<String, dynamic>) {
+      product = Map<String, dynamic>.from(rawProduct);
+    } else if (rawProductId is Map<String, dynamic>) {
+      product = Map<String, dynamic>.from(rawProductId);
+    } else if (json["productData"] is Map<String, dynamic>) {
+      product = Map<String, dynamic>.from(json["productData"]);
+    }
+
+    final imageValue =
+        product["image"] ??
+        product["imageUrl"] ??
+        json["image"] ??
+        json["productImage"] ??
+        '';
     final materials = (json["materials"] as List<dynamic>? ?? [])
         .map((item) => _mapMaterial(item as Map<String, dynamic>))
         .toList();
@@ -1496,10 +1513,10 @@ class _BomImportItem {
       name: json["name"] ?? "",
       description: json["description"] ?? "",
       product: {
-        "productId": product["productId"] ?? "",
+        "productId": product["productId"] ?? product["_id"] ?? "",
         "name": product["name"] ?? "",
         "description": product["description"] ?? "",
-        "image": product["image"] ?? "",
+        "image": imageValue ?? "",
       },
       materials: materials,
       additionalCosts: additionalCosts,

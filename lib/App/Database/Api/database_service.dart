@@ -218,6 +218,111 @@ class DatabaseService {
     return response.data?["success"] == true;
   }
 
+  Future<List<DatabaseInvoice>> getInvoices({
+    int page = 1,
+    int limit = 50,
+    String? search,
+    String? status,
+    String? paymentStatus,
+  }) async {
+    final token = await _getToken();
+    if (token == null) return [];
+
+    final response = await _dio.get(
+      "/api/database/invoices",
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (paymentStatus != null && paymentStatus.trim().isNotEmpty)
+          'paymentStatus': paymentStatus.trim(),
+      },
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    if (response.data?["success"] == true) {
+      final data = response.data["data"]?["data"] as List<dynamic>? ?? [];
+      return data.map((item) => DatabaseInvoice.fromJson(item)).toList();
+    }
+    return [];
+  }
+
+  Future<bool> updateInvoice(String id, Map<String, dynamic> body) async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await _dio.put(
+      "/api/database/invoices/$id",
+      data: body,
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data?["success"] == true;
+  }
+
+  Future<bool> deleteInvoice(String id) async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await _dio.delete(
+      "/api/database/invoices/$id",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data?["success"] == true;
+  }
+
+  Future<List<DatabaseReceipt>> getReceipts({
+    int page = 1,
+    int limit = 50,
+    String? search,
+  }) async {
+    final token = await _getToken();
+    if (token == null) return [];
+
+    final response = await _dio.get(
+      "/api/database/receipts",
+      queryParameters: {
+        'page': page,
+        'limit': limit,
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      },
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    if (response.data?["success"] == true) {
+      final data = response.data["data"]?["data"] as List<dynamic>? ?? [];
+      return data.map((item) => DatabaseReceipt.fromJson(item)).toList();
+    }
+    return [];
+  }
+
+  Future<bool> updateReceipt(String id, Map<String, dynamic> body) async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await _dio.put(
+      "/api/database/receipts/$id",
+      data: body,
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data?["success"] == true;
+  }
+
+  Future<bool> deleteReceipt(String id) async {
+    final token = await _getToken();
+    if (token == null) return false;
+
+    final response = await _dio.delete(
+      "/api/database/receipts/$id",
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    return response.data?["success"] == true;
+  }
+
   Future<bool> deleteStaff(String userId) async {
     final token = await _getToken();
     if (token == null) return false;

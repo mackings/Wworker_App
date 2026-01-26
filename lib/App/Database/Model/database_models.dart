@@ -482,3 +482,115 @@ class DatabaseMaterial {
     );
   }
 }
+
+class DatabaseInvoice {
+  final String id;
+  final String invoiceNumber;
+  final String quotationId;
+  final String quotationNumber;
+  final String clientName;
+  final String email;
+  final List<DatabaseQuotationItem> items;
+  final double finalTotal;
+  final double amountPaid;
+  final double balance;
+  final String paymentStatus;
+  final String status;
+  final DateTime? dueDate;
+  final DateTime? createdAt;
+
+  DatabaseInvoice({
+    required this.id,
+    required this.invoiceNumber,
+    required this.quotationId,
+    required this.quotationNumber,
+    required this.clientName,
+    required this.email,
+    required this.items,
+    required this.finalTotal,
+    required this.amountPaid,
+    required this.balance,
+    required this.paymentStatus,
+    required this.status,
+    this.dueDate,
+    this.createdAt,
+  });
+
+  factory DatabaseInvoice.fromJson(Map<String, dynamic> json) {
+    final items = (json['items'] as List<dynamic>? ?? [])
+        .map((item) => DatabaseQuotationItem.fromJson(
+              item as Map<String, dynamic>,
+            ))
+        .toList();
+
+    return DatabaseInvoice(
+      id: json['_id'] ?? '',
+      invoiceNumber: json['invoiceNumber'] ?? '',
+      quotationId: json['quotationId'] ?? '',
+      quotationNumber: json['quotationNumber'] ?? '',
+      clientName: json['clientName'] ?? '',
+      email: json['email'] ?? '',
+      items: items,
+      finalTotal: (json['finalTotal'] ?? 0).toDouble(),
+      amountPaid: (json['amountPaid'] ?? 0).toDouble(),
+      balance: (json['balance'] ?? 0).toDouble(),
+      paymentStatus: json['paymentStatus'] ?? '',
+      status: json['status'] ?? '',
+      dueDate: json['dueDate'] != null ? DateTime.tryParse(json['dueDate']) : null,
+      createdAt:
+          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+    );
+  }
+}
+
+class DatabaseReceipt {
+  final String id;
+  final String receiptNumber;
+  final String orderId;
+  final String orderNumber;
+  final String clientName;
+  final DateTime? receiptDate;
+  final double totalAmount;
+  final double amountPaid;
+  final double balance;
+  final String paymentMethod;
+  final String? notes;
+  final String? reference;
+  final DateTime? createdAt;
+
+  DatabaseReceipt({
+    required this.id,
+    required this.receiptNumber,
+    required this.orderId,
+    required this.orderNumber,
+    required this.clientName,
+    this.receiptDate,
+    required this.totalAmount,
+    required this.amountPaid,
+    required this.balance,
+    required this.paymentMethod,
+    this.notes,
+    this.reference,
+    this.createdAt,
+  });
+
+  factory DatabaseReceipt.fromJson(Map<String, dynamic> json) {
+    return DatabaseReceipt(
+      id: json['_id'] ?? '',
+      receiptNumber: json['receiptNumber'] ?? '',
+      orderId: json['orderId'] ?? '',
+      orderNumber: json['orderNumber'] ?? '',
+      clientName: json['clientName'] ?? '',
+      receiptDate:
+          json['receiptDate'] != null ? DateTime.tryParse(json['receiptDate']) : null,
+      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
+      amountPaid: (json['amountPaid'] ?? 0).toDouble(),
+      balance: (json['balance'] ?? 0).toDouble(),
+      paymentMethod: json['paymentMethod'] ?? '',
+      notes: json['notes'],
+      reference: json['reference'],
+      createdAt:
+          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+    );
+  }
+}

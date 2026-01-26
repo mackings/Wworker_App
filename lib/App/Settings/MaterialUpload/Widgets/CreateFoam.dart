@@ -30,79 +30,10 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-populate common foam variants
-    foamVariants = [
-      FoamVariant(
-        thickness: 0.5,
-        thicknessUnit: 'inches',
-        density: 'ordinary',
-        width: 21,
-        length: 60,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-      FoamVariant(
-        thickness: 0.5,
-        thicknessUnit: 'inches',
-        density: 'lemon',
-        width: 21,
-        length: 60,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-      FoamVariant(
-        thickness: 1,
-        thicknessUnit: 'inches',
-        density: 'ordinary',
-        width: 48,
-        length: 96,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-      FoamVariant(
-        thickness: 1,
-        thicknessUnit: 'inches',
-        density: 'lemon',
-        width: 48,
-        length: 96,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-      FoamVariant(
-        thickness: 2,
-        thicknessUnit: 'inches',
-        density: 'ordinary',
-        width: 48,
-        length: 96,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-      FoamVariant(
-        thickness: 2,
-        thicknessUnit: 'inches',
-        density: 'lemon',
-        width: 48,
-        length: 96,
-        dimensionUnit: 'inches',
-        pricePerSqm: null,
-      ),
-    ];
   }
 
   Future<void> _createMaterial() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Validate that at least one variant has a price
-    final variantsWithPrices = foamVariants.where((v) => v.pricePerSqm != null).toList();
-    if (variantsWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please set a base price or at least one variant price'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
 
     setState(() => isCreating = true);
 
@@ -113,20 +44,20 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
-      'pricePerSqm': _pricePerSqmController.text.isNotEmpty 
-          ? double.parse(_pricePerSqmController.text) 
-          : 0,
       'pricingUnit': 'sqm',
       'wasteThreshold': double.parse(_wasteThresholdController.text),
-      'foamVariants': foamVariants.map((v) => {
-        'thickness': v.thickness,
-        'thicknessUnit': v.thicknessUnit,
-        'density': v.density,
-        'width': v.width,
-        'length': v.length,
-        'dimensionUnit': v.dimensionUnit,
-        if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
-      }).toList(),
+      if (_pricePerSqmController.text.isNotEmpty)
+        'pricePerSqm': double.parse(_pricePerSqmController.text),
+      if (foamVariants.isNotEmpty)
+        'foamVariants': foamVariants.map((v) => {
+              'thickness': v.thickness,
+              'thicknessUnit': v.thicknessUnit,
+              'density': v.density,
+              'width': v.width,
+              'length': v.length,
+              'dimensionUnit': v.dimensionUnit,
+              if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
+            }).toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -135,7 +66,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Foam material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -168,29 +99,79 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
     final priceController = TextEditingController(
       text: variant?.pricePerSqm?.toString() ?? '',
     );
-    
+
     String thicknessUnit = variant?.thicknessUnit ?? 'inches';
     String dimensionUnit = variant?.dimensionUnit ?? 'inches';
 
-    showDialog(
+    showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(isEditing ? 'Edit Foam Variant' : 'Add Foam Variant'),
-              content: SingleChildScrollView(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          isEditing ? 'Edit Foam Variant' : 'Add Foam Variant',
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF302E2E),
+                          ),
+                        ),
+                        if (isEditing)
+                          TextButton(
+                            onPressed: () {
+                              setState(() => foamVariants.removeAt(editIndex));
+                              Navigator.pop(context);
+                            },
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
                           child: TextField(
                             controller: thicknessController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Thickness *',
-                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: const Color(0xFFF7F5F2),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -198,22 +179,28 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                         const SizedBox(width: 8),
                         DropdownButton<String>(
                           value: thicknessUnit,
+                          underline: const SizedBox(),
                           items: const [
                             DropdownMenuItem(value: 'mm', child: Text('mm')),
                             DropdownMenuItem(value: 'cm', child: Text('cm')),
                             DropdownMenuItem(value: 'inches', child: Text('in')),
                           ],
-                          onChanged: (value) => setDialogState(() => thicknessUnit = value!),
+                          onChanged: (value) =>
+                              setSheetState(() => thicknessUnit = value!),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: densityController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Density *',
-                        border: OutlineInputBorder(),
                         hintText: 'e.g., lemon, ordinary, grey',
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -222,9 +209,13 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                         Expanded(
                           child: TextField(
                             controller: widthController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Width *',
-                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: const Color(0xFFF7F5F2),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -233,9 +224,13 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                         Expanded(
                           child: TextField(
                             controller: lengthController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Length *',
-                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: const Color(0xFFF7F5F2),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -245,81 +240,83 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: dimensionUnit,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Dimension Unit',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'mm', child: Text('mm')),
                         DropdownMenuItem(value: 'cm', child: Text('cm')),
                         DropdownMenuItem(value: 'inches', child: Text('inches')),
                       ],
-                      onChanged: (value) => setDialogState(() => dimensionUnit = value!),
+                      onChanged: (value) =>
+                          setSheetState(() => dimensionUnit = value!),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price per m²',
-                        border: OutlineInputBorder(),
-                        prefixText: '₦',
-                        hintText: 'Optional',
+                      decoration: InputDecoration(
+                        labelText: 'Price per m² (optional)',
+                        prefixText: '₦ ',
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (thicknessController.text.isEmpty ||
+                              densityController.text.isEmpty ||
+                              widthController.text.isEmpty ||
+                              lengthController.text.isEmpty) {
+                            return;
+                          }
+
+                          final newVariant = FoamVariant(
+                            thickness: double.parse(thicknessController.text),
+                            thicknessUnit: thicknessUnit,
+                            density: densityController.text.trim(),
+                            width: double.parse(widthController.text),
+                            length: double.parse(lengthController.text),
+                            dimensionUnit: dimensionUnit,
+                            pricePerSqm: priceController.text.isNotEmpty
+                                ? double.tryParse(priceController.text)
+                                : null,
+                          );
+
+                          setState(() {
+                            if (isEditing) {
+                              foamVariants[editIndex] = newVariant;
+                            } else {
+                              foamVariants.add(newVariant);
+                            }
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA16438),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(isEditing ? 'Save Changes' : 'Add Variant'),
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                if (isEditing)
-                  TextButton.icon(
-                    onPressed: () {
-                      setState(() => foamVariants.removeAt(editIndex));
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.delete, color: Colors.red),
-                    label: const Text('Delete', style: TextStyle(color: Colors.red)),
-                  ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (thicknessController.text.isNotEmpty &&
-                        densityController.text.isNotEmpty &&
-                        widthController.text.isNotEmpty &&
-                        lengthController.text.isNotEmpty) {
-                      
-                      final newVariant = FoamVariant(
-                        thickness: double.parse(thicknessController.text),
-                        thicknessUnit: thicknessUnit,
-                        density: densityController.text.trim(),
-                        width: double.parse(widthController.text),
-                        length: double.parse(lengthController.text),
-                        dimensionUnit: dimensionUnit,
-                        pricePerSqm: priceController.text.isNotEmpty
-                            ? double.tryParse(priceController.text)
-                            : null,
-                      );
-
-                      setState(() {
-                        if (isEditing) {
-                          foamVariants[editIndex] = newVariant;
-                        } else {
-                          foamVariants.add(newVariant);
-                        }
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA16438),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: Text(isEditing ? 'Update' : 'Add'),
-                ),
-              ],
             );
           },
         );
@@ -509,21 +506,9 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
             ),
             const SizedBox(height: 16),
 
-            // Base Pricing
             _buildSectionCard(
-              'Base Pricing (Optional)',
+              'Material Settings',
               [
-                TextFormField(
-                  controller: _pricePerSqmController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Price per m²',
-                    border: OutlineInputBorder(),
-                    prefixText: '₦',
-                    hintText: 'Leave empty if variants have different prices',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _wasteThresholdController,
                   decoration: const InputDecoration(
@@ -563,7 +548,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                         ),
                       )
                     : const Text(
-                        'Create Foam Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

@@ -29,38 +29,10 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-populate common marble sizes
-    sizeVariants = [
-      SizeVariant(
-        name: 'Full Sheet Lemon',
-        width: 60,
-        length: 81,
-        unit: 'inches',
-        pricePerUnit: null,
-      ),
-      SizeVariant(
-        name: 'Full Sheet Ordinary',
-        width: 60,
-        length: 72,
-        unit: 'inches',
-        pricePerUnit: null,
-      ),
-    ];
   }
 
   Future<void> _createMaterial() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final variantsWithPrices = sizeVariants.where((v) => v.pricePerUnit != null).toList();
-    if (variantsWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please set a base price or at least one variant price'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
 
     setState(() => isCreating = true);
 
@@ -71,18 +43,18 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
-      'pricePerSqm': _pricePerSqmController.text.isNotEmpty 
-          ? double.parse(_pricePerSqmController.text) 
-          : 0,
       'pricingUnit': 'sqm',
       'wasteThreshold': double.parse(_wasteThresholdController.text),
-      'sizeVariants': sizeVariants.map((v) => {
-        'name': v.name,
-        'width': v.width,
-        'length': v.length,
-        'unit': v.unit,
-        if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
-      }).toList(),
+      if (_pricePerSqmController.text.isNotEmpty)
+        'pricePerSqm': double.parse(_pricePerSqmController.text),
+      if (sizeVariants.isNotEmpty)
+        'sizeVariants': sizeVariants.map((v) => {
+              'name': v.name,
+              'width': v.width,
+              'length': v.length,
+              'unit': v.unit,
+              if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
+            }).toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -91,7 +63,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Marble material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -106,8 +78,10 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   }
 
   void _addSizeVariant() {
-    showDialog(
+    showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         final nameController = TextEditingController();
         final widthController = TextEditingController();
@@ -116,19 +90,50 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
         String unit = 'inches';
 
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Add Size Variant'),
-              content: SingleChildScrollView(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Add Size Variant',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF302E2E),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Variant Name *',
-                        border: OutlineInputBorder(),
-                        hintText: 'e.g., Full Sheet Premium',
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -137,9 +142,13 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                         Expanded(
                           child: TextField(
                             controller: widthController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Width *',
-                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: const Color(0xFFF7F5F2),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -148,9 +157,13 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                         Expanded(
                           child: TextField(
                             controller: lengthController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Length *',
-                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: const Color(0xFFF7F5F2),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                             keyboardType: TextInputType.number,
                           ),
@@ -160,63 +173,75 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: unit,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Unit',
-                        border: OutlineInputBorder(),
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       items: const [
                         DropdownMenuItem(value: 'mm', child: Text('mm')),
                         DropdownMenuItem(value: 'cm', child: Text('cm')),
                         DropdownMenuItem(value: 'inches', child: Text('inches')),
                       ],
-                      onChanged: (value) => setDialogState(() => unit = value!),
+                      onChanged: (value) =>
+                          setSheetState(() => unit = value!),
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price per Unit',
-                        border: OutlineInputBorder(),
-                        prefixText: '₦',
+                      decoration: InputDecoration(
+                        labelText: 'Price per Unit (optional)',
+                        prefixText: '₦ ',
+                        filled: true,
+                        fillColor: const Color(0xFFF7F5F2),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (nameController.text.isEmpty ||
+                              widthController.text.isEmpty ||
+                              lengthController.text.isEmpty) {
+                            return;
+                          }
+                          setState(() {
+                            sizeVariants.add(
+                              SizeVariant(
+                                name: nameController.text.trim(),
+                                width: double.parse(widthController.text),
+                                length: double.parse(lengthController.text),
+                                unit: unit,
+                                pricePerUnit: priceController.text.isNotEmpty
+                                    ? double.tryParse(priceController.text)
+                                    : null,
+                              ),
+                            );
+                          });
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA16438),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Add Variant'),
+                      ),
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (nameController.text.isNotEmpty &&
-                        widthController.text.isNotEmpty &&
-                        lengthController.text.isNotEmpty) {
-                      setState(() {
-                        sizeVariants.add(
-                          SizeVariant(
-                            name: nameController.text.trim(),
-                            width: double.parse(widthController.text),
-                            length: double.parse(lengthController.text),
-                            unit: unit,
-                            pricePerUnit: priceController.text.isNotEmpty
-                                ? double.tryParse(priceController.text)
-                                : null,
-                          ),
-                        );
-                      });
-                      Navigator.pop(context);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFA16438),
-                    foregroundColor: Colors.white,
-                  ),
-                  child: const Text('Add'),
-                ),
-              ],
             );
           },
         );
@@ -338,17 +363,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
             ]),
             const SizedBox(height: 16),
 
-            _buildSectionCard('Base Pricing (Optional)', [
-              TextFormField(
-                controller: _pricePerSqmController,
-                decoration: const InputDecoration(
-                  labelText: 'Base Price per m²',
-                  border: OutlineInputBorder(),
-                  prefixText: '₦',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
+            _buildSectionCard('Material Settings', [
               TextFormField(
                 controller: _wasteThresholdController,
                 decoration: const InputDecoration(
@@ -385,7 +400,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                         ),
                       )
                     : const Text(
-                        'Create Marble Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

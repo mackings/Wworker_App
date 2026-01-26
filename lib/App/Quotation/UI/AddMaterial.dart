@@ -312,15 +312,15 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
               const SizedBox(height: 12),
 
-              CustomButton(
-                text: "Add item from BOM List",
-                outlined: true,
-                icon: Icons.add,
-                onPressed: () {
-                  Nav.push(BOMList());
-                },
-              ),
-              const SizedBox(height: 12),
+              // CustomButton(
+              //   text: "Add item from BOM List",
+              //   outlined: true,
+              //   icon: Icons.add,
+              //   onPressed: () {
+              //     Nav.push(BOMList());
+              //   },
+              // ),
+              // const SizedBox(height: 12),
               CustomButton(
                 text: "Add item from Quotation",
                 outlined: true,

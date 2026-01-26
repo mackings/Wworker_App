@@ -42,7 +42,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fabric material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -179,7 +179,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
                         ),
                       )
                     : const Text(
-                        'Create Fabric Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -263,7 +263,7 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Hardware material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -402,7 +402,7 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
                         ),
                       )
                     : const Text(
-                        'Create Hardware Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -486,7 +486,7 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -624,7 +624,7 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
                         ),
                       )
                     : const Text(
-                        'Create Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,

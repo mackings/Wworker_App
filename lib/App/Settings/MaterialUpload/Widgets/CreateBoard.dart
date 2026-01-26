@@ -32,56 +32,10 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-populate common board types
-    boardTypes = [
-      BoardType(name: 'Mdf', pricePerSqm: null),
-      BoardType(name: 'Hdf', pricePerSqm: null),
-      BoardType(name: 'Mdf_high_gloss', pricePerSqm: null),
-      BoardType(name: 'Hdf_high_gloss', pricePerSqm: null),
-      BoardType(name: 'Hdf_straight', pricePerSqm: null),
-      BoardType(name: 'Packing_Board', pricePerSqm: null),
-      BoardType(name: 'Back_cover', pricePerSqm: null),
-      BoardType(name: 'Particle_Board_Light', pricePerSqm: null),
-      BoardType(name: 'Particle_Board_thick', pricePerSqm: null),
-      BoardType(name: 'eco_board', pricePerSqm: null),
-      BoardType(name: 'Marine_board', pricePerSqm: null),
-      BoardType(name: 'Halfinch_plywood', pricePerSqm: null),
-    ];
-
-    // Pre-populate common thicknesses for boards
-    commonThicknesses = [
-      ThicknessOption(thickness: 6),
-      ThicknessOption(thickness: 9),
-      ThicknessOption(thickness: 12),
-      ThicknessOption(thickness: 15),
-      ThicknessOption(thickness: 18),
-      ThicknessOption(thickness: 25),
-    ];
   }
 
   Future<void> _createMaterial() async {
     if (!_formKey.currentState!.validate()) return;
-
-    final typesWithPrices = boardTypes.where((t) => t.pricePerSqm != null).toList();
-    if (typesWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please set a base price or at least one type price'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    if (commonThicknesses.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add at least one thickness option'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
 
     setState(() => isCreating = true);
 
@@ -92,19 +46,20 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
-      'pricePerSqm': _pricePerSqmController.text.isNotEmpty 
-          ? double.parse(_pricePerSqmController.text) 
-          : 0,
       'pricingUnit': 'sqm',
       'wasteThreshold': double.parse(_wasteThresholdController.text),
-      'types': boardTypes.map((t) => {
-        'name': t.name,
-        if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
-      }).toList(),
-      'commonThicknesses': commonThicknesses.map((t) => {
-        'thickness': t.thickness,
-        'unit': _thicknessUnit,
-      }).toList(),
+      if (_pricePerSqmController.text.isNotEmpty)
+        'pricePerSqm': double.parse(_pricePerSqmController.text),
+      if (boardTypes.isNotEmpty)
+        'types': boardTypes.map((t) => {
+              'name': t.name,
+              if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
+            }).toList(),
+      if (commonThicknesses.isNotEmpty)
+        'commonThicknesses': commonThicknesses.map((t) => {
+              'thickness': t.thickness,
+              'unit': _thicknessUnit,
+            }).toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -113,7 +68,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
 
     if (result['success'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Board material created successfully')),
+        const SnackBar(content: Text('Material submitted for review')),
       );
       Navigator.pop(context);
       Navigator.pop(context);
@@ -174,138 +129,11 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   void _addBoardType() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        final nameController = TextEditingController();
-        final priceController = TextEditingController();
-
-        return AlertDialog(
-          title: const Text('Add Board Type'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Type Name *',
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., Plywood',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price per m² (optional)',
-                  border: OutlineInputBorder(),
-                  prefixText: '₦',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.isNotEmpty) {
-                  setState(() {
-                    boardTypes.add(
-                      BoardType(
-                        name: nameController.text.trim(),
-                        pricePerSqm: priceController.text.isNotEmpty
-                            ? double.tryParse(priceController.text)
-                            : null,
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Add'),
-            ),
-          ],
-        );
-      },
-    );
+    _openBoardTypeSheet();
   }
 
   void _editBoardType(int index) {
-    final type = boardTypes[index];
-    final nameController = TextEditingController(text: type.name);
-    final priceController = TextEditingController(
-      text: type.pricePerSqm?.toString() ?? '',
-    );
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Edit Board Type'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Type Name *',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price per m²',
-                  border: OutlineInputBorder(),
-                  prefixText: '₦',
-                ),
-                keyboardType: TextInputType.number,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                setState(() => boardTypes.removeAt(index));
-                Navigator.pop(context);
-              },
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  boardTypes[index] = BoardType(
-                    name: nameController.text.trim(),
-                    pricePerSqm: priceController.text.isNotEmpty
-                        ? double.tryParse(priceController.text)
-                        : null,
-                  );
-                });
-                Navigator.pop(context);
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Save'),
-            ),
-          ],
-        );
-      },
-    );
+    _openBoardTypeSheet(editIndex: index);
   }
 
   @override
@@ -436,19 +264,8 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             const SizedBox(height: 16),
 
             _buildSectionCard(
-              'Base Pricing (Optional)',
+              'Material Settings',
               [
-                TextFormField(
-                  controller: _pricePerSqmController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Price per m²',
-                    border: OutlineInputBorder(),
-                    prefixText: '₦',
-                    hintText: 'Leave empty if types have different prices',
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-                const SizedBox(height: 16),
                 TextFormField(
                   controller: _wasteThresholdController,
                   decoration: const InputDecoration(
@@ -486,7 +303,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                         ),
                       )
                     : const Text(
-                        'Create Board Material',
+                        'Submit Material',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -720,6 +537,134 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             }),
         ],
       ),
+    );
+  }
+
+  Future<void> _openBoardTypeSheet({int? editIndex}) async {
+    final isEditing = editIndex != null;
+    final existing = isEditing ? boardTypes[editIndex!] : null;
+    final nameController = TextEditingController(text: existing?.name ?? '');
+    final priceController = TextEditingController(
+      text: existing?.pricePerSqm?.toString() ?? '',
+    );
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      isEditing ? 'Edit Board Type' : 'Add Board Type',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF302E2E),
+                      ),
+                    ),
+                    if (isEditing)
+                      TextButton(
+                        onPressed: () {
+                          setState(() => boardTypes.removeAt(editIndex!));
+                          Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: nameController,
+                  decoration: InputDecoration(
+                    labelText: 'Type Name *',
+                    filled: true,
+                    fillColor: const Color(0xFFF7F5F2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: priceController,
+                  decoration: InputDecoration(
+                    labelText: 'Price per m² (optional)',
+                    prefixText: '₦ ',
+                    filled: true,
+                    fillColor: const Color(0xFFF7F5F2),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (nameController.text.trim().isEmpty) return;
+                      setState(() {
+                        final updated = BoardType(
+                          name: nameController.text.trim(),
+                          pricePerSqm: priceController.text.isNotEmpty
+                              ? double.tryParse(priceController.text)
+                              : null,
+                        );
+                        if (isEditing) {
+                          boardTypes[editIndex!] = updated;
+                        } else {
+                          boardTypes.add(updated);
+                        }
+                      });
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFA16438),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(isEditing ? 'Save Changes' : 'Add Type'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

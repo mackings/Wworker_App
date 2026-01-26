@@ -48,13 +48,6 @@ class _SigninState extends ConsumerState<Signin> {
       next.when(
         data: (data) async {
           if (data["success"] == true) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(data["message"] ?? "Signed in successfully"),
-                backgroundColor: Colors.green,
-              ),
-            );
-
             // Check if user has multiple companies
             final userData = data["data"]?["user"];
             if (userData != null) {

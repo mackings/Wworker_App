@@ -13,8 +13,19 @@ class DatabaseHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tabs = [
+      'Quotations',
+      'BOMs',
+      'Clients',
+      'Users',
+      'Products',
+      'Materials',
+      'Invoices',
+      'Receipts',
+    ];
+
     return DefaultTabController(
-      length: 6,
+      length: tabs.length,
       child: Scaffold(
         backgroundColor: ColorsApp.bgColor,
         appBar: AppBar(
@@ -27,18 +38,45 @@ class DatabaseHomePage extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          bottom: const TabBar(
-            labelColor: ColorsApp.btnColor,
-            unselectedLabelColor: Colors.black45,
-            indicatorColor: ColorsApp.btnColor,
-            tabs: [
-              Tab(text: 'Quotations'),
-              Tab(text: 'BOMs'),
-              Tab(text: 'Clients'),
-              Tab(text: 'Users'),
-              Tab(text: 'Products'),
-              Tab(text: 'Materials'),
-            ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: TabBar(
+                isScrollable: true,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.black54,
+                indicatorSize: TabBarIndicatorSize.tab,
+                indicator: BoxDecoration(
+                  color: ColorsApp.btnColor,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                labelPadding: const EdgeInsets.symmetric(horizontal: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                tabs: tabs
+                    .map(
+                      (text) => Tab(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: ColorsApp.btnColor.withOpacity(0.2),
+                            ),
+                          ),
+                          child: Text(
+                            text,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
           ),
         ),
         body: const TabBarView(
@@ -49,6 +87,8 @@ class DatabaseHomePage extends StatelessWidget {
             DatabaseStaffTab(),
             DatabaseProductsTab(),
             DatabaseMaterialsTab(),
+            DatabaseInvoicesTab(),
+            DatabaseReceiptsTab(),
           ],
         ),
       ),
@@ -1621,6 +1661,511 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
   }
 }
 
+class DatabaseInvoicesTab extends StatefulWidget {
+  const DatabaseInvoicesTab({super.key});
+
+  @override
+  State<DatabaseInvoicesTab> createState() => _DatabaseInvoicesTabState();
+}
+
+class _DatabaseInvoicesTabState extends State<DatabaseInvoicesTab> {
+  final DatabaseService _service = DatabaseService();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+  String? _error;
+  List<DatabaseInvoice> _invoices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInvoices();
+  }
+
+  Future<void> _loadInvoices({String? search}) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await _service.getInvoices(search: search);
+      setState(() {
+        _invoices = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load invoices';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteInvoice(DatabaseInvoice invoice) async {
+    final confirm = await _showDeleteDialog(
+      context,
+      title: 'Delete invoice?',
+      message: 'This will remove ${invoice.invoiceNumber} from your database.',
+    );
+    if (!confirm) return;
+
+    final success = await _service.deleteInvoice(invoice.id);
+    if (!mounted) return;
+    _showSnack(
+      context,
+      success ? 'Invoice deleted' : 'Failed to delete invoice',
+    );
+    if (success) {
+      _loadInvoices(search: _searchController.text);
+    }
+  }
+
+  Future<void> _editInvoice(DatabaseInvoice invoice) async {
+    final clientNameController =
+        TextEditingController(text: invoice.clientName);
+    final emailController = TextEditingController(text: invoice.email);
+    final amountPaidController =
+        TextEditingController(text: invoice.amountPaid.toString());
+    final notesController = TextEditingController();
+    String statusValue = invoice.status;
+    String paymentStatusValue = invoice.paymentStatus;
+    DateTime? dueDate = invoice.dueDate;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.75,
+          minChildSize: 0.6,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(20),
+                child: StatefulBuilder(
+                  builder: (context, setModalState) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSheetHandle(),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Edit Invoice',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: ColorsApp.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          label: 'Client Name',
+                          controller: clientNameController,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Email',
+                          controller: emailController,
+                          keyboardType: TextInputType.emailAddress,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Amount Paid',
+                          controller: amountPaidController,
+                          keyboardType: TextInputType.number,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Notes',
+                          controller: notesController,
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdownField(
+                          label: 'Status',
+                          value: statusValue,
+                          items: const [
+                            'pending',
+                            'paid',
+                            'overdue',
+                            'cancelled',
+                          ],
+                          onChanged: (value) {
+                            setModalState(() {
+                              statusValue = value ?? statusValue;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDropdownField(
+                          label: 'Payment Status',
+                          value: paymentStatusValue,
+                          items: const ['unpaid', 'partial', 'paid'],
+                          onChanged: (value) {
+                            setModalState(() {
+                              paymentStatusValue = value ?? paymentStatusValue;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDatePickerField(
+                          label: 'Due Date',
+                          date: dueDate,
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: dueDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setModalState(() => dueDate = picked);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        CustomButton(
+                          text: 'Save Changes',
+                          onPressed: () async {
+                            final updates = <String, dynamic>{
+                              "clientName":
+                                  clientNameController.text.trim(),
+                              "email": emailController.text.trim(),
+                              "status": statusValue,
+                              "paymentStatus": paymentStatusValue,
+                              "amountPaid": double.tryParse(
+                                    amountPaidController.text.trim(),
+                                  ) ??
+                                  0,
+                              "notes": notesController.text.trim(),
+                              if (dueDate != null)
+                                "dueDate": dueDate!.toIso8601String(),
+                            };
+
+                            Navigator.pop(context);
+                            final success = await _service.updateInvoice(
+                              invoice.id,
+                              updates,
+                            );
+                            if (!mounted) return;
+                            _showSnack(
+                              context,
+                              success
+                                  ? 'Invoice updated'
+                                  : 'Failed to update invoice',
+                            );
+                            if (success) {
+                              _loadInvoices(
+                                search: _searchController.text,
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _buildSearchRow(
+          controller: _searchController,
+          onSearch: () => _loadInvoices(search: _searchController.text),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            color: ColorsApp.btnColor,
+            onRefresh: () => _loadInvoices(search: _searchController.text),
+            child: _buildContent(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _buildErrorView(_error!);
+    }
+    if (_invoices.isEmpty) {
+      return _buildEmptyView('No invoices found');
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: _invoices.length,
+      itemBuilder: (context, index) {
+        final invoice = _invoices[index];
+        return _DatabaseCard(
+          leading: _MaterialAvatar(category: 'INV'),
+          title: invoice.invoiceNumber,
+          subtitle: invoice.clientName,
+          trailing: _buildStatusChip(
+            invoice.paymentStatus.isEmpty
+                ? 'unpaid'
+                : invoice.paymentStatus,
+          ),
+          details: _buildInvoiceDetails(invoice),
+          onEdit: () => _editInvoice(invoice),
+          onDelete: () => _deleteInvoice(invoice),
+        );
+      },
+    );
+  }
+}
+
+class DatabaseReceiptsTab extends StatefulWidget {
+  const DatabaseReceiptsTab({super.key});
+
+  @override
+  State<DatabaseReceiptsTab> createState() => _DatabaseReceiptsTabState();
+}
+
+class _DatabaseReceiptsTabState extends State<DatabaseReceiptsTab> {
+  final DatabaseService _service = DatabaseService();
+  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = true;
+  String? _error;
+  List<DatabaseReceipt> _receipts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReceipts();
+  }
+
+  Future<void> _loadReceipts({String? search}) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await _service.getReceipts(search: search);
+      setState(() {
+        _receipts = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load receipts';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _deleteReceipt(DatabaseReceipt receipt) async {
+    final confirm = await _showDeleteDialog(
+      context,
+      title: 'Delete receipt?',
+      message: 'This will remove ${receipt.receiptNumber} from your database.',
+    );
+    if (!confirm) return;
+
+    final success = await _service.deleteReceipt(receipt.id);
+    if (!mounted) return;
+    _showSnack(
+      context,
+      success ? 'Receipt deleted' : 'Failed to delete receipt',
+    );
+    if (success) {
+      _loadReceipts(search: _searchController.text);
+    }
+  }
+
+  Future<void> _editReceipt(DatabaseReceipt receipt) async {
+    final notesController = TextEditingController(text: receipt.notes ?? '');
+    final referenceController =
+        TextEditingController(text: receipt.reference ?? '');
+    final paymentMethodController =
+        TextEditingController(text: receipt.paymentMethod);
+    DateTime? receiptDate = receipt.receiptDate;
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.55,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.all(20),
+                child: StatefulBuilder(
+                  builder: (context, setModalState) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSheetHandle(),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Edit Receipt',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: ColorsApp.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          label: 'Payment Method',
+                          controller: paymentMethodController,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Reference',
+                          controller: referenceController,
+                        ),
+                        const SizedBox(height: 12),
+                        CustomTextField(
+                          label: 'Notes',
+                          controller: notesController,
+                          maxLines: 3,
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDatePickerField(
+                          label: 'Receipt Date',
+                          date: receiptDate,
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: receiptDate ?? DateTime.now(),
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime(2035),
+                            );
+                            if (picked != null) {
+                              setModalState(() => receiptDate = picked);
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        CustomButton(
+                          text: 'Save Changes',
+                          onPressed: () async {
+                            final updates = <String, dynamic>{
+                              "notes": notesController.text.trim(),
+                              "reference": referenceController.text.trim(),
+                              "paymentMethod":
+                                  paymentMethodController.text.trim(),
+                              if (receiptDate != null)
+                                "receiptDate": receiptDate!.toIso8601String(),
+                            };
+
+                            Navigator.pop(context);
+                            final success = await _service.updateReceipt(
+                              receipt.id,
+                              updates,
+                            );
+                            if (!mounted) return;
+                            _showSnack(
+                              context,
+                              success
+                                  ? 'Receipt updated'
+                                  : 'Failed to update receipt',
+                            );
+                            if (success) {
+                              _loadReceipts(
+                                search: _searchController.text,
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _buildSearchRow(
+          controller: _searchController,
+          onSearch: () => _loadReceipts(search: _searchController.text),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            color: ColorsApp.btnColor,
+            onRefresh: () => _loadReceipts(search: _searchController.text),
+            child: _buildContent(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _buildErrorView(_error!);
+    }
+    if (_receipts.isEmpty) {
+      return _buildEmptyView('No receipts found');
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      itemCount: _receipts.length,
+      itemBuilder: (context, index) {
+        final receipt = _receipts[index];
+        return _DatabaseCard(
+          leading: _MaterialAvatar(category: 'REC'),
+          title: receipt.receiptNumber,
+          subtitle: receipt.clientName,
+          trailing: _buildStatusChip(
+            receipt.paymentMethod.isEmpty
+                ? 'payment'
+                : receipt.paymentMethod,
+          ),
+          details: _buildReceiptDetails(receipt),
+          onEdit: () => _editReceipt(receipt),
+          onDelete: () => _deleteReceipt(receipt),
+        );
+      },
+    );
+  }
+}
+
 class _DatabaseCard extends StatefulWidget {
   final String title;
   final String subtitle;
@@ -2057,6 +2602,49 @@ Widget _buildMaterialDetails(DatabaseMaterial material) {
   );
 }
 
+Widget _buildInvoiceDetails(DatabaseInvoice invoice) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildDetailRow('Quotation No', invoice.quotationNumber, showCurrency: false),
+      _buildDetailRow('Final Total', _formatAmount(invoice.finalTotal)),
+      _buildDetailRow('Amount Paid', _formatAmount(invoice.amountPaid)),
+      _buildDetailRow('Balance', _formatAmount(invoice.balance)),
+      _buildDetailRow('Status', invoice.status, showCurrency: false),
+      _buildDetailRow('Payment', invoice.paymentStatus, showCurrency: false),
+      if (invoice.dueDate != null)
+        _buildDetailRow(
+          'Due Date',
+          DateFormat('dd MMM yyyy').format(invoice.dueDate!),
+          showCurrency: false,
+        ),
+    ],
+  );
+}
+
+Widget _buildReceiptDetails(DatabaseReceipt receipt) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      _buildDetailRow('Order No', receipt.orderNumber, showCurrency: false),
+      _buildDetailRow('Total', _formatAmount(receipt.totalAmount)),
+      _buildDetailRow('Amount Paid', _formatAmount(receipt.amountPaid)),
+      _buildDetailRow('Balance', _formatAmount(receipt.balance)),
+      _buildDetailRow('Payment Method', receipt.paymentMethod, showCurrency: false),
+      if (receipt.receiptDate != null)
+        _buildDetailRow(
+          'Receipt Date',
+          DateFormat('dd MMM yyyy').format(receipt.receiptDate!),
+          showCurrency: false,
+        ),
+      if (receipt.reference != null && receipt.reference!.isNotEmpty)
+        _buildDetailRow('Reference', receipt.reference!, showCurrency: false),
+      if (receipt.notes != null && receipt.notes!.isNotEmpty)
+        _buildDetailRow('Notes', receipt.notes!, showCurrency: false),
+    ],
+  );
+}
+
 Widget _buildDetailRow(
   String label,
   String value, {
@@ -2081,6 +2669,103 @@ Widget _buildDetailRow(
         ),
       ],
     ),
+  );
+}
+
+Widget _buildDropdownField({
+  required String label,
+  required String? value,
+  required List<String> items,
+  required ValueChanged<String?> onChanged,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.black54,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 6),
+      DropdownButtonFormField<String>(
+        value: value,
+        items: items
+            .map(
+              (item) => DropdownMenuItem<String>(
+                value: item,
+                child: Text(item),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: Colors.grey.shade100,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: Colors.grey.shade300),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildDatePickerField({
+  required String label,
+  required DateTime? date,
+  required VoidCallback onTap,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: 12,
+          color: Colors.black54,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      const SizedBox(height: 6),
+      InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.calendar_today, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              Text(
+                date == null
+                    ? 'Select date'
+                    : DateFormat('dd MMM yyyy').format(date),
+                style: TextStyle(
+                  color: date == null
+                      ? Colors.grey.shade600
+                      : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ],
   );
 }
 

@@ -30,10 +30,14 @@ class OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final firstItem = order.items.isNotEmpty ? order.items.first : null;
-    final image = (firstItem?['image']?.isNotEmpty ?? false)
-        ? firstItem!['image']
-        : Urls.woodImg;
+    String? image;
+    if (order.boms.isNotEmpty && order.boms.first.product.image.isNotEmpty) {
+      image = order.boms.first.product.image;
+    } else if (order.items.isNotEmpty &&
+        (order.items.first['image']?.isNotEmpty ?? false)) {
+      image = order.items.first['image'];
+    }
+    image ??= Urls.woodImg;
 
     Color statusColor;
     String statusText;
@@ -169,7 +173,7 @@ class OrderCard extends StatelessWidget {
                 children: [
                   _buildDetailRow("Client:", order.clientName),
                   const SizedBox(height: 16),
-                  _buildDetailRow("Sales No:", order.orderNumber),
+                  _buildDetailRow("Order No:", order.orderNumber),
                   const SizedBox(height: 16),
                   _buildDetailRow(
                     "Start Date:",

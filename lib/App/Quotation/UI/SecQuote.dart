@@ -7,6 +7,7 @@ import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 
 class SecQuote extends ConsumerStatefulWidget {
   final String name;
@@ -365,11 +366,21 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       }
     }
 
+    final firstProduct =
+        widget.selectedQuotations.isNotEmpty
+            ? (widget.selectedQuotations.first["product"] ?? {})
+            : {};
+    final productId =
+        firstProduct["productId"] ??
+        firstProduct["id"] ??
+        firstProduct["_id"];
+
     final service = {
       "product": "Materials Service",
       "quantity": 1,
       "discount": 0,
       "totalPrice": totalSum,
+      if (productId != null) "productId": productId,
     };
 
     // ✅ Call the updated createQuotation method with duration parameters
@@ -388,6 +399,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
         "expectedPeriod": expectedPeriod ?? "Day",
         "costPrice": totalCostPrice,
         "overheadCost": totalOverheadCost,
+        if (productId != null) "productId": productId,
       },
     );
 
@@ -398,9 +410,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
         const SnackBar(content: Text("✅ Quotation created successfully")),
       );
 
-      Nav.pop();
-      Nav.pop();
-      Nav.pop();
+      Nav.offAll(const DashboardScreen(initialIndex: 1));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),

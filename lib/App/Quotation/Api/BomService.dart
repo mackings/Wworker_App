@@ -179,6 +179,8 @@ Future<Map<String, dynamic>> createQuotation({
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 
+    debugPrint("✅ [CREATE QUOTATION PAYLOAD] => ${response.requestOptions.data}");
+
     return response.data;
   } on DioException catch (e) {
     return {
@@ -199,4 +201,3 @@ Future<Map<String, dynamic>> createQuotation({
     };
   }
 }
-

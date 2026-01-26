@@ -51,6 +51,7 @@ class OrderService {
     required String quotationId,
     required String startDate,
     required String endDate,
+    List<String>? bomIds,
     String? notes,
     double amountPaid = 0,
   }) async {
@@ -63,15 +64,16 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/sales/orders/create",
+        "📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/orders/create",
       );
 
       final response = await _dio.post(
-        "/api/sales/orders/create",
+        "/api/orders/create",
         data: {
           "quotationId": quotationId,
           "startDate": startDate,
           "endDate": endDate,
+          if (bomIds != null && bomIds.isNotEmpty) "bomIds": bomIds,
           if (notes != null) "notes": notes,
           "amountPaid": amountPaid,
         },
@@ -117,10 +119,10 @@ class OrderService {
         if (showMyAssignments) 'showMyAssignments': showMyAssignments,
       };
 
-      debugPrint("📤 [GET ORDERS] => GET ${Urls.baseUrl}/api/sales/orders");
+      debugPrint("📤 [GET ORDERS] => GET ${Urls.baseUrl}/api/orders/get-orders");
 
       final response = await _dio.get(
-        "/api/sales/orders",
+        "/api/orders/get-orders",
         queryParameters: queryParams,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -148,11 +150,11 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [GET ORDER] => GET ${Urls.baseUrl}/api/sales/orders/$orderId",
+        "📤 [GET ORDER] => GET ${Urls.baseUrl}/api/orders/get-orders/$orderId",
       );
 
       final response = await _dio.get(
-        "/api/sales/orders/$orderId",
+        "/api/orders/get-orders/$orderId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

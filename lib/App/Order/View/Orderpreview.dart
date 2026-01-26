@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
+import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 
 class OrderPreviewPage extends StatefulWidget {
   final Quotation quotation;
@@ -17,22 +19,59 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   bool isLoading = false;
   final OrderService _orderService = OrderService();
   final TextEditingController _amountPaidController = TextEditingController();
-  DateTime? startDate;
-  DateTime? endDate;
+  final Map<String, DateTime?> _startDates = {};
+  final Map<String, DateTime?> _endDates = {};
+  final Set<String> _selectedItemIds = {};
+  bool _selectAllItems = false;
 
   double get grandTotal {
-    return widget.quotation.finalTotal.toDouble();
+    if (_selectAllItems) {
+      return _sumBomTotals(widget.quotation.boms);
+    }
+    if (_selectedItemIds.isEmpty) return 0;
+    double total = 0;
+    for (final bom in widget.quotation.boms) {
+      final key = bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber;
+      if (_selectedItemIds.contains(key)) {
+        total += _bomSellingPrice(bom);
+      }
+    }
+    return total;
+  }
+
+  double _bomSellingPrice(QuotationBom bom) {
+    if (bom.pricing != null && bom.pricing!.sellingPrice > 0) {
+      return bom.pricing!.sellingPrice;
+    }
+    if (bom.totalCost > 0) return bom.totalCost;
+    return 0;
+  }
+
+  double _sumBomTotals(List<QuotationBom> boms) {
+    if (boms.isEmpty) {
+      return widget.quotation.finalTotal.toDouble();
+    }
+    double total = 0;
+    for (final bom in boms) {
+      total += _bomSellingPrice(bom);
+    }
+    return total;
   }
 
   double get balance {
-    final amountPaid = double.tryParse(_amountPaidController.text) ?? 0;
+    final raw = _amountPaidController.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final amountPaid = raw.isEmpty ? 0 : double.parse(raw);
     return grandTotal - amountPaid;
   }
 
+  String _formatMoney(double value) {
+    return NumberFormat.decimalPattern().format(value.round());
+  }
+
   String get quotationImage {
-    if (widget.quotation.items.isNotEmpty &&
-        widget.quotation.items.first.image.isNotEmpty) {
-      return widget.quotation.items.first.image;
+    if (widget.quotation.boms.isNotEmpty &&
+        widget.quotation.boms.first.product.image.isNotEmpty) {
+      return widget.quotation.boms.first.product.image;
     }
     return Urls.woodImg;
   }
@@ -44,16 +83,17 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   }
 
   /// Calculate end date based on expected duration
-  DateTime _calculateEndDate(DateTime start) {
-    final duration = widget.quotation.expectedDuration;
+  DateTime _calculateEndDate(DateTime start, ExpectedDuration? duration) {
+    final effectiveDuration =
+        duration ?? widget.quotation.expectedDuration;
 
-    if (duration == null || duration.value == null) {
+    if (effectiveDuration == null || effectiveDuration.value == null) {
       // Default to 1 day if no duration specified
       return start.add(const Duration(days: 1));
     }
 
-    final value = duration.value!;
-    final unit = duration.unit.toLowerCase();
+    final value = effectiveDuration.value!;
+    final unit = effectiveDuration.unit.toLowerCase();
 
     switch (unit) {
       case 'day':
@@ -75,10 +115,11 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   }
 
   /// Handle start date selection
-  Future<void> _selectStartDate() async {
+  Future<void> _selectStartDate(QuotationBom bom) async {
+    final key = bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber;
     final picked = await showDatePicker(
       context: context,
-      initialDate: startDate ?? DateTime.now(),
+      initialDate: _startDates[key] ?? DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       builder: (context, child) {
@@ -97,19 +138,20 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
 
     if (picked != null) {
       setState(() {
-        startDate = picked;
-        // Auto-calculate end date based on expected duration
-        endDate = _calculateEndDate(picked);
+        _selectedItemIds.add(key);
+        _startDates[key] = picked;
+        _endDates[key] = _calculateEndDate(picked, bom.expectedDuration);
       });
     }
   }
 
   /// Handle end date selection (user can override auto-calculated date)
-  Future<void> _selectEndDate() async {
+  Future<void> _selectEndDate(QuotationBom bom) async {
+    final key = bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber;
     final picked = await showDatePicker(
       context: context,
-      initialDate: endDate ?? startDate ?? DateTime.now(),
-      firstDate: startDate ?? DateTime(2020),
+      initialDate: _endDates[key] ?? _startDates[key] ?? DateTime.now(),
+      firstDate: _startDates[key] ?? DateTime(2020),
       lastDate: DateTime(2030),
       builder: (context, child) {
         return Theme(
@@ -127,7 +169,8 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
 
     if (picked != null) {
       setState(() {
-        endDate = picked;
+        _selectedItemIds.add(key);
+        _endDates[key] = picked;
       });
     }
   }
@@ -317,7 +360,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                     Row(
                       children: [
                         Text(
-                          "Items: ${widget.quotation.items.length}",
+                          "BOMs: ${widget.quotation.boms.length}",
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.grey[600],
@@ -357,7 +400,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                     style: TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   Text(
-                    "#${grandTotal.toStringAsFixed(0)}",
+                    "₦${_formatMoney(grandTotal)}",
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -369,52 +412,195 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Date Pickers with auto-calculation
-          Row(
-            children: [
-              Expanded(
-                child: _buildDatePicker(
-                  label: "Start Date",
-                  date: startDate,
-                  onTap: _selectStartDate,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildDatePicker(
-                  label: "End Date",
-                  date: endDate,
-                  onTap: _selectEndDate,
-                  isAutoCalculated: startDate != null && endDate != null,
-                ),
-              ),
-            ],
-          ),
-
-          // Show hint about auto-calculation
-          if (startDate != null && endDate != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline, size: 14, color: Colors.grey[600]),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                      "End date auto-calculated based on expected duration. Tap to edit.",
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey[600],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          _buildItemSchedules(),
         ],
       ),
+    );
+  }
+
+  Widget _buildItemSchedules() {
+    final boms = widget.quotation.boms;
+    if (boms.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+            Row(
+              children: [
+            const Expanded(
+              child: Text(
+                "BOM Items Schedule",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF302E2E),
+                    ),
+                  ),
+                ),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _selectAllItems,
+                      activeColor: const Color(0xFFA16438),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectAllItems = value ?? false;
+                          if (_selectAllItems) {
+                            _selectedItemIds
+                              ..clear()
+                              ..addAll(
+                                boms
+                                    .map((e) => e.bomId.isNotEmpty
+                                        ? e.bomId
+                                        : e.bomNumber)
+                                    .toList(),
+                              );
+                          } else {
+                            _selectedItemIds.clear();
+                          }
+                        });
+                      },
+                    ),
+                const Text(
+                  "All items",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF302E2E),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        ...boms.map((bom) {
+          final key = bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber;
+          final startDate = _startDates[key];
+          final endDate = _endDates[key];
+          final isSelected =
+              _selectedItemIds.contains(key) && !_selectAllItems;
+          final title = bom.name.isNotEmpty
+              ? bom.name
+              : bom.bomNumber.isNotEmpty
+                  ? bom.bomNumber
+                  : "BOM";
+          final subtitle = bom.product.name.isNotEmpty
+              ? bom.product.name
+              : bom.description;
+
+          return Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFFFFF3E0)
+                  : const Color(0xFFF5F8F2),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFA16438)
+                    : Colors.grey[300]!,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _selectedItemIds.contains(key),
+                      activeColor: const Color(0xFFA16438),
+                      onChanged: (value) {
+                        setState(() {
+                          if (value == true) {
+                            _selectedItemIds.add(key);
+                          } else {
+                            _selectedItemIds.remove(key);
+                            _selectAllItems = false;
+                          }
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF302E2E),
+                            ),
+                          ),
+                          if (subtitle.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              subtitle,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDatePicker(
+                        label: "Start Date",
+                        date: startDate,
+                        onTap: () => _selectStartDate(bom),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildDatePicker(
+                        label: "End Date",
+                        date: endDate,
+                        onTap: () => _selectEndDate(bom),
+                        isAutoCalculated:
+                            startDate != null && endDate != null,
+                      ),
+                    ),
+                  ],
+                ),
+                if (startDate != null && endDate != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 14,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            "End date auto-calculated based on expected duration. Tap to edit.",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 
@@ -509,7 +695,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         children: [
           _buildSummaryRow(
             "Total:",
-            "#${grandTotal.toStringAsFixed(0)}",
+            "₦${_formatMoney(grandTotal)}",
             isBold: true,
           ),
           const SizedBox(height: 16),
@@ -529,6 +715,15 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 controller: _amountPaidController,
                 keyboardType: TextInputType.number,
                 onChanged: (value) {
+                  final raw = value.replaceAll(RegExp(r'[^0-9]'), '');
+                  final parsed = raw.isEmpty ? 0 : int.parse(raw);
+                  final formatted = NumberFormat.decimalPattern().format(parsed);
+                  _amountPaidController.value = TextEditingValue(
+                    text: formatted,
+                    selection: TextSelection.collapsed(
+                      offset: formatted.length,
+                    ),
+                  );
                   setState(() {}); // Recalculate balance
                 },
                 decoration: InputDecoration(
@@ -587,16 +782,12 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      balance.toStringAsFixed(0),
+                      "₦${_formatMoney(balance)}",
                       style: const TextStyle(
                         fontSize: 16,
                         color: Color(0xFF302E2E),
                         fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    const Text(
-                      "NGN",
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -657,8 +848,72 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
   }
 
   Future<void> _createOrder() async {
+    if (!_selectAllItems && _selectedItemIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Please select at least one BOM item"),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    DateTime? selectedStart;
+    DateTime? selectedEnd;
+
+    if (_selectAllItems) {
+      final starts = widget.quotation.boms
+          .map((bom) => _startDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber])
+          .whereType<DateTime>()
+          .toList();
+      final ends = widget.quotation.boms
+          .map((bom) => _endDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber])
+          .whereType<DateTime>()
+          .toList();
+      if (starts.length != widget.quotation.boms.length ||
+          ends.length != widget.quotation.boms.length) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please select dates for all items"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      starts.sort();
+      ends.sort();
+      selectedStart = starts.first;
+      selectedEnd = ends.last;
+    } else {
+      final starts = _selectedItemIds
+          .map((id) => _startDates[id])
+          .whereType<DateTime>()
+          .toList();
+      final ends = _selectedItemIds
+          .map((id) => _endDates[id])
+          .whereType<DateTime>()
+          .toList();
+      if (starts.length != _selectedItemIds.length ||
+          ends.length != _selectedItemIds.length) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Please select dates for all selected items"),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+      starts.sort();
+      ends.sort();
+      selectedStart = starts.first;
+      selectedEnd = ends.last;
+    }
+
     // Validate dates
-    if (startDate == null || endDate == null) {
+    if (selectedStart == null || selectedEnd == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please select both start and end dates"),
@@ -669,7 +924,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
       return;
     }
 
-    if (endDate!.isBefore(startDate!)) {
+    if (selectedEnd.isBefore(selectedStart)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("End date must be after start date"),
@@ -683,14 +938,24 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     setState(() => isLoading = true);
 
     try {
-      final amountPaid = double.tryParse(_amountPaidController.text) ?? 0;
+      final rawPaid =
+          _amountPaidController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final double amountPaid = rawPaid.isEmpty ? 0.0 : double.parse(rawPaid);
+      final allBomIds = widget.quotation.boms
+          .map((bom) => bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber)
+          .toList();
+      final selectedBomIds = _selectAllItems
+          ? allBomIds
+          : _selectedItemIds.toList();
 
       final response = await _orderService.createOrderFromQuotation(
         quotationId: widget.quotation.id,
-        startDate: startDate!.toIso8601String(),
-        endDate: endDate!.toIso8601String(),
-        notes:
-            "Order created from quotation ${widget.quotation.quotationNumber}",
+        startDate: selectedStart.toIso8601String(),
+        endDate: selectedEnd.toIso8601String(),
+        bomIds: selectedBomIds,
+        notes: _selectAllItems
+            ? "Order created from quotation ${widget.quotation.quotationNumber} (all items)"
+            : "Order created from quotation ${widget.quotation.quotationNumber} (items ${selectedBomIds.join(', ')})",
         amountPaid: amountPaid,
       );
 
@@ -713,8 +978,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           ),
         );
 
-        Nav.pop();
-        Nav.pop();
+        Nav.offAll(const DashboardScreen(initialIndex: 2));
 
       } else {
         if (!mounted) return;

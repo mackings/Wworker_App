@@ -185,6 +185,8 @@ class _SelectQuotationForOrderState
         itemCount: quotations.length,
         itemBuilder: (context, index) {
           final quotation = quotations[index];
+          final firstBom =
+              quotation.boms.isNotEmpty ? quotation.boms.first : null;
           final firstItem = quotation.items.isNotEmpty
               ? quotation.items.first
               : null;
@@ -208,17 +210,32 @@ class _SelectQuotationForOrderState
                 'status': quotation.status,
                 'createdAt': quotation.createdAt.toIso8601String(),
                 'quotationNumber': quotation.quotationNumber,
-                'items': firstItem != null
+                'items': firstBom != null
                     ? [
                         {
-                          'productName': quotation.service.product,
-                          'woodType': firstItem.woodType ?? 'N/A',
-                          'image': firstItem.image.isNotEmpty
-                              ? firstItem.image
+                          'productName': firstBom.name.isNotEmpty
+                              ? firstBom.name
+                              : firstBom.product.name,
+                          'woodType': firstBom.materials.isNotEmpty
+                              ? (firstBom.materials.first.woodType ??
+                                  firstBom.materials.first.name)
+                              : 'N/A',
+                          'image': firstBom.product.image.isNotEmpty
+                              ? firstBom.product.image
                               : Urls.woodImg,
                         },
                       ]
-                    : [],
+                    : firstItem != null
+                        ? [
+                            {
+                              'productName': quotation.service.product,
+                              'woodType': firstItem.woodType ?? 'N/A',
+                              'image': firstItem.image.isNotEmpty
+                                  ? firstItem.image
+                                  : Urls.woodImg,
+                            },
+                          ]
+                        : [],
               },
               onDelete: () {}, // Disable delete for order selection
             ),

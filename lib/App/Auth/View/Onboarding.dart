@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/svg.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:wworker/App/Auth/View/Signup.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
+
+
 
 class FirstOnboard extends ConsumerStatefulWidget {
   const FirstOnboard({super.key});
@@ -17,7 +19,7 @@ class FirstOnboard extends ConsumerStatefulWidget {
 class _FirstOnboardState extends ConsumerState<FirstOnboard> {
   int currentIndex = 0;
 
-  final List<Map<String, String>> onboardingData = [
+  static const List<Map<String, String>> onboardingData = [
     {
       "image": "assets/svg/onboard1.svg",
       "title": "Simplify Your Quotation Process",
@@ -37,6 +39,17 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
   ];
 
   final PageController _pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final item in onboardingData) {
+        final assetName = item["image"]!;
+        SvgAssetLoader(assetName).loadBytes(context);
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -89,7 +102,17 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                         return Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SvgPicture.asset(item["image"]!, height: 350),
+                            SvgPicture.asset(
+                              item["image"]!,
+                              height: 300,
+                              fit: BoxFit.contain,
+                              placeholderBuilder: (context) => const SizedBox(
+                                height: 300,
+                                child: Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              ),
+                            ),
                             const SizedBox(height: 40),
                             CustomText(
                               title: item["title"],

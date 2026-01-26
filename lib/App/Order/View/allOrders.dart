@@ -29,7 +29,6 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
   String? errorMessage;
   int currentPage = 1;
   int totalPages = 1;
-  String? paymentFilter;
   String? statusFilter;
 
   @override
@@ -135,35 +134,16 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
 
   List<OrderModel> _filteredOrders() {
     return orders.where((order) {
-      final payment = _normalize(order.paymentStatus);
       final status = _normalize(order.status);
 
-      final paymentOk =
-          paymentFilter == null || payment == _normalize(paymentFilter!);
       final statusOk = statusFilter == null || status == _normalize(statusFilter!);
 
-      return paymentOk && statusOk;
+      return statusOk;
     }).toList();
   }
 
   String _normalize(String value) {
     return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
-  }
-
-  List<_FilterOption> _availablePaymentFilters() {
-    final options = <String, String>{};
-    for (final order in orders) {
-      final normalized = _normalize(order.paymentStatus);
-      if (normalized.isEmpty) {
-        continue;
-      }
-      options.putIfAbsent(normalized, () => _prettyLabel(order.paymentStatus));
-    }
-    final list = options.entries.toList()
-      ..sort((a, b) => a.value.compareTo(b.value));
-    return list
-        .map((entry) => _FilterOption(value: entry.key, label: entry.value))
-        .toList();
   }
 
   List<_FilterOption> _availableStatusFilters() {
@@ -346,7 +326,6 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
   }
 
   Widget _buildFilterBar() {
-    final paymentOptions = _availablePaymentFilters();
     final statusOptions = _availableStatusFilters();
 
     return Container(
@@ -368,13 +347,6 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
             ],
           ),
           const SizedBox(height: 6),
-          _buildFilterRow(
-            title: "Payment",
-            options: paymentOptions,
-            selected: paymentFilter,
-            onSelected: (value) => setState(() => paymentFilter = value),
-          ),
-          const SizedBox(height: 8),
           _buildFilterRow(
             title: "Status",
             options: statusOptions,

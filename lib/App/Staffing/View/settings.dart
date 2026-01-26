@@ -7,10 +7,13 @@ import 'package:wworker/App/Settings/Api/company_settings_service.dart';
 import 'package:wworker/App/Settings/Model/company_settings_model.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/platform_dashboard_new.dart';
+import 'package:wworker/App/Settings/View/tawk_live_chat.dart';
 import 'package:wworker/App/Staffing/Widgets/database.dart';
 import 'package:wworker/App/Staffing/Widgets/notification.dart';
 import 'package:wworker/App/Staffing/Widgets/staffaccess.dart';
 import 'package:wworker/App/Invoice/View/invoice_template_settings.dart';
+import 'package:wworker/App/Auth/Api/AuthService.dart';
+import 'package:wworker/App/Auth/View/Signin.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
@@ -27,6 +30,7 @@ class Settings extends ConsumerStatefulWidget {
 class _SettingsState extends ConsumerState<Settings> {
   final PlatformOwnerService _platformService = PlatformOwnerService();
   final CompanySettingsService _settingsService = CompanySettingsService();
+  final AuthService _authService = AuthService();
   bool isPlatformOwner = false;
   bool isLoadingPlatformStatus = true;
   bool isLoadingSettings = true;
@@ -75,6 +79,12 @@ class _SettingsState extends ConsumerState<Settings> {
           ? "⚠️ Company settings load failed"
           : "✅ Company settings loaded",
     );
+  }
+
+  Future<void> _handleLogout() async {
+    await _authService.logout();
+    if (!mounted) return;
+    Nav.pushReplacement(const Signin());
   }
 
   Future<void> _updateSetting({
@@ -204,6 +214,16 @@ class _SettingsState extends ConsumerState<Settings> {
 
                 const SizedBox(height: 12),
 
+                _buildModernSettingCard(
+                  title: 'Live Chat Support',
+                  subtitle: 'Chat with support',
+                  icon: Icons.support_agent,
+                  iconColor: Colors.indigo,
+                  onTap: () => Nav.push(const TawkLiveChatPage()),
+                ),
+
+                const SizedBox(height: 12),
+
                 _buildCompanySettingsSection(),
 
                 const SizedBox(height: 12),
@@ -212,6 +232,16 @@ class _SettingsState extends ConsumerState<Settings> {
                   isEnabled: guideEnabled,
                   onChanged: (value) =>
                       ref.read(guideProvider.notifier).setEnabled(value),
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildModernSettingCard(
+                  title: 'Log Out',
+                  subtitle: 'Sign out of your account',
+                  icon: Icons.logout,
+                  iconColor: Colors.redAccent,
+                  onTap: _handleLogout,
                 ),
 
                 // Platform Owner Dashboard (only shown for platform owners)

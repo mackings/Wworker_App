@@ -7,14 +7,16 @@ import 'package:wworker/App/Staffing/View/settings.dart';
 import 'package:wworker/GeneralWidgets/UI/NavBar.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int initialIndex;
+
+  const DashboardScreen({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
 
   final List<Widget> _pages = const [
     Home(),
@@ -23,6 +25,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     SalesPage(),
     Settings(),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   @override
   Widget build(BuildContext context) {

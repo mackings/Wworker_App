@@ -124,6 +124,7 @@ Future<void> _saveUserData(Map<String, dynamic> data) async {
   // Save token
   if (data["token"] != null) {
     await prefs.setString("token", data["token"]);
+    await prefs.setBool("isLoggedIn", true);
     debugPrint("✅ Token saved");
   }
 
