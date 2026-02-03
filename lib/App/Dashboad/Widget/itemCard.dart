@@ -11,6 +11,10 @@ class ItemsCard extends StatelessWidget {
   final ValueChanged<bool>? onPriceIncrementToggle;
   final bool useBomStyle;
   final VoidCallback? onEdit;
+  final bool showQuantityControls;
+  final int quantity;
+  final VoidCallback? onIncreaseQuantity;
+  final VoidCallback? onDecreaseQuantity;
 
   const ItemsCard({
     super.key,
@@ -24,6 +28,10 @@ class ItemsCard extends StatelessWidget {
     this.onPriceIncrementToggle,
     this.useBomStyle = false,
     this.onEdit,
+    this.showQuantityControls = false,
+    this.quantity = 1,
+    this.onIncreaseQuantity,
+    this.onDecreaseQuantity,
   });
 
   @override
@@ -64,8 +72,9 @@ class ItemsCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               color: Colors.white,
             ),
-            child: Column(
+              child: Column(
               children: item.entries
+                  .where((entry) => entry.key != "disableIncrement")
                   .map(
                     (entry) => _buildRow(
                       entry.key,
@@ -243,6 +252,59 @@ class ItemsCard extends StatelessWidget {
               ...rows.map((row) => buildRow(row.key, row.value)),
 
               if (rows.isNotEmpty) const SizedBox(height: 8),
+
+              if (showQuantityControls) ...[
+                Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFD3D3D3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Text(
+                        "Quantity",
+                        style: TextStyle(
+                          color: Color(0xFF302E2E),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        onPressed: onDecreaseQuantity,
+                        icon: const Icon(Icons.remove_circle_outline),
+                        color: const Color(0xFF8B4513),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          quantity.toString(),
+                          style: const TextStyle(
+                            color: Color(0xFF302E2E),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onIncreaseQuantity,
+                        icon: const Icon(Icons.add_circle_outline),
+                        color: const Color(0xFF8B4513),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
 
               if (item["Total"] != null && item["Total"].toString().isNotEmpty)
                 Container(
@@ -439,7 +501,7 @@ class ItemsCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               "When enabled, the item total uses the base price only and "
-              "does not multiply by quantity.",
+              "does not multiply by quotation quantity.",
               style: GoogleFonts.openSans(
                 color: const Color(0xFF7B7B7B),
                 fontSize: 13,

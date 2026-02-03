@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
 import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 
 
@@ -32,6 +33,8 @@ class MaterialService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   // 🟢 GET ALL MATERIALS

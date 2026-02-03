@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Database/Model/database_models.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class DatabaseService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -30,6 +31,8 @@ class DatabaseService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   Future<String?> _getToken() async {

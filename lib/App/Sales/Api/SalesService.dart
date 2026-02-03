@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Sales/Model/SalesModel.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class SalesService {
   final Dio _dio = Dio(BaseOptions(baseUrl: 'https://ww-backend.vercel.app'));
@@ -29,6 +30,8 @@ class SalesService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   /// Get sales analytics

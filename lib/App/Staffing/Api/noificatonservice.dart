@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class NotificationService {
     final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -32,6 +33,8 @@ class NotificationService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   // 🟢 GET NOTIFICATIONS

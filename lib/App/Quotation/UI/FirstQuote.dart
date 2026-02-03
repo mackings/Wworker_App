@@ -40,7 +40,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
   List<ClientModel> _filteredClients = [];
   ClientModel? _selectedClient;
   bool _isLoadingClients = true;
-  bool _showClientDropdown = false;
   bool _isNewClient = false;
 
   @override
@@ -96,7 +95,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
     setState(() {
       if (query.isEmpty) {
         _filteredClients = _allClients;
-        _showClientDropdown = false;
         _selectedClient = null;
         _isNewClient = false;
         _clearClientFields();
@@ -105,7 +103,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
             .where((client) => 
               client.clientName.toLowerCase().contains(query))
             .toList();
-        _showClientDropdown = _filteredClients.isNotEmpty;
         
         // Check if exact match exists
         final exactMatch = _filteredClients.firstWhere(
@@ -135,7 +132,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
       _phoneController.text = client.phoneNumber;
       _addressController.text = client.clientAddress;
       _busStopController.text = client.nearestBusStop;
-      _showClientDropdown = false;
       _isNewClient = false;
     });
   }
@@ -147,11 +143,13 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
     _busStopController.clear();
   }
 
-  void _createNewClient() {
+  void _createNewClient({bool keepTypedName = false}) {
     setState(() {
       _selectedClient = null;
       _isNewClient = true;
-      _showClientDropdown = false;
+      if (!keepTypedName) {
+        _nameController.clear();
+      }
       _clearClientFields();
     });
   }
@@ -216,6 +214,12 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                                 widget.quotationQuantities ?? {},
                           ),
                         );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Please fill all required fields'),
+                          ),
+                        );
                       }
                     },
                   ),
@@ -269,6 +273,26 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
             ],
           ),
           const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  "Tap a saved client to prefill details",
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _createNewClient(),
+                icon: const Icon(Icons.person_add_alt_1, size: 16),
+                label: const Text("Add New Client"),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFA16438),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           
           // Search/Select Field
           TextField(
@@ -313,8 +337,11 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
             ),
           ),
           
-          // Client Dropdown Results
-          if (_showClientDropdown && _filteredClients.isNotEmpty)
+          // All clients list (filtered by search text)
+          if (!_isLoadingClients &&
+              _allClients.isNotEmpty &&
+              (_nameController.text.trim().isEmpty ||
+                  _filteredClients.isNotEmpty))
             Container(
               margin: const EdgeInsets.only(top: 8),
               constraints: const BoxConstraints(maxHeight: 200),
@@ -333,9 +360,13 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: _filteredClients.length,
+                itemCount: _nameController.text.trim().isEmpty
+                    ? _allClients.length
+                    : _filteredClients.length,
                 itemBuilder: (context, index) {
-                  final client = _filteredClients[index];
+                  final client = _nameController.text.trim().isEmpty
+                      ? _allClients[index]
+                      : _filteredClients[index];
                   return ListTile(
                     dense: true,
                     leading: CircleAvatar(

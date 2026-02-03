@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class ClientQuotationService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -31,6 +32,8 @@ class ClientQuotationService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   /// GET {{live}}/api/quotation

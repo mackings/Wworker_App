@@ -35,7 +35,12 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
 
     setState(() => isCreating = true);
 
@@ -633,7 +638,14 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
-                      if (nameController.text.trim().isEmpty) return;
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Type name is required'),
+                          ),
+                        );
+                        return;
+                      }
                       setState(() {
                         final updated = BoardType(
                           name: nameController.text.trim(),

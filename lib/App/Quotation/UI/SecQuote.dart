@@ -127,7 +127,9 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     for (final cost in additionalCosts) {
       final amount =
           double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
-      additionalTotal += amount * quantity;
+      final disableIncrement = cost["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quantity;
+      additionalTotal += amount * multiplier;
     }
 
     final total = materialTotal + additionalTotal;

@@ -51,17 +51,15 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     });
   }
 
-  Map<String, dynamic> _buildDisplayItem(
-    Map<String, dynamic> item,
-    bool isPriceIncrementDisabled,
-  ) {
+  Map<String, dynamic> _buildDisplayItem(Map<String, dynamic> item) {
     final displayItem = Map<String, dynamic>.from(item);
     displayItem.remove("disableIncrement");
     final price =
         double.tryParse((item["Price"] ?? "0").toString()) ?? 0.0;
     final quantity =
         int.tryParse((item["quantity"] ?? "1").toString()) ?? 1;
-    final total = isPriceIncrementDisabled ? price : price * quantity;
+    // Always respect material quantity on the materials page.
+    final total = price * quantity;
     final totalRounded = total.round();
     displayItem["Total"] =
         NumberFormat.decimalPattern().format(totalRounded);
@@ -166,9 +164,33 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 final index = entry.key;
                 final item = entry.value;
                 final isDisabled = item["disableIncrement"] == true;
-                final displayItem = _buildDisplayItem(item, isDisabled);
+                final displayItem = _buildDisplayItem(item);
                 return ItemsCard(
                   item: displayItem,
+                  showQuantityControls: true,
+                  quantity:
+                      int.tryParse((item["quantity"] ?? "1").toString()) ?? 1,
+                  onIncreaseQuantity: () {
+                    final currentQty =
+                        int.tryParse((item["quantity"] ?? "1").toString()) ??
+                        1;
+                    final updated = {
+                      ...item,
+                      "quantity": (currentQty + 1).toString(),
+                    };
+                    notifier.updateMaterial(index, updated);
+                  },
+                  onDecreaseQuantity: () {
+                    final currentQty =
+                        int.tryParse((item["quantity"] ?? "1").toString()) ??
+                        1;
+                    if (currentQty <= 1) return;
+                    final updated = {
+                      ...item,
+                      "quantity": (currentQty - 1).toString(),
+                    };
+                    notifier.updateMaterial(index, updated);
+                  },
                   showPriceIncrementToggle: true,
                   useBomStyle: true,
                   isPriceIncrementDisabled: isDisabled,
@@ -192,6 +214,12 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 final item = entry.value;
                 return ItemsCard(
                   item: item,
+                  showPriceIncrementToggle: true,
+                  isPriceIncrementDisabled: item["disableIncrement"] == true,
+                  onPriceIncrementToggle: (value) {
+                    final updated = {...item, "disableIncrement": value};
+                    notifier.updateAdditionalCost(index, updated);
+                  },
                   onDelete: () => notifier.deleteAdditionalCost(index),
                 );
               }),

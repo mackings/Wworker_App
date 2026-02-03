@@ -147,11 +147,14 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
 
     await prefs.setString(key, jsonEncode(quotations));
 
+    // Clear the working BOM materials so next BOM starts fresh.
+    await ref.read(materialProvider.notifier).clearAll();
+
     // Optional: make it the active quotation
     state = {
       "product": quotation["product"],
-      "materials": quotation["materials"],
-      "additionalCosts": quotation["additionalCosts"],
+      "materials": [],
+      "additionalCosts": [],
       "isLoaded": true,
       "quotationCount": quotations.length,
     };

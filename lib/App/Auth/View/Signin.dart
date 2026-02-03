@@ -15,7 +15,9 @@ import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
 
 class Signin extends ConsumerStatefulWidget {
-  const Signin({super.key});
+  final String? sessionMessage;
+
+  const Signin({super.key, this.sessionMessage});
 
   @override
   ConsumerState<Signin> createState() => _SigninState();
@@ -24,6 +26,28 @@ class Signin extends ConsumerStatefulWidget {
 class _SigninState extends ConsumerState<Signin> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.sessionMessage != null && widget.sessionMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Login Required'),
+            content: Text(widget.sessionMessage!),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      });
+    }
+  }
 
   Future<void> _handleSignin() async {
     final email = _emailController.text.trim();
@@ -72,7 +96,6 @@ class _SigninState extends ConsumerState<Signin> {
                 }
 
                 if (accessibleCompanies.length > 1) {
-                  // User has multiple accessible companies - show selection screen
                   Nav.pushReplacement(
                     CompanySelectionScreen(
                       companies: accessibleCompanies,
@@ -80,8 +103,12 @@ class _SigninState extends ConsumerState<Signin> {
                     ),
                   );
                 } else {
-                  // User has single accessible company - go to dashboard
-                  Nav.pushReplacement(const DashboardScreen());
+                  Nav.pushReplacement(
+                    CompanySelectionScreen(
+                      companies: accessibleCompanies,
+                      currentIndex: 0,
+                    ),
+                  );
                 }
               } else {
                 // No companies - go to dashboard anyway

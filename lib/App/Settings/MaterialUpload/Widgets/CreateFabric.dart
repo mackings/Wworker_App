@@ -23,7 +23,12 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
 
     setState(() => isCreating = true);
 
@@ -244,7 +249,12 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
 
     setState(() => isCreating = true);
 
@@ -467,7 +477,12 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
 
     setState(() => isCreating = true);
 

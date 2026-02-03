@@ -81,7 +81,7 @@ class CustomButton extends StatelessWidget {
                   ),
                 )
               : Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisSize: MainAxisSize.max,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
@@ -92,13 +92,18 @@ class CustomButton extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                     ],
-                    Text(
-                      text,
-                      style: GoogleFonts.openSans(
-                        color: btnTextColor,
-                        fontSize: textSize, // ✅ Custom text size
-                        fontWeight: FontWeight.w600,
-                        height: 1.5,
+                    Flexible(
+                      child: Text(
+                        text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.openSans(
+                          color: btnTextColor,
+                          fontSize: textSize, // ✅ Custom text size
+                          fontWeight: FontWeight.w600,
+                          height: 1.5,
+                        ),
                       ),
                     ),
                   ],

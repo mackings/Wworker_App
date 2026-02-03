@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Invoice/Model/Client_model.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 
 
@@ -35,6 +36,8 @@ class ClientService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
 

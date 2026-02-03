@@ -585,6 +585,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       };
 
       await quotationNotifier.addNewQuotation(newQuotation);
+      await ref.read(materialProvider.notifier).clearAll();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -721,6 +722,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     setState(() => isSavingBom = false);
 
     if (response["success"] == true) {
+      await ref.read(materialProvider.notifier).clearAll();
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("✅ BOM saved successfully!"),

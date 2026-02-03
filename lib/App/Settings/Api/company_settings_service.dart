@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Settings/Model/company_settings_model.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class CompanySettingsService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -31,6 +32,8 @@ class CompanySettingsService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   Future<String?> _getToken() async {

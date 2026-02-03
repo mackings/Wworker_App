@@ -31,7 +31,12 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
 
   Future<void> _createGlobalProduct() async {
     final form = _formKey.currentState;
-    if (form == null || !form.validate()) return;
+    if (form == null || !form.validate()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all required fields')),
+      );
+      return;
+    }
 
     setState(() => isLoading = true);
 

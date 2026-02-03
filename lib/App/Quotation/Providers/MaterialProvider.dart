@@ -87,6 +87,15 @@ class MaterialNotifier extends StateNotifier<Map<String, dynamic>> {
     }
   }
 
+  Future<void> updateAdditionalCost(int index, Map<String, dynamic> item) async {
+    final updated = List<Map<String, dynamic>>.from(state["additionalCosts"]);
+    if (index >= 0 && index < updated.length) {
+      updated[index] = item;
+      state = {...state, "additionalCosts": updated};
+      await _saveMaterials();
+    }
+  }
+
   Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString("userId") ?? "default_user";

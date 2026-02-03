@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wworker/App/Auth/View/Onboarding.dart';
+import 'package:wworker/App/Auth/View/session_gate.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
 void main() {
@@ -17,7 +17,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const FirstOnboard(),
+      home: const SessionGate(),
     );
   }
 }

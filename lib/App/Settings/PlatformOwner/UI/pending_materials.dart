@@ -126,7 +126,12 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       confirmLabel: 'Reject',
       confirmColor: ColorsApp.btnColor.withOpacity(0.9),
     );
-    if (reason == null || reason.isEmpty) return;
+    if (reason == null || reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rejection reason is required')),
+      );
+      return;
+    }
 
     final result = await _service.rejectMaterial(material.id, reason: reason);
 

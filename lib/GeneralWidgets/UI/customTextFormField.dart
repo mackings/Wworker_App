@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
+bool _didAutoScrollToInvalidField = false;
+
 class CustomTextField extends StatefulWidget {
   final String label;
   final String hintText;
@@ -40,6 +42,24 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   bool _obscureText = true;
+  final GlobalKey _fieldKey = GlobalKey();
+  late final FocusNode _focusNode;
+  bool _ownsFocusNode = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode = FocusNode();
+    _ownsFocusNode = true;
+  }
+
+  @override
+  void dispose() {
+    if (_ownsFocusNode) {
+      _focusNode.dispose();
+    }
+    super.dispose();
+  }
 
   IconData? _getIcon() {
     final labelLower = widget.label.toLowerCase();
@@ -57,6 +77,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      key: _fieldKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CustomText(
@@ -91,7 +112,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
     return Center(
       child: TextFormField(
         controller: widget.controller,
-        validator: widget.validator,
+        focusNode: _focusNode,
+        validator: (value) => _validateAndScroll(value),
         keyboardType: widget.keyboardType,
         obscureText: widget.isPassword ? _obscureText : false,
         textAlign: widget.textAlign,
@@ -138,7 +160,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
   Widget _buildDropdownField() {
     return DropdownButtonFormField<String>(
       value: widget.value, // ✅ Use preselected value if provided
-      validator: widget.validator,
+      validator: (value) => _validateAndScroll(value),
       items: widget.dropdownItems
           ?.map(
             (value) => DropdownMenuItem(
@@ -165,5 +187,39 @@ class _CustomTextFieldState extends State<CustomTextField> {
         suffixIcon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7B7B7B)),
       ),
     );
+  }
+
+  String? _validateAndScroll(String? value) {
+    final error = widget.validator?.call(value);
+    if (error == null) return null;
+
+    if (!_didAutoScrollToInvalidField) {
+      _didAutoScrollToInvalidField = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) {
+          _didAutoScrollToInvalidField = false;
+          return;
+        }
+
+        final fieldContext = _fieldKey.currentContext;
+        if (fieldContext != null) {
+          await Scrollable.ensureVisible(
+            fieldContext,
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            alignment: 0.2,
+          );
+        }
+
+        if (!widget.isDropdown) {
+          _focusNode.requestFocus();
+        }
+
+        await Future<void>.delayed(const Duration(milliseconds: 300));
+        _didAutoScrollToInvalidField = false;
+      });
+    }
+
+    return error;
   }
 }

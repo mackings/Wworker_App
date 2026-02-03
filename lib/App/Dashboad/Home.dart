@@ -23,6 +23,7 @@ import 'package:wworker/App/Staffing/View/addCompany.dart';
 import 'package:wworker/App/Database/View/database_home.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
+import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
@@ -929,27 +930,71 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('No Company'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B4513).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.apartment_rounded,
+                color: Color(0xFF8B4513),
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'No Company Found',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
         content: const Text(
-          'You need to create or join a company to access this feature.',
+          'Create a company first to unlock quotations, invoices, and project tracking.',
+          style: TextStyle(height: 1.4, color: Color(0xFF5B5B5B)),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CreateCompanyScreen()),
-              ).then((_) => _loadUserData());
-            },
-            child: const Text(
-              'Create Company',
-              style: TextStyle(color: Color(0xFF8B4513)),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: CustomButton(
+                  text: 'Maybe Later',
+                  onPressed: () => Navigator.pop(context),
+                  outlined: true,
+                  icon: Icons.close_rounded,
+                  height: 56,
+                  padding: 14,
+                  borderRadius: 12,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: CustomButton(
+                  text: 'Create Now',
+                  onPressed: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const CreateCompanyScreen(),
+                      ),
+                    ).then((_) => _loadUserData());
+                  },
+                  icon: Icons.add_business_rounded,
+                  height: 56,
+                  padding: 14,
+                  borderRadius: 12,
+                ),
+              ),
+            ],
           ),
         ],
       ),

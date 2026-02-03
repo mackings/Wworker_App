@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Product/Model/ProModel.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/Constant/urls.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class ProductService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -33,6 +34,8 @@ class ProductService {
         },
       ),
     );
+  
+    _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   // 🟢 CREATE PRODUCT (Multipart POST)

@@ -37,8 +37,15 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
     accessibleCompanies = widget.companies
         .where((company) => company['accessGranted'] == true)
         .toList();
-    
-    selectedIndex = widget.currentIndex;
+
+    if (accessibleCompanies.isEmpty) {
+      selectedIndex = null;
+    } else if (widget.currentIndex >= 0 &&
+        widget.currentIndex < accessibleCompanies.length) {
+      selectedIndex = widget.currentIndex;
+    } else {
+      selectedIndex = 0;
+    }
   }
 
   Future<void> _continueWithSelectedCompany() async {
@@ -67,7 +74,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
     }
 
     // ✅ If same company is selected, just navigate (no API call needed)
-    if (selectedIndex == widget.currentIndex) {
+    final hasValidCurrentIndex = widget.currentIndex >= 0 &&
+        widget.currentIndex < accessibleCompanies.length;
+    if (hasValidCurrentIndex && selectedIndex == widget.currentIndex) {
       if (widget.isFromSettings) {
         Navigator.pop(context, false);
       } else {

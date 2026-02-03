@@ -143,7 +143,9 @@ class _QuotationSummaryState extends ConsumerState<QuotationSummary> {
     for (final cost in additionalCosts) {
       final amount =
           double.tryParse((cost["amount"]?.toString() ?? "0")) ?? 0.0;
-      additionalTotal += amount * quantity;
+      final disableIncrement = cost["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quantity;
+      additionalTotal += amount * multiplier;
     }
 
     final total = materialTotal + additionalTotal;
