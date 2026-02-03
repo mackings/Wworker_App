@@ -3,6 +3,52 @@ import 'package:flutter/material.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
+class RetryTwiceInterceptor extends Interceptor {
+  final Dio dio;
+
+  RetryTwiceInterceptor(this.dio);
+
+  @override
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final options = err.requestOptions;
+    final retries = (options.extra['retry_count'] as int? ?? 0);
+    final canRetry = retries < 2 && _isRetryable(err);
+
+    if (!canRetry) {
+      handler.next(err);
+      return;
+    }
+
+    options.extra['retry_count'] = retries + 1;
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+
+    try {
+      final response = await dio.fetch(options);
+      handler.resolve(response);
+    } catch (e) {
+      if (e is DioException) {
+        handler.next(e);
+      } else {
+        handler.next(err);
+      }
+    }
+  }
+
+  bool _isRetryable(DioException err) {
+    if (err.type == DioExceptionType.connectionTimeout ||
+        err.type == DioExceptionType.sendTimeout ||
+        err.type == DioExceptionType.receiveTimeout ||
+        err.type == DioExceptionType.connectionError) {
+      return true;
+    }
+    final status = err.response?.statusCode ?? 0;
+    return status >= 500 && status < 600;
+  }
+}
+
 class ApiFeedbackInterceptor extends Interceptor {
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
@@ -10,7 +56,15 @@ class ApiFeedbackInterceptor extends Interceptor {
     if (data is Map<String, dynamic>) {
       final success = data['success'] == true;
       final message = data['message']?.toString().trim();
-      if (success && message != null && message.isNotEmpty) {
+      final method = response.requestOptions.method.toUpperCase();
+      final showSuccessDialog =
+          response.requestOptions.extra['showSuccessDialog'] != false;
+      final shouldShowSuccess =
+          method != 'GET' && method != 'HEAD' && showSuccessDialog;
+      if (success &&
+          shouldShowSuccess &&
+          message != null &&
+          message.isNotEmpty) {
         ApiModalSheet.showSuccess(message);
       } else if (!success && message != null && message.isNotEmpty) {
         ApiModalSheet.showError(message);
@@ -21,6 +75,11 @@ class ApiFeedbackInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    final showErrorDialog = err.requestOptions.extra['showErrorDialog'] != false;
+    if (!showErrorDialog) {
+      handler.next(err);
+      return;
+    }
     final responseData = err.response?.data;
     String message = err.message ?? 'Something went wrong';
     if (responseData is Map<String, dynamic>) {

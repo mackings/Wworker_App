@@ -31,6 +31,7 @@ class SalesService {
       ),
     );
   
+    _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 

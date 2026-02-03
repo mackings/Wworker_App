@@ -25,35 +25,19 @@ class AuthService {
           debugPrint("📥 [DATA] => ${response.data}");
           return handler.next(response);
         },
-        onError: (DioException e, handler) async {
+        onError: (DioException e, handler) {
           debugPrint("❌ [AUTH ERROR] => ${e.requestOptions.uri}");
           debugPrint("📛 [MESSAGE] => ${e.message}");
 
           if (e.response != null) {
             debugPrint("📄 [ERROR RESPONSE] => ${e.response?.data}");
           }
-
-          // Retry Logic (2 retries)
-          final requestOptions = e.requestOptions;
-          final retries = (requestOptions.extra["retries"] ?? 0) + 1;
-
-          if (retries <= 2) {
-            debugPrint("🔁 Retrying request... attempt #$retries");
-            requestOptions.extra["retries"] = retries;
-            await Future.delayed(const Duration(seconds: 1));
-            try {
-              final response = await _dio.fetch(requestOptions);
-              return handler.resolve(response);
-            } catch (err) {
-              return handler.next(err as DioException);
-            }
-          }
-
           return handler.next(e);
         },
       ),
     );
   
+    _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 

@@ -33,6 +33,7 @@ class ClientQuotationService {
       ),
     );
   
+    _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
