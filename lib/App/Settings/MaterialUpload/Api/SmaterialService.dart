@@ -4,16 +4,16 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
-
-
-
+import 'package:wworker/GeneralWidgets/UI/etag_cache.dart';
 
 class MaterialService {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: 'https://ww-backend.vercel.app',
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: 'https://ww-backend.vercel.app',
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   static void _prettyPrintJson(dynamic data) {
     try {
@@ -68,7 +68,7 @@ class MaterialService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -88,15 +88,16 @@ class MaterialService {
   /// ✅ Validate company exists
   Future<Map<String, dynamic>?> _validateCompany() async {
     final companyName = await _getCompanyName();
-    
+
     if (companyName == null || companyName.isEmpty) {
       debugPrint("⚠️ No active company found!");
       return {
         'success': false,
-        'message': 'No active company found. Please select or create a company.',
+        'message':
+            'No active company found. Please select or create a company.',
       };
     }
-    
+
     debugPrint("🏢 Active Company: $companyName");
     return null; // No error
   }
@@ -108,10 +109,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -121,6 +119,7 @@ class MaterialService {
       // ✅ Get company name and attach to request
       final companyName = await _getCompanyName();
       request['companyName'] = companyName;
+      request['useCatalog'] = request['useCatalog'] ?? false;
 
       final imagePath = request.remove('imagePath');
       final formPayload = <String, dynamic>{};
@@ -166,22 +165,22 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
   /// Get all materials (with optional category filter)
-  Future<Map<String, dynamic>> getAllMaterials({String? category}) async {
+  Future<Map<String, dynamic>> getAllMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? isActive,
+    bool? priced,
+  }) async {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -189,21 +188,40 @@ class MaterialService {
       if (companyError != null) return companyError;
 
       final companyName = await _getCompanyName();
-      debugPrint("📤 [GET ALL MATERIALS] Company: $companyName, Category: $category");
+      debugPrint(
+        "📤 [GET ALL MATERIALS] Company: $companyName, Category: $category, Subcategory: $subCategory",
+      );
 
       final queryParams = <String, dynamic>{};
       if (category != null) {
         queryParams['category'] = category;
       }
+      if (subCategory != null) {
+        queryParams['subCategory'] = subCategory;
+      }
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (isActive != null) {
+        queryParams['isActive'] = isActive;
+      }
+      if (priced != null) {
+        queryParams['priced'] = priced;
+      }
 
-      final response = await _dio.get(
-        '/api/materials',  // Backend filters by company automatically via middleware
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/product/materials',
         queryParameters: queryParams,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        headers: {"Authorization": "Bearer $token"},
       );
 
-      debugPrint("✅ [GET ALL MATERIALS SUCCESS] => ${response.data}");
-      return response.data;
+      debugPrint("✅ [GET ALL MATERIALS SUCCESS] => $data");
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
     } on DioException catch (e) {
       debugPrint(
         "⚠️ [GET ALL MATERIALS ERROR] => ${e.response?.data ?? e.message}",
@@ -214,22 +232,66 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
-  /// Get material categories with counts
+  /// Get grouped materials (category -> subCategory -> variants)
+  Future<Map<String, dynamic>> getGroupedMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? isActive,
+    bool? priced,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      // ✅ Validate company
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      final queryParams = <String, dynamic>{};
+      if (category != null) queryParams['category'] = category;
+      if (subCategory != null) queryParams['subCategory'] = subCategory;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (isActive != null) queryParams['isActive'] = isActive;
+      if (priced != null) queryParams['priced'] = priced;
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/product/materials/grouped',
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch grouped materials',
+      };
+    } catch (_) {
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Get material categories with counts from supported catalog summary
   Future<Map<String, dynamic>> getMaterialCategories() async {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -238,13 +300,18 @@ class MaterialService {
 
       debugPrint("📤 [GET MATERIAL CATEGORIES]");
 
-      final response = await _dio.get(
-        '/api/materials/categories',  // Backend filters by company
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/product/materials/supported/summary',
+        headers: {"Authorization": "Bearer $token"},
       );
 
-      debugPrint("✅ [GET MATERIAL CATEGORIES SUCCESS] => ${response.data}");
-      return response.data;
+      debugPrint("✅ [GET MATERIAL CATEGORIES SUCCESS] => $data");
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
     } on DioException catch (e) {
       debugPrint(
         "⚠️ [GET MATERIAL CATEGORIES ERROR] => ${e.response?.data ?? e.message}",
@@ -255,10 +322,7 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -267,10 +331,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -280,26 +341,21 @@ class MaterialService {
       debugPrint("📤 [GET MATERIAL BY ID] => $materialId");
 
       final response = await _dio.get(
-        '/api/materials/$materialId',
+        '/api/product/material/$materialId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       debugPrint("✅ [GET MATERIAL SUCCESS] => ${response.data}");
       return response.data;
     } on DioException catch (e) {
-      debugPrint(
-        "⚠️ [GET MATERIAL ERROR] => ${e.response?.data ?? e.message}",
-      );
+      debugPrint("⚠️ [GET MATERIAL ERROR] => ${e.response?.data ?? e.message}");
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to fetch material',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -311,10 +367,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -329,7 +382,7 @@ class MaterialService {
       debugPrint("📦 [UPDATE DATA] => $updateData");
 
       final response = await _dio.put(
-        '/api/materials/$materialId',
+        '/api/product/material/$materialId',
         data: updateData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -346,10 +399,7 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -361,10 +411,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -375,7 +422,7 @@ class MaterialService {
       debugPrint("📦 [TYPES] => $request");
 
       final response = await _dio.post(
-        '/api/materials/$materialId/types',
+        '/api/product/material/$materialId/add-types',
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -388,14 +435,12 @@ class MaterialService {
       );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to add material types',
+        'message':
+            e.response?.data['message'] ?? 'Failed to add material types',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -404,10 +449,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -417,7 +459,7 @@ class MaterialService {
       debugPrint("📤 [DELETE MATERIAL] => $materialId");
 
       final response = await _dio.delete(
-        '/api/materials/$materialId',
+        '/api/product/material/$materialId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -433,10 +475,7 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -448,10 +487,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -462,7 +498,7 @@ class MaterialService {
       debugPrint("📦 [REQUEST] => $request");
 
       final response = await _dio.post(
-        '/api/materials/$materialId/calculate',
+        '/api/product/material/$materialId/calculate-cost',
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -479,10 +515,7 @@ class MaterialService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -493,10 +526,7 @@ class MaterialService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       // ✅ Validate company
@@ -527,14 +557,91 @@ class MaterialService {
       );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to bulk create materials',
+        'message':
+            e.response?.data['message'] ?? 'Failed to bulk create materials',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Get exact supported catalog materials for app pickers/search
+  Future<Map<String, dynamic>> getSupportedMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? priced,
+    int page = 1,
+    int limit = 100,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
+
+      if (category != null) queryParams['category'] = category;
+      if (subCategory != null) queryParams['subCategory'] = subCategory;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (priced != null) queryParams['priced'] = priced;
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/product/materials/supported',
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
       return {
         'success': false,
-        'message': 'An unexpected error occurred',
+        'message':
+            e.response?.data['message'] ??
+            'Failed to fetch supported materials',
       };
+    } catch (_) {
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Get supported catalog category/subcategory summary
+  Future<Map<String, dynamic>> getSupportedMaterialsSummary() async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/product/materials/supported/summary',
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message':
+            e.response?.data['message'] ??
+            'Failed to fetch supported material summary',
+      };
+    } catch (_) {
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 }

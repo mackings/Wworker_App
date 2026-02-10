@@ -1,6 +1,3 @@
-
-
-
 class MaterialCostModel {
   final MaterialInfo material;
   final ProjectInfo project;
@@ -31,13 +28,24 @@ class MaterialCostModel {
 
   // Backward compatibility with old field names
   DimensionsInfo get dimensions => DimensionsInfo(
-        projectAreaSqm: double.parse(project.projectAreaSqm),
-        standardAreaSqm: double.parse(standard.standardAreaSqm),
-      );
+    projectAreaSqm: _toDouble(project.projectAreaSqm),
+    standardAreaSqm: _toDouble(standard.standardAreaSqm),
+  );
 
-  QuantityInfo get quantity => QuantityInfo(
-        minimumUnits: calculation.minimumUnits,
-      );
+  QuantityInfo get quantity =>
+      QuantityInfo(minimumUnits: calculation.minimumUnits);
+}
+
+double _toDouble(dynamic value, {double fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString()) ?? fallback;
+}
+
+int _toInt(dynamic value, {int fallback = 0}) {
+  if (value == null) return fallback;
+  if (value is num) return value.toInt();
+  return int.tryParse(value.toString()) ?? fallback;
 }
 
 class MaterialInfo {
@@ -81,8 +89,8 @@ class ProjectInfo {
 
   factory ProjectInfo.fromJson(Map<String, dynamic> json) {
     return ProjectInfo(
-      requiredWidth: json['requiredWidth']?.toDouble() ?? 0.0,
-      requiredLength: json['requiredLength']?.toDouble() ?? 0.0,
+      requiredWidth: _toDouble(json['requiredWidth']),
+      requiredLength: _toDouble(json['requiredLength']),
       requiredUnit: json['requiredUnit'] ?? '',
       projectAreaSqm: json['projectAreaSqm']?.toString() ?? '0',
     );
@@ -104,8 +112,8 @@ class StandardInfo {
 
   factory StandardInfo.fromJson(Map<String, dynamic> json) {
     return StandardInfo(
-      standardWidth: json['standardWidth']?.toDouble() ?? 0.0,
-      standardLength: json['standardLength']?.toDouble() ?? 0.0,
+      standardWidth: _toDouble(json['standardWidth']),
+      standardLength: _toDouble(json['standardLength']),
       standardUnit: json['standardUnit'] ?? '',
       standardAreaSqm: json['standardAreaSqm']?.toString() ?? '0',
     );
@@ -113,14 +121,18 @@ class StandardInfo {
 }
 
 class CalculationInfo {
+  final String mode;
   final int minimumUnits;
+  final double quantity;
   final double wasteThreshold;
   final String rawRemainder;
   final String wasteThresholdArea;
   final bool extraUnitAdded;
 
   CalculationInfo({
+    required this.mode,
     required this.minimumUnits,
+    required this.quantity,
     required this.wasteThreshold,
     required this.rawRemainder,
     required this.wasteThresholdArea,
@@ -129,8 +141,10 @@ class CalculationInfo {
 
   factory CalculationInfo.fromJson(Map<String, dynamic> json) {
     return CalculationInfo(
-      minimumUnits: json['minimumUnits'] ?? 0,
-      wasteThreshold: json['wasteThreshold']?.toDouble() ?? 0.75,
+      mode: json['mode']?.toString() ?? 'sheet_based',
+      minimumUnits: _toInt(json['minimumUnits']),
+      quantity: _toDouble(json['quantity'], fallback: 1),
+      wasteThreshold: _toDouble(json['wasteThreshold'], fallback: 0.75),
       rawRemainder: json['rawRemainder']?.toString() ?? '0',
       wasteThresholdArea: json['wasteThresholdArea']?.toString() ?? '0',
       extraUnitAdded: json['extraUnitAdded'] ?? false,
@@ -139,11 +153,13 @@ class CalculationInfo {
 }
 
 class PricingInfo {
+  final double pricePerUnit;
   final double pricePerSqm;
   final double pricePerFullUnit;
   final double totalMaterialCost;
 
   PricingInfo({
+    required this.pricePerUnit,
     required this.pricePerSqm,
     required this.pricePerFullUnit,
     required this.totalMaterialCost,
@@ -151,9 +167,10 @@ class PricingInfo {
 
   factory PricingInfo.fromJson(Map<String, dynamic> json) {
     return PricingInfo(
-      pricePerSqm: double.parse(json['pricePerSqm']?.toString() ?? '0'),
-      pricePerFullUnit: double.parse(json['pricePerFullUnit']?.toString() ?? '0'),
-      totalMaterialCost: double.parse(json['totalMaterialCost']?.toString() ?? '0'),
+      pricePerUnit: _toDouble(json['pricePerUnit']),
+      pricePerSqm: _toDouble(json['pricePerSqm']),
+      pricePerFullUnit: _toDouble(json['pricePerFullUnit']),
+      totalMaterialCost: _toDouble(json['totalMaterialCost']),
     );
   }
 
@@ -175,9 +192,9 @@ class WasteInfo {
 
   factory WasteInfo.fromJson(Map<String, dynamic> json) {
     return WasteInfo(
-      totalAreaUsed: double.parse(json['totalAreaUsed']?.toString() ?? '0'),
-      wasteArea: double.parse(json['wasteArea']?.toString() ?? '0'),
-      wastePercentage: double.parse(json['wastePercentage']?.toString() ?? '0'),
+      totalAreaUsed: _toDouble(json['totalAreaUsed']),
+      wasteArea: _toDouble(json['wasteArea']),
+      wastePercentage: _toDouble(json['wastePercentage']),
     );
   }
 }
@@ -187,10 +204,7 @@ class DimensionsInfo {
   final double projectAreaSqm;
   final double standardAreaSqm;
 
-  DimensionsInfo({
-    required this.projectAreaSqm,
-    required this.standardAreaSqm,
-  });
+  DimensionsInfo({required this.projectAreaSqm, required this.standardAreaSqm});
 }
 
 class QuantityInfo {

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
-
+import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
 
 class CreateFabricMaterialPage extends StatefulWidget {
   const CreateFabricMaterialPage({super.key});
 
   @override
-  State<CreateFabricMaterialPage> createState() => _CreateFabricMaterialPageState();
+  State<CreateFabricMaterialPage> createState() =>
+      _CreateFabricMaterialPageState();
 }
 
 class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
@@ -20,9 +21,19 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
 
   String _pricingUnit = 'piece';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -33,12 +44,12 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
     setState(() => isCreating = true);
 
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'FABRIC',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
-      if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
+      if (_notesController.text.isNotEmpty)
+        'notes': _notesController.text.trim(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -59,6 +70,20 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      preferredCategory: 'Fabric',
+      title: 'Select Fabric Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   @override
@@ -118,12 +143,24 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
             _buildSectionCard([
               TextFormField(
                 controller: _nameController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Fabric Name *',
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Leather, Velvet, Ankara',
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -134,7 +171,8 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
                   prefixText: '₦',
                 ),
                 keyboardType: TextInputType.number,
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -233,10 +271,12 @@ class CreateHardwareMaterialPage extends StatefulWidget {
   const CreateHardwareMaterialPage({super.key});
 
   @override
-  State<CreateHardwareMaterialPage> createState() => _CreateHardwareMaterialPageState();
+  State<CreateHardwareMaterialPage> createState() =>
+      _CreateHardwareMaterialPageState();
 }
 
-class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage> {
+class _CreateHardwareMaterialPageState
+    extends State<CreateHardwareMaterialPage> {
   final _formKey = GlobalKey<FormState>();
   final MaterialService _materialService = MaterialService();
 
@@ -246,9 +286,19 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
 
   String _pricingUnit = 'piece';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -259,12 +309,12 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
     setState(() => isCreating = true);
 
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'HARDWARE',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
-      if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
+      if (_notesController.text.isNotEmpty)
+        'notes': _notesController.text.trim(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -285,6 +335,19 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      title: 'Select Hardware Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   @override
@@ -344,12 +407,24 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
             _buildSectionCard([
               TextFormField(
                 controller: _nameController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Hardware Name *',
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Handle 1, Edge Tape, Nails',
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -360,7 +435,8 @@ class _CreateHardwareMaterialPageState extends State<CreateHardwareMaterialPage>
                   prefixText: '₦',
                 ),
                 keyboardType: TextInputType.number,
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
@@ -461,7 +537,8 @@ class CreateOtherMaterialPage extends StatefulWidget {
   const CreateOtherMaterialPage({super.key});
 
   @override
-  State<CreateOtherMaterialPage> createState() => _CreateOtherMaterialPageState();
+  State<CreateOtherMaterialPage> createState() =>
+      _CreateOtherMaterialPageState();
 }
 
 class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
@@ -474,9 +551,19 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
 
   String _pricingUnit = 'liter';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -487,12 +574,12 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
     setState(() => isCreating = true);
 
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'OTHER',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
-      if (_notesController.text.isNotEmpty) 'notes': _notesController.text.trim(),
+      if (_notesController.text.isNotEmpty)
+        'notes': _notesController.text.trim(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -513,6 +600,19 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      title: 'Select Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   @override
@@ -572,12 +672,24 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
             _buildSectionCard([
               TextFormField(
                 controller: _nameController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Material Name *',
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Paint, Glue, Varnish',
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -588,7 +700,8 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
                   prefixText: '₦',
                 ),
                 keyboardType: TextInputType.number,
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

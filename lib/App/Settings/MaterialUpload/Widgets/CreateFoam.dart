@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
+import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
 
 class CreateFoamMaterialPage extends StatefulWidget {
   const CreateFoamMaterialPage({super.key});
@@ -14,14 +15,19 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   final MaterialService _materialService = MaterialService();
 
   // Controllers
-  final TextEditingController _nameController = TextEditingController(text: 'Foam');
-  final TextEditingController _standardWidthController = TextEditingController();
-  final TextEditingController _standardLengthController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _standardWidthController =
+      TextEditingController();
+  final TextEditingController _standardLengthController =
+      TextEditingController();
   final TextEditingController _pricePerSqmController = TextEditingController();
-  final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   // Foam variants (thickness + density combinations)
@@ -33,6 +39,15 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -43,8 +58,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
     setState(() => isCreating = true);
 
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'FOAM',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
@@ -54,15 +68,19 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
       if (_pricePerSqmController.text.isNotEmpty)
         'pricePerSqm': double.parse(_pricePerSqmController.text),
       if (foamVariants.isNotEmpty)
-        'foamVariants': foamVariants.map((v) => {
-              'thickness': v.thickness,
-              'thicknessUnit': v.thicknessUnit,
-              'density': v.density,
-              'width': v.width,
-              'length': v.length,
-              'dimensionUnit': v.dimensionUnit,
-              if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
-            }).toList(),
+        'foamVariants': foamVariants
+            .map(
+              (v) => {
+                'thickness': v.thickness,
+                'thicknessUnit': v.thicknessUnit,
+                'density': v.density,
+                'width': v.width,
+                'length': v.length,
+                'dimensionUnit': v.dimensionUnit,
+                if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
+              },
+            )
+            .toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -83,6 +101,20 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      preferredCategory: 'Foam',
+      title: 'Select Foam Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   void _showVariantDialog({int? editIndex}) {
@@ -188,7 +220,10 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                           items: const [
                             DropdownMenuItem(value: 'mm', child: Text('mm')),
                             DropdownMenuItem(value: 'cm', child: Text('cm')),
-                            DropdownMenuItem(value: 'inches', child: Text('in')),
+                            DropdownMenuItem(
+                              value: 'inches',
+                              child: Text('in'),
+                            ),
                           ],
                           onChanged: (value) =>
                               setSheetState(() => thicknessUnit = value!),
@@ -256,7 +291,10 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
                       items: const [
                         DropdownMenuItem(value: 'mm', child: Text('mm')),
                         DropdownMenuItem(value: 'cm', child: Text('cm')),
-                        DropdownMenuItem(value: 'inches', child: Text('inches')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('inches'),
+                        ),
                       ],
                       onChanged: (value) =>
                           setSheetState(() => dimensionUnit = value!),
@@ -441,90 +479,92 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
             const SizedBox(height: 20),
 
             // Basic Information
-            _buildSectionCard(
-              'Basic Information',
-              [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material Name *',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Basic Information', [
+              TextFormField(
+                controller: _nameController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Material Name *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
+              ),
+            ]),
             const SizedBox(height: 16),
 
             // Standard Dimensions (most common foam size)
-            _buildSectionCard(
-              'Standard Sheet Size (Base)',
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardWidthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Width *',
-                          border: OutlineInputBorder(),
-                          hintText: '48',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Standard Sheet Size (Base)', [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardWidthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Width *',
+                        border: OutlineInputBorder(),
+                        hintText: '48',
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardLengthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Length *',
-                          border: OutlineInputBorder(),
-                          hintText: '96',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _standardUnit,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit *',
-                    border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'mm', child: Text('Millimeters')),
-                    DropdownMenuItem(value: 'cm', child: Text('Centimeters')),
-                    DropdownMenuItem(value: 'm', child: Text('Meters')),
-                    DropdownMenuItem(value: 'inches', child: Text('Inches')),
-                  ],
-                  onChanged: (value) => setState(() => _standardUnit = value!),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardLengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Length *',
+                        border: OutlineInputBorder(),
+                        hintText: '96',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _standardUnit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(value: 'mm', child: Text('Millimeters')),
+                  DropdownMenuItem(value: 'cm', child: Text('Centimeters')),
+                  DropdownMenuItem(value: 'm', child: Text('Meters')),
+                  DropdownMenuItem(value: 'inches', child: Text('Inches')),
+                ],
+                onChanged: (value) => setState(() => _standardUnit = value!),
+              ),
+            ]),
             const SizedBox(height: 16),
 
-            _buildSectionCard(
-              'Material Settings',
-              [
-                TextFormField(
-                  controller: _wasteThresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waste Threshold',
-                    border: OutlineInputBorder(),
-                    hintText: '0.75 = 75%',
-                  ),
-                  keyboardType: TextInputType.number,
+            _buildSectionCard('Material Settings', [
+              TextFormField(
+                controller: _wasteThresholdController,
+                decoration: const InputDecoration(
+                  labelText: 'Waste Threshold',
+                  border: OutlineInputBorder(),
+                  hintText: '0.75 = 75%',
                 ),
-              ],
-            ),
+                keyboardType: TextInputType.number,
+              ),
+            ]),
             const SizedBox(height: 16),
 
             // Foam Variants
@@ -650,7 +690,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
               final index = entry.key;
               final variant = entry.value;
               final hasPrice = variant.pricePerSqm != null;
-              
+
               return Container(
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.only(bottom: 8),
@@ -760,7 +800,9 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   }
 
   String _formatNumber(double number) {
-    return number.toStringAsFixed(2).replaceAllMapped(
+    return number
+        .toStringAsFixed(2)
+        .replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );

@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Staffing/Api/staffService.dart';
+import 'package:wworker/App/Staffing/Model/staffModel.dart';
+import 'package:wworker/App/Staffing/View/StaffPermission.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
-
-
-
 
 class AddStaff extends ConsumerStatefulWidget {
   const AddStaff({super.key});
@@ -21,15 +19,102 @@ class _AddStaffState extends ConsumerState<AddStaff> {
   final fullnameController = TextEditingController();
   final emailController = TextEditingController();
   final phoneController = TextEditingController();
-  final positionController = TextEditingController(); // ✅ Changed to TextEditingController
-  
+  final positionController =
+      TextEditingController(); // ✅ Changed to TextEditingController
+
   final CompanyService _companyService = CompanyService();
-  
+
   bool isLoading = false;
   String? selectedRole;
 
   // ✅ List of roles
   final List<String> roles = ["admin", "staff"];
+
+  StaffModel? _extractStaffFromInviteResult(Map<String, dynamic> result) {
+    final data = result['data'];
+    Map<String, dynamic>? staffJson;
+
+    if (data is Map<String, dynamic>) {
+      if (data['staff'] is Map) {
+        staffJson = Map<String, dynamic>.from(data['staff'] as Map);
+      } else if (data['user'] is Map) {
+        staffJson = Map<String, dynamic>.from(data['user'] as Map);
+      } else if (data['invitedStaff'] is Map) {
+        staffJson = Map<String, dynamic>.from(data['invitedStaff'] as Map);
+      } else if (data['data'] is Map) {
+        // Some APIs nest again under `data`.
+        staffJson = Map<String, dynamic>.from(data['data'] as Map);
+      } else if (data['id'] != null) {
+        staffJson = data;
+      }
+    } else if (data is Map) {
+      staffJson = Map<String, dynamic>.from(data);
+    }
+
+    // If backend did not return staff payload, fall back to form values.
+    // We still need an id to load permissions; this fallback only helps
+    // with display once we resolve the id by fetching staff list.
+    if (staffJson == null) return null;
+
+    // Normalize some common backend keys.
+    if (staffJson['id'] == null && staffJson['_id'] != null) {
+      staffJson['id'] = staffJson['_id'];
+    }
+
+    return StaffModel.fromJson(staffJson);
+  }
+
+  Future<StaffModel?> _resolveInvitedStaffForPermissions({
+    required Map<String, dynamic> inviteResult,
+    required String email,
+    required String fullname,
+    required String phoneNumber,
+    required String role,
+    required String position,
+  }) async {
+    final extracted = _extractStaffFromInviteResult(inviteResult);
+    if (extracted != null && extracted.id.isNotEmpty) {
+      return extracted;
+    }
+
+    // If the invite response didn't include staff id, fetch staff list and match by email.
+    final staffListResult = await _companyService.getCompanyStaff();
+    if (staffListResult['success'] == true && staffListResult['data'] is List) {
+      final list = (staffListResult['data'] as List)
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList();
+
+      final match = list.cast<Map<String, dynamic>?>().firstWhere(
+        (m) =>
+            (m?['email']?.toString().toLowerCase().trim() ?? '') ==
+            email.toLowerCase().trim(),
+        orElse: () => null,
+      );
+
+      if (match != null) {
+        return StaffModel.fromJson(match);
+      }
+    }
+
+    // Last resort: construct a local model (permissions fetch will fail without id).
+    return StaffModel(
+      id: extracted?.id ?? '',
+      fullname: extracted?.fullname.isNotEmpty == true
+          ? extracted!.fullname
+          : fullname,
+      email: extracted?.email.isNotEmpty == true ? extracted!.email : email,
+      phoneNumber: extracted?.phoneNumber.isNotEmpty == true
+          ? extracted!.phoneNumber
+          : phoneNumber,
+      role: extracted?.role.isNotEmpty == true ? extracted!.role : role,
+      position: extracted?.position.isNotEmpty == true
+          ? extracted!.position
+          : position,
+      accessGranted: extracted?.accessGranted ?? true,
+      joinedAt: extracted?.joinedAt,
+    );
+  }
 
   @override
   void dispose() {
@@ -46,7 +131,8 @@ class _AddStaffState extends ConsumerState<AddStaff> {
         emailController.text.isEmpty ||
         phoneController.text.isEmpty ||
         selectedRole == null ||
-        positionController.text.isEmpty) { // ✅ Changed validation
+        positionController.text.isEmpty) {
+      // ✅ Changed validation
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Please fill all fields"),
@@ -82,22 +168,40 @@ class _AddStaffState extends ConsumerState<AddStaff> {
     setState(() => isLoading = true);
 
     try {
+      final navigator = Navigator.of(context);
+      final messenger = ScaffoldMessenger.of(context);
+
+      final fullname = fullnameController.text.trim();
+      final email = emailController.text.trim();
+      final phone = phoneController.text.trim();
+      final role = selectedRole!;
+      final position = positionController.text.trim();
+
       final result = await _companyService.inviteStaff(
-        fullname: fullnameController.text.trim(),
-        email: emailController.text.trim(),
-        phoneNumber: phoneController.text.trim(),
-        role: selectedRole!,
-        position: positionController.text.trim(), // ✅ Using text input
+        fullname: fullname,
+        email: email,
+        phoneNumber: phone,
+        role: role,
+        position: position, // ✅ Using text input
       );
 
       setState(() => isLoading = false);
 
       if (result['success'] == true) {
         if (mounted) {
+          final invitedStaff = await _resolveInvitedStaffForPermissions(
+            inviteResult: result,
+            email: email,
+            fullname: fullname,
+            phoneNumber: phone,
+            role: role,
+            position: position,
+          );
+
           // Show temp password if returned (optional)
           final tempPassword = result['data']?['tempPassword'];
-          
-          ScaffoldMessenger.of(context).showSnackBar(
+
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
                 tempPassword != null
@@ -118,14 +222,38 @@ class _AddStaffState extends ConsumerState<AddStaff> {
             selectedRole = null;
           });
 
-          // Navigate back
-          Nav.pop();
+          // Go directly to permissions for the newly invited staff.
+          if (invitedStaff == null || invitedStaff.id.isEmpty) {
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Staff created, but couldn't open permissions (missing staff id).",
+                ),
+                backgroundColor: Colors.orange,
+              ),
+            );
+            Nav.pop();
+            return;
+          }
+
+          if (!mounted) return;
+          await showModalBottomSheet<bool>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => StaffPermissionsModal(staff: invitedStaff),
+          );
+
+          // After permissions, go back to staff list.
+          navigator.pop();
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
-              content: Text("❌ ${result['message'] ?? 'Failed to invite staff'}"),
+              content: Text(
+                "❌ ${result['message'] ?? 'Failed to invite staff'}",
+              ),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -161,7 +289,8 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomText(
-                      subtitle: "Create a new staff account. They'll receive login credentials via email.",
+                      subtitle:
+                          "Create a new staff account. They'll receive login credentials via email.",
                       subtitleColor: Colors.grey,
                     ),
                     const SizedBox(height: 20),
@@ -210,7 +339,8 @@ class _AddStaffState extends ConsumerState<AddStaff> {
                     // ✅ Position TextField (manual input)
                     CustomTextField(
                       label: "Position",
-                      hintText: "Enter position (e.g., Cabinet Maker, Sales Manager)",
+                      hintText:
+                          "Enter position (e.g., Cabinet Maker, Sales Manager)",
                       controller: positionController,
                     ),
                     const SizedBox(height: 40),

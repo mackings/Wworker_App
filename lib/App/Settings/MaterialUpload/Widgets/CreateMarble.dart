@@ -1,26 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
+import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
 
 class CreateMarbleMaterialPage extends StatefulWidget {
   const CreateMarbleMaterialPage({super.key});
 
   @override
-  State<CreateMarbleMaterialPage> createState() => _CreateMarbleMaterialPageState();
+  State<CreateMarbleMaterialPage> createState() =>
+      _CreateMarbleMaterialPageState();
 }
 
 class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   final _formKey = GlobalKey<FormState>();
   final MaterialService _materialService = MaterialService();
 
-  final TextEditingController _nameController = TextEditingController(text: 'Marble');
-  final TextEditingController _standardWidthController = TextEditingController();
-  final TextEditingController _standardLengthController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _standardWidthController =
+      TextEditingController();
+  final TextEditingController _standardLengthController =
+      TextEditingController();
   final TextEditingController _pricePerSqmController = TextEditingController();
-  final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   // Size variants (different sheet sizes)
@@ -32,6 +39,15 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -42,8 +58,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
     setState(() => isCreating = true);
 
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'MARBLE',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
@@ -53,13 +68,17 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
       if (_pricePerSqmController.text.isNotEmpty)
         'pricePerSqm': double.parse(_pricePerSqmController.text),
       if (sizeVariants.isNotEmpty)
-        'sizeVariants': sizeVariants.map((v) => {
-              'name': v.name,
-              'width': v.width,
-              'length': v.length,
-              'unit': v.unit,
-              if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
-            }).toList(),
+        'sizeVariants': sizeVariants
+            .map(
+              (v) => {
+                'name': v.name,
+                'width': v.width,
+                'length': v.length,
+                'unit': v.unit,
+                if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
+              },
+            )
+            .toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -80,6 +99,20 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      preferredCategory: 'Marble',
+      title: 'Select Marble Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   void _addSizeVariant() {
@@ -189,10 +222,12 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                       items: const [
                         DropdownMenuItem(value: 'mm', child: Text('mm')),
                         DropdownMenuItem(value: 'cm', child: Text('cm')),
-                        DropdownMenuItem(value: 'inches', child: Text('inches')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('inches'),
+                        ),
                       ],
-                      onChanged: (value) =>
-                          setSheetState(() => unit = value!),
+                      onChanged: (value) => setSheetState(() => unit = value!),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -311,11 +346,23 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
             _buildSectionCard('Basic Information', [
               TextFormField(
                 controller: _nameController,
+                readOnly: true,
                 decoration: const InputDecoration(
                   labelText: 'Material Name *',
                   border: OutlineInputBorder(),
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
               ),
             ]),
             const SizedBox(height: 16),
@@ -332,7 +379,8 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                         hintText: '60',
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -345,7 +393,8 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                         hintText: '81',
                       ),
                       keyboardType: TextInputType.number,
-                      validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
                   ),
                 ],
@@ -519,10 +568,7 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
                     ),
                     Text(
                       'Size: ${variant.width} × ${variant.length} ${variant.unit}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                     if (variant.pricePerUnit != null)
                       Text(
@@ -543,7 +589,9 @@ class _CreateMarbleMaterialPageState extends State<CreateMarbleMaterialPage> {
   }
 
   String _formatNumber(double number) {
-    return number.toStringAsFixed(2).replaceAllMapped(
+    return number
+        .toStringAsFixed(2)
+        .replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );

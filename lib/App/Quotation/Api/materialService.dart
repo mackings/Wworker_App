@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,8 +7,7 @@ import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
 import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
-
-
+import 'package:wworker/GeneralWidgets/UI/etag_cache.dart';
 
 class MaterialService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
@@ -20,7 +21,9 @@ class MaterialService {
           return handler.next(options);
         },
         onResponse: (response, handler) {
-          debugPrint("✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}");
+          debugPrint(
+            "✅ [RESPONSE] => ${response.statusCode} ${response.requestOptions.uri}",
+          );
           return handler.next(response);
         },
         onError: (DioException e, handler) {
@@ -33,13 +36,19 @@ class MaterialService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
 
   // 🟢 GET ALL MATERIALS
-  Future<Map<String, dynamic>> getAllMaterials({String? category}) async {
+  Future<Map<String, dynamic>> getAllMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? priced,
+    bool? isActive,
+  }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
@@ -47,22 +56,87 @@ class MaterialService {
         return {'success': false, 'message': 'No auth token found'};
       }
 
-      String url = "/api/product/materials";
-      if (category != null) {
-        url += "?category=$category";
+      final queryParams = <String, dynamic>{};
+      if (category != null) queryParams['category'] = category;
+      if (subCategory != null) queryParams['subCategory'] = subCategory;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
       }
+      if (priced != null) queryParams['priced'] = priced;
+      if (isActive != null) queryParams['isActive'] = isActive;
 
-      final response = await _dio.get(
-        url,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: "/api/product/materials",
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
       );
 
-      return response.data;
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET MATERIALS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET MATERIALS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to fetch materials'
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to fetch materials',
+      };
+    }
+  }
+
+  // 🟢 GET GROUPED MATERIALS (category -> subCategory -> variants)
+  Future<Map<String, dynamic>> getGroupedMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? priced,
+    bool? isActive,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final queryParams = <String, dynamic>{};
+      if (category != null) queryParams['category'] = category;
+      if (subCategory != null) queryParams['subCategory'] = subCategory;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (priced != null) queryParams['priced'] = priced;
+      if (isActive != null) queryParams['isActive'] = isActive;
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: "/api/product/materials/grouped",
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [GET GROUPED MATERIALS ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to fetch grouped materials',
       };
     }
   }
@@ -71,7 +145,7 @@ class MaterialService {
   Future<List<MaterialModel>> getMaterials() async {
     try {
       final result = await getAllMaterials();
-      
+
       if (result['success'] == true && result['data'] is List) {
         return (result['data'] as List)
             .map((json) => MaterialModel.fromJson(json))
@@ -86,7 +160,9 @@ class MaterialService {
   }
 
   // 🟢 CREATE MATERIAL (Generic - works for all categories)
-  Future<Map<String, dynamic>> createMaterial(Map<String, dynamic> materialData) async {
+  Future<Map<String, dynamic>> createMaterial(
+    Map<String, dynamic> materialData,
+  ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");
@@ -94,18 +170,45 @@ class MaterialService {
         return {'success': false, 'message': 'No auth token found'};
       }
 
+      materialData['useCatalog'] = materialData['useCatalog'] ?? false;
+      final imagePath = materialData.remove('imagePath');
+      final formPayload = <String, dynamic>{};
+
+      materialData.forEach((key, value) {
+        if (value == null) return;
+        if (value is List || value is Map) {
+          formPayload[key] = jsonEncode(value);
+        } else {
+          formPayload[key] = value.toString();
+        }
+      });
+
+      if (imagePath is String && imagePath.isNotEmpty) {
+        formPayload['image'] = await MultipartFile.fromFile(imagePath);
+      }
+
       final response = await _dio.post(
-        "/api/product/materials",
-        data: materialData,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+        "/api/product/creatematerial",
+        data: FormData.fromMap(formPayload),
+        options: Options(
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "multipart/form-data",
+          },
+        ),
       );
 
       return response.data;
     } on DioException catch (e) {
-      debugPrint("⚠️ [CREATE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [CREATE MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to create material'
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to create material',
       };
     }
   }
@@ -133,7 +236,8 @@ class MaterialService {
       debugPrint("⚠️ [ADD TYPES ERROR] => ${e.response?.data ?? e.message}");
       return {
         'success': false,
-        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to add types'
+        'message':
+            e.response?.data?['message'] ?? e.message ?? 'Failed to add types',
       };
     }
   }
@@ -181,7 +285,9 @@ class MaterialService {
         return null;
       }
     } on DioException catch (e) {
-      debugPrint("⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}",
+      );
       return null;
     }
   }
@@ -206,10 +312,15 @@ class MaterialService {
 
       return response.data;
     } on DioException catch (e) {
-      debugPrint("⚠️ [UPDATE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [UPDATE MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to update material'
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to update material',
       };
     }
   }
@@ -230,10 +341,93 @@ class MaterialService {
 
       return response.data;
     } on DioException catch (e) {
-      debugPrint("⚠️ [DELETE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [DELETE MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data?['message'] ?? e.message ?? 'Failed to delete material'
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to delete material',
+      };
+    }
+  }
+
+  // 🟢 SUPPORTED MATERIALS (catalog rows)
+  Future<Map<String, dynamic>> getSupportedMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? priced,
+    int page = 1,
+    int limit = 100,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final queryParams = <String, dynamic>{"page": page, "limit": limit};
+      if (category != null) queryParams["category"] = category;
+      if (subCategory != null) queryParams["subCategory"] = subCategory;
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams["search"] = search.trim();
+      }
+      if (priced != null) queryParams["priced"] = priced;
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: "/api/product/materials/supported",
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to fetch supported materials',
+      };
+    }
+  }
+
+  // 🟢 SUPPORTED MATERIALS SUMMARY
+  Future<Map<String, dynamic>> getSupportedMaterialsSummary() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: "/api/product/materials/supported/summary",
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message':
+            e.response?.data?['message'] ??
+            e.message ??
+            'Failed to fetch supported summary',
       };
     }
   }

@@ -7,8 +7,6 @@ import 'package:wworker/App/Quotation/Widget/FQCard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
-
-
 class FirstQuote extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? selectedQuotations;
   final Map<String, int>? quotationQuantities;
@@ -25,12 +23,13 @@ class FirstQuote extends ConsumerStatefulWidget {
 
 class _FirstQuoteState extends ConsumerState<FirstQuote> {
   final ClientService _clientService = ClientService();
-  
+
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _busStopController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
@@ -46,27 +45,28 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
   void initState() {
     super.initState();
     _loadClients();
-    _nameController.addListener(_onNameChanged);
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _nameController.removeListener(_onNameChanged);
+    _searchController.removeListener(_onSearchChanged);
     _emailController.dispose();
     _phoneController.dispose();
     _busStopController.dispose();
     _addressController.dispose();
     _nameController.dispose();
+    _searchController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
 
   Future<void> _loadClients() async {
     setState(() => _isLoadingClients = true);
-    
+
     try {
       final clients = await _clientService.getClients();
-      
+
       // Remove duplicates based on client name
       final uniqueClients = <String, ClientModel>{};
       for (var client in clients) {
@@ -74,11 +74,12 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
           uniqueClients[client.clientName.toLowerCase()] = client;
         }
       }
-      
+
       setState(() {
         _allClients = uniqueClients.values.toList();
-        _allClients.sort((a, b) => 
-          a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase())
+        _allClients.sort(
+          (a, b) =>
+              a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase()),
         );
         _filteredClients = _allClients;
         _isLoadingClients = false;
@@ -89,37 +90,25 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
     }
   }
 
-  void _onNameChanged() {
-    final query = _nameController.text.toLowerCase();
-    
+  void _onSearchChanged() {
+    final query = _searchController.text.trim().toLowerCase();
+
     setState(() {
-      if (query.isEmpty) {
-        _filteredClients = _allClients;
+      _filteredClients = query.isEmpty
+          ? _allClients
+          : _allClients
+                .where(
+                  (client) => client.clientName.toLowerCase().contains(query),
+                )
+                .toList();
+
+      // Do not auto-fill the client name from search.
+      // Search is only for picking an existing client.
+      if (query.isNotEmpty) {
         _selectedClient = null;
         _isNewClient = false;
+        _nameController.clear();
         _clearClientFields();
-      } else {
-        _filteredClients = _allClients
-            .where((client) => 
-              client.clientName.toLowerCase().contains(query))
-            .toList();
-        
-        // Check if exact match exists
-        final exactMatch = _filteredClients.firstWhere(
-          (client) => client.clientName.toLowerCase() == query,
-          orElse: () => ClientModel(
-            clientName: '',
-            phoneNumber: '',
-            email: '',
-            clientAddress: '',
-            nearestBusStop: '',
-          ),
-        );
-        
-        if (exactMatch.clientName.isEmpty) {
-          _isNewClient = true;
-          _selectedClient = null;
-        }
       }
     });
   }
@@ -133,6 +122,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
       _addressController.text = client.clientAddress;
       _busStopController.text = client.nearestBusStop;
       _isNewClient = false;
+      _searchController.clear();
     });
   }
 
@@ -150,6 +140,20 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
       if (!keepTypedName) {
         _nameController.clear();
       }
+      _searchController.clear();
+      _clearClientFields();
+    });
+  }
+
+  void _createNewClientFromSearch() {
+    final typed = _searchController.text.trim();
+    setState(() {
+      _selectedClient = null;
+      _isNewClient = true;
+      if (typed.isNotEmpty) {
+        _nameController.text = typed;
+      }
+      _searchController.clear();
       _clearClientFields();
     });
   }
@@ -179,12 +183,12 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-                  
+
                   // Client Selection Section
                   _buildClientSelectionSection(),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Client Form
                   FirstQuoteCard(
                     nameController: _nameController,
@@ -194,9 +198,9 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                     busStopController: _busStopController,
                     descriptionController: _descriptionController,
                   ),
-                  
+
                   const SizedBox(height: 30),
-                  
+
                   CustomButton(
                     text: "Continue",
                     onPressed: () {
@@ -284,8 +288,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               ),
               TextButton.icon(
                 onPressed: () => _createNewClient(),
-                icon: const Icon(Icons.person_add_alt_1, size: 16),
-                label: const Text("Add New Client"),
+                icon: const Icon(Icons.person_add, size: 16),
+                label: const Text("New client"),
                 style: TextButton.styleFrom(
                   foregroundColor: const Color(0xFFA16438),
                 ),
@@ -293,23 +297,22 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
             ],
           ),
           const SizedBox(height: 8),
-          
+
           // Search/Select Field
           TextField(
-            controller: _nameController,
+            controller: _searchController,
             decoration: InputDecoration(
-              hintText: "Search or enter new client name...",
+              hintText: "Search clients...",
               prefixIcon: const Icon(
                 Icons.search,
                 color: Color(0xFFA16438),
                 size: 20,
               ),
-              suffixIcon: _nameController.text.isNotEmpty
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, size: 20),
                       onPressed: () {
-                        _nameController.clear();
-                        _clearClientFields();
+                        _searchController.clear();
                       },
                     )
                   : null,
@@ -336,12 +339,62 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               ),
             ),
           ),
-          
+
+          // Search "no match" -> allow creating a new client explicitly.
+          if (!_isLoadingClients &&
+              _searchController.text.trim().isNotEmpty &&
+              _filteredClients.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFFA16438).withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.person_add,
+                    size: 16,
+                    color: Color(0xFFA16438),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "No client found for \"${_searchController.text.trim()}\"",
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Color(0xFFA16438),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _createNewClientFromSearch,
+                    style: TextButton.styleFrom(
+                      foregroundColor: const Color(0xFFA16438),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      minimumSize: const Size(0, 0),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text("New client"),
+                  ),
+                ],
+              ),
+            ),
+
           // All clients list (filtered by search text)
           if (!_isLoadingClients &&
               _allClients.isNotEmpty &&
-              (_nameController.text.trim().isEmpty ||
-                  _filteredClients.isNotEmpty))
+              (_searchController.text.trim().isEmpty ||
+                  _filteredClients.isNotEmpty) &&
+              !_isNewClient)
             Container(
               margin: const EdgeInsets.only(top: 8),
               constraints: const BoxConstraints(maxHeight: 200),
@@ -360,11 +413,11 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               child: ListView.builder(
                 shrinkWrap: true,
                 padding: const EdgeInsets.symmetric(vertical: 4),
-                itemCount: _nameController.text.trim().isEmpty
+                itemCount: _searchController.text.trim().isEmpty
                     ? _allClients.length
                     : _filteredClients.length,
                 itemBuilder: (context, index) {
-                  final client = _nameController.text.trim().isEmpty
+                  final client = _searchController.text.trim().isEmpty
                       ? _allClients[index]
                       : _filteredClients[index];
                   return ListTile(
@@ -393,19 +446,16 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                       client.phoneNumber.isNotEmpty
                           ? client.phoneNumber
                           : "No phone number",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                     onTap: () => _selectClient(client),
                   );
                 },
               ),
             ),
-          
+
           // New Client Indicator
-          if (_isNewClient && _nameController.text.isNotEmpty)
+          if (_isNewClient && _nameController.text.trim().isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -426,7 +476,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      "Creating new client: ${_nameController.text}",
+                      "Creating new client: ${_nameController.text.trim()}",
                       style: const TextStyle(
                         fontSize: 12,
                         color: Color(0xFFA16438),
@@ -437,7 +487,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                 ],
               ),
             ),
-          
+
           // Selected Client Info
           if (_selectedClient != null)
             Container(
@@ -512,6 +562,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                       setState(() {
                         _selectedClient = null;
                         _nameController.clear();
+                        _searchController.clear();
                         _clearClientFields();
                       });
                     },
@@ -519,17 +570,14 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                 ],
               ),
             ),
-          
+
           // Quick Stats
           if (!_isLoadingClients && _allClients.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Text(
                 "${_allClients.length} client${_allClients.length != 1 ? 's' : ''} available",
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ),
         ],

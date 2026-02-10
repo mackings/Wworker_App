@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
@@ -5,20 +7,20 @@ import 'package:wworker/App/Invoice/Widget/InvoiceSelector.dart';
 import 'package:wworker/App/Invoice/Widget/invoice_bank_prefs.dart';
 import 'package:wworker/App/Invoice/Widget/invoice_template_prefs.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
+import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
-import 'dart:io';
 
 class InvoicePreview extends StatefulWidget {
   final Quotation? quotation;
   final InvoiceModel? invoice;
 
   const InvoicePreview({super.key, this.quotation, this.invoice})
-      : assert(
-          quotation != null || invoice != null,
-          'Either quotation or invoice must be provided',
-        );
+    : assert(
+        quotation != null || invoice != null,
+        'Either quotation or invoice must be provided',
+      );
 
   @override
   State<InvoicePreview> createState() => _InvoicePreviewState();
@@ -229,10 +231,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                   isExistingInvoice
                       ? 'Choose a template to view your invoice'
                       : 'Select a beautiful template for your invoice',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
@@ -247,11 +246,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                   ),
                   child: Column(
                     children: [
-                      _buildDetailRow(
-                        Icons.person,
-                        'Client',
-                        clientName,
-                      ),
+                      _buildDetailRow(Icons.person, 'Client', clientName),
                       const SizedBox(height: 12),
                       _buildDetailRow(
                         Icons.numbers,
@@ -311,7 +306,11 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                           ],
                         ),
                         const SizedBox(height: 8),
-                        _buildDetailRow(Icons.account_balance, "Bank", _bankName),
+                        _buildDetailRow(
+                          Icons.account_balance,
+                          "Bank",
+                          _bankName,
+                        ),
                         _buildDetailRow(
                           Icons.person_outline,
                           "Account Name",
@@ -342,7 +341,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                               color: Colors.white,
                               strokeWidth: 2,
                             ),
-                        )
+                          )
                         : const Icon(Icons.style),
                     label: Text(
                       isExistingInvoice ? 'View Invoice' : 'Preview Invoice',
@@ -418,7 +417,9 @@ class _InvoicePreviewState extends State<InvoicePreview> {
               ? widget.invoice!.createdAt
               : DateTime.now(),
           dueDate: isExistingInvoice ? widget.invoice?.dueDate : null,
-          paymentStatus: isExistingInvoice ? widget.invoice?.paymentStatus : null,
+          paymentStatus: isExistingInvoice
+              ? widget.invoice?.paymentStatus
+              : null,
           description: description,
           items: items,
           grandTotal: grandTotal,
@@ -439,6 +440,9 @@ class _InvoicePreviewState extends State<InvoicePreview> {
 
   // Send invoice to client with PDF
   Future<void> _sendInvoiceToClient(int templateIndex, File pdfFile) async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     setState(() => isLoading = true);
 
     try {
@@ -473,15 +477,13 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           debugPrint("⚠️ Could not delete temp PDF: $deleteError");
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Row(
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 12),
-                Expanded(
-                  child: Text("Invoice created and sent successfully!"),
-                ),
+                Expanded(child: Text("Invoice created and sent successfully!")),
               ],
             ),
             backgroundColor: Colors.green,
@@ -490,10 +492,11 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           ),
         );
 
-        // Navigate back to home
-        Navigator.pop(context); // Close template selector
-        Navigator.pop(context); // Close preview
-        Navigator.pop(context); // Close quotation details
+        // Navigate back to the main dashboard (bottom nav home).
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+          (route) => false,
+        );
       } else {
         if (!mounted) return;
 
@@ -506,7 +509,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
           debugPrint("⚠️ Could not delete temp PDF: $deleteError");
         }
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -542,15 +545,13 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         debugPrint("⚠️ Could not delete temp PDF: $deleteError");
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Row(
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text("Error: ${e.toString()}"),
-              ),
+              Expanded(child: Text("Error: ${e.toString()}")),
             ],
           ),
           backgroundColor: Colors.red,

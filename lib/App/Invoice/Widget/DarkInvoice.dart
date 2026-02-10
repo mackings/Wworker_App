@@ -2,6 +2,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ModernInvoiceTemplate extends StatefulWidget {
@@ -63,6 +64,11 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
   String companyEmail = '';
   bool isLoading = true;
 
+  final NumberFormat _money = NumberFormat.currency(
+    symbol: '₦',
+    decimalDigits: 2,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -72,14 +78,14 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
   // ✅ Load company data from SharedPreferences
   Future<void> _loadCompanyData() async {
     final prefs = await SharedPreferences.getInstance();
-    
-     if (!mounted) return;
+
+    if (!mounted) return;
     setState(() {
       companyName = prefs.getString('companyName') ?? 'Your Company';
       companyEmail = prefs.getString('companyEmail') ?? '';
       companyPhone = prefs.getString('companyPhoneNumber') ?? '';
       companyAddress = prefs.getString('companyAddress') ?? '';
-      
+
       // You can also get the full active company object if you need more data
       final activeCompanyString = prefs.getString('activeCompany');
       if (activeCompanyString != null) {
@@ -87,7 +93,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
         // Use any additional fields you need from activeCompany
         debugPrint("📋 Active Company: $activeCompany");
       }
-      
+
       isLoading = false;
     });
   }
@@ -100,14 +106,26 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
       );
     }
 
+    final width = MediaQuery.sizeOf(context).width;
+    final compact = width < 520;
+    final computedGrandTotal = widget.items.fold<double>(0.0, (sum, item) {
+      try {
+        final unit = (item.sellingPrice as num?)?.toDouble() ?? 0.0;
+        final qty = (item.quantity as num?)?.toDouble() ?? 0.0;
+        return sum + (unit * qty);
+      } catch (_) {
+        return sum;
+      }
+    });
+
     return SingleChildScrollView(
       child: Container(
         color: Colors.white,
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(compact ? 14 : 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(compact: compact),
             const SizedBox(height: 32),
             _buildInfoSection(),
             const SizedBox(height: 24),
@@ -115,9 +133,9 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
               _buildDescription(),
               const SizedBox(height: 24),
             ],
-            _buildItemsTable(),
+            _buildItemsTable(compact: compact),
             const SizedBox(height: 24),
-            _buildFinancialSummary(),
+            _buildFinancialSummary(grandTotal: computedGrandTotal),
             const SizedBox(height: 32),
             _buildFooter(),
             const SizedBox(height: 40),
@@ -127,18 +145,20 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
     );
   }
 
-  Widget _buildHeader() {
+  String _formatMoney(num? value) {
+    final v = (value ?? 0).toDouble();
+    return _money.format(v);
+  }
+
+  Widget _buildHeader({required bool compact}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: const Color(0xFF2C2C2C),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
+      child: compact
+          ? Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
@@ -157,33 +177,77 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        companyName,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  companyName,
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
+                if (companyPhone.isNotEmpty)
+                  _buildHeaderInfo('Phone:', companyPhone),
+                if (companyEmail.isNotEmpty)
+                  _buildHeaderInfo('Email:', companyEmail),
+                if (companyAddress.isNotEmpty)
+                  _buildHeaderInfo('Address:', companyAddress),
+              ],
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 50,
+                            height: 50,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFFFB74D),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.auto_awesome,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        companyName,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 16),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (companyPhone.isNotEmpty)
+                      _buildHeaderInfo('Phone:', companyPhone),
+                    if (companyEmail.isNotEmpty)
+                      _buildHeaderInfo('Email:', companyEmail),
+                    if (companyAddress.isNotEmpty)
+                      _buildHeaderInfo('Address:', companyAddress),
+                  ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (companyPhone.isNotEmpty)
-                _buildHeaderInfo('Phone:', companyPhone),
-              if (companyEmail.isNotEmpty)
-                _buildHeaderInfo('Email:', companyEmail),
-              if (companyAddress.isNotEmpty)
-                _buildHeaderInfo('Address:', companyAddress),
-            ],
-          ),
-        ],
-      ),
     );
   }
 
@@ -195,17 +259,11 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
           children: [
             TextSpan(
               text: '$label ',
-              style: const TextStyle(
-                color: Colors.white54,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.white54, fontSize: 11),
             ),
             TextSpan(
               text: value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 11),
             ),
           ],
         ),
@@ -214,79 +272,76 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
   }
 
   Widget _buildInfoSection() {
+    final left = Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'To:',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            widget.clientName,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            widget.clientAddress,
+            style: const TextStyle(fontSize: 13),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Phone: ${widget.clientPhone}',
+            style: const TextStyle(fontSize: 13),
+          ),
+        ],
+      ),
+    );
+
+    final right = Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          const Text(
+            'INVOICE',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildInvoiceDetailRow('QT No', widget.quotationNumber),
+          _buildInvoiceDetailRow('Date', _formatDate(widget.invoiceDate)),
+          if (widget.dueDate != null)
+            _buildInvoiceDetailRow('Due Date', _formatDate(widget.dueDate!)),
+        ],
+      ),
+    );
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'To:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  widget.clientName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  widget.clientAddress,
-                  style: const TextStyle(fontSize: 13),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Phone: ${widget.clientPhone}',
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text(
-                  'INVOICE',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildInvoiceDetailRow('QT No', widget.quotationNumber),
-                _buildInvoiceDetailRow('Date', _formatDate(widget.invoiceDate)),
-                if (widget.dueDate != null)
-                  _buildInvoiceDetailRow('Due Date', _formatDate(widget.dueDate!)),
-              ],
-            ),
-          ),
-        ),
+        Expanded(child: left),
+        const SizedBox(width: 12),
+        Expanded(child: right),
       ],
     );
   }
@@ -298,17 +353,11 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
         mainAxisAlignment: MainAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            '$label: ',
-            style: const TextStyle(fontSize: 11),
-          ),
+          Text('$label: ', style: const TextStyle(fontSize: 11)),
           Flexible(
             child: Text(
               value,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -330,22 +379,113 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
         children: [
           const Text(
             'Project Description',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text(
-            widget.description,
-            style: const TextStyle(fontSize: 13),
-          ),
+          Text(widget.description, style: const TextStyle(fontSize: 13)),
         ],
       ),
     );
   }
 
-  Widget _buildItemsTable() {
+  Widget _buildItemsTable({required bool compact}) {
+    if (compact) {
+      return Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFB74D),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(11)),
+              ),
+              child: const Text(
+                'ITEMS',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            ...widget.items.asMap().entries.map((entry) {
+              final item = entry.value;
+              final isLast = entry.key == widget.items.length - 1;
+              final price = (item.sellingPrice as num?) ?? 0;
+              final qty = (item.quantity as num?) ?? 0;
+              final total = price * qty;
+
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  border: isLast
+                      ? null
+                      : Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.woodType ?? item.foamType ?? 'Material',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (item.description?.isNotEmpty ?? false)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          item.description,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ),
+                    if (widget.isExistingInvoice)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          '${item.width} × ${item.length} × ${item.thickness} ${item.unit}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Price: ${_formatMoney(price)}  |  Qty: ${qty.toString()}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                        Text(
+                          'Total: ${_formatMoney(total)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
@@ -454,7 +594,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
                   ),
                   Expanded(
                     child: Text(
-                      '₦${item.sellingPrice.toStringAsFixed(2)}',
+                      _formatMoney(item.sellingPrice as num?),
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 13),
                     ),
@@ -469,7 +609,10 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      '₦${(item.sellingPrice * item.quantity).toStringAsFixed(2)}',
+                      _formatMoney(
+                        ((item.sellingPrice as num?) ?? 0) *
+                            ((item.quantity as num?) ?? 0),
+                      ),
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 14,
@@ -486,7 +629,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
     );
   }
 
-  Widget _buildFinancialSummary() {
+  Widget _buildFinancialSummary({required double grandTotal}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -498,12 +641,9 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Sub Total',
-                style: TextStyle(fontSize: 14),
-              ),
+              const Text('Sub Total', style: TextStyle(fontSize: 14)),
               Text(
-                '₦${widget.grandTotal.toStringAsFixed(2)}',
+                _formatMoney(grandTotal),
                 style: const TextStyle(fontSize: 14),
               ),
             ],
@@ -512,12 +652,9 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Tax Vat 18%',
-                style: TextStyle(fontSize: 14),
-              ),
+              const Text('Tax Vat 18%', style: TextStyle(fontSize: 14)),
               Text(
-                '₦${(widget.grandTotal * 0.0).toStringAsFixed(2)}',
+                _formatMoney(grandTotal * 0.0),
                 style: const TextStyle(fontSize: 14),
               ),
             ],
@@ -541,7 +678,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
                   ),
                 ),
                 Text(
-                  '₦${widget.grandTotal.toStringAsFixed(2)}',
+                  _formatMoney(grandTotal),
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -561,7 +698,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
                   style: TextStyle(color: Colors.green, fontSize: 14),
                 ),
                 Text(
-                  '₦${widget.amountPaid.toStringAsFixed(2)}',
+                  _formatMoney(widget.amountPaid),
                   style: const TextStyle(
                     color: Colors.green,
                     fontWeight: FontWeight.bold,
@@ -575,13 +712,10 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
               children: [
                 const Text(
                   'Outstanding Balance',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '₦${widget.balance.toStringAsFixed(2)}',
+                  _formatMoney(widget.balance),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -602,10 +736,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
       children: [
         const Text(
           'Thank you for your business!',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         const Text(
@@ -613,10 +744,7 @@ class _ModernInvoiceTemplateState extends State<ModernInvoiceTemplate> {
           style: TextStyle(fontSize: 12, color: Colors.grey),
         ),
         const SizedBox(height: 12),
-        Text(
-          'Bank: ${widget.bankName}',
-          style: const TextStyle(fontSize: 12),
-        ),
+        Text('Bank: ${widget.bankName}', style: const TextStyle(fontSize: 12)),
         Text(
           'Account: ${widget.accountNumber}',
           style: const TextStyle(fontSize: 12),

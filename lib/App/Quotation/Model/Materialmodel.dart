@@ -2,6 +2,9 @@ class MaterialModel {
   final String id;
   final String name;
   final String? category;
+  final String? subCategory;
+  final String? size;
+  final String? color;
   final String? unit;
   final double? standardWidth;
   final double? standardLength;
@@ -16,6 +19,12 @@ class MaterialModel {
   final double wasteThreshold;
   final bool? isActive;
   final String? notes;
+  final String? image;
+  final double? thickness;
+  final String? thicknessUnit;
+  final bool? isCatalogMaterial;
+  final bool? isCatalogPriced;
+  final double? catalogPrice;
   final List<Size> sizes;
   final List<FoamDensity> foamDensities;
   final List<FoamThickness> foamThicknesses;
@@ -26,6 +35,9 @@ class MaterialModel {
     required this.id,
     required this.name,
     this.category,
+    this.subCategory,
+    this.size,
+    this.color,
     this.unit,
     this.standardWidth,
     this.standardLength,
@@ -40,6 +52,12 @@ class MaterialModel {
     this.wasteThreshold = 0.75,
     this.isActive,
     this.notes,
+    this.image,
+    this.thickness,
+    this.thicknessUnit,
+    this.isCatalogMaterial,
+    this.isCatalogPriced,
+    this.catalogPrice,
     this.sizes = const [],
     this.foamDensities = const [],
     this.foamThicknesses = const [],
@@ -52,41 +70,54 @@ class MaterialModel {
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       category: json['category'],
+      subCategory: json['subCategory'],
+      size: json['size']?.toString(),
+      color: json['color'],
       unit: json['unit'],
-      standardWidth: json['standardWidth']?.toDouble(),
-      standardLength: json['standardLength']?.toDouble(),
+      standardWidth: _asDouble(json['standardWidth']),
+      standardLength: _asDouble(json['standardLength']),
       standardUnit: json['standardUnit'],
-      pricePerSqm: json['pricePerSqm']?.toDouble(),
-      pricePerUnit: json['pricePerUnit']?.toDouble(),
+      pricePerSqm: _asDouble(json['pricePerSqm']),
+      pricePerUnit: _asDouble(json['pricePerUnit']),
       pricingUnit: json['pricingUnit'],
-      types: (json['types'] as List?)
+      types:
+          (json['types'] as List?)
               ?.map((t) => MaterialType.fromJson(t))
               .toList() ??
           [],
-      sizeVariants: (json['sizeVariants'] as List?)
+      sizeVariants:
+          (json['sizeVariants'] as List?)
               ?.map((s) => SizeVariant.fromJson(s))
               .toList() ??
           [],
-      foamVariants: (json['foamVariants'] as List?)
+      foamVariants:
+          (json['foamVariants'] as List?)
               ?.map((f) => FoamVariant.fromJson(f))
               .toList() ??
           [],
-      commonThicknesses: (json['commonThicknesses'] as List?)
+      commonThicknesses:
+          (json['commonThicknesses'] as List?)
               ?.map((c) => CommonThickness.fromJson(c))
               .toList() ??
           [], // NEW
-      wasteThreshold: json['wasteThreshold']?.toDouble() ?? 0.75,
+      wasteThreshold: _asDouble(json['wasteThreshold']) ?? 0.75,
       isActive: json['isActive'],
       notes: json['notes'],
-      sizes: (json['sizes'] as List?)
-              ?.map((s) => Size.fromJson(s))
-              .toList() ??
-          [],
-      foamDensities: (json['foamDensities'] as List?)
+      image: json['image'],
+      thickness: _asDouble(json['thickness']),
+      thicknessUnit: json['thicknessUnit'],
+      isCatalogMaterial: json['isCatalogMaterial'],
+      isCatalogPriced: json['isCatalogPriced'],
+      catalogPrice: _asDouble(json['catalogPrice']),
+      sizes:
+          (json['sizes'] as List?)?.map((s) => Size.fromJson(s)).toList() ?? [],
+      foamDensities:
+          (json['foamDensities'] as List?)
               ?.map((f) => FoamDensity.fromJson(f))
               .toList() ??
           [],
-      foamThicknesses: (json['foamThicknesses'] as List?)
+      foamThicknesses:
+          (json['foamThicknesses'] as List?)
               ?.map((f) => FoamThickness.fromJson(f))
               .toList() ??
           [],
@@ -100,6 +131,9 @@ class MaterialModel {
       '_id': id,
       'name': name,
       if (category != null) 'category': category,
+      if (subCategory != null) 'subCategory': subCategory,
+      if (size != null) 'size': size,
+      if (color != null) 'color': color,
       if (unit != null) 'unit': unit,
       if (standardWidth != null) 'standardWidth': standardWidth,
       if (standardLength != null) 'standardLength': standardLength,
@@ -110,10 +144,18 @@ class MaterialModel {
       'types': types.map((t) => t.toJson()).toList(),
       'sizeVariants': sizeVariants.map((s) => s.toJson()).toList(),
       'foamVariants': foamVariants.map((f) => f.toJson()).toList(),
-      'commonThicknesses': commonThicknesses.map((c) => c.toJson()).toList(), // NEW
+      'commonThicknesses': commonThicknesses
+          .map((c) => c.toJson())
+          .toList(), // NEW
       'wasteThreshold': wasteThreshold,
       if (isActive != null) 'isActive': isActive,
       if (notes != null) 'notes': notes,
+      if (image != null) 'image': image,
+      if (thickness != null) 'thickness': thickness,
+      if (thicknessUnit != null) 'thicknessUnit': thicknessUnit,
+      if (isCatalogMaterial != null) 'isCatalogMaterial': isCatalogMaterial,
+      if (isCatalogPriced != null) 'isCatalogPriced': isCatalogPriced,
+      if (catalogPrice != null) 'catalogPrice': catalogPrice,
       'sizes': sizes.map((s) => s.toJson()).toList(),
       'foamDensities': foamDensities.map((f) => f.toJson()).toList(),
       'foamThicknesses': foamThicknesses.map((f) => f.toJson()).toList(),
@@ -121,6 +163,12 @@ class MaterialModel {
       if (updatedAt != null) 'updatedAt': updatedAt,
     };
   }
+}
+
+double? _asDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  return double.tryParse(value.toString());
 }
 
 class CommonThickness {
@@ -140,7 +188,6 @@ class CommonThickness {
     return {'thickness': thickness, 'unit': unit};
   }
 }
-
 
 class MaterialType {
   final String name;

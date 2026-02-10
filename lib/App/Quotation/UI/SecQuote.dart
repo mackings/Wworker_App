@@ -1,6 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
@@ -37,7 +44,8 @@ class SecQuote extends ConsumerStatefulWidget {
 
 class _SecQuoteState extends ConsumerState<SecQuote> {
   bool isLoading = false;
-  
+  bool isSharing = false;
+
   // ✅ Company data from SharedPreferences
   String companyName = 'Your Company';
   String companyEmail = '';
@@ -54,16 +62,287 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
   // ✅ Load company data from SharedPreferences
   Future<void> _loadCompanyData() async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (!mounted) return;
     setState(() {
       companyName = prefs.getString('companyName') ?? 'Your Company';
       companyEmail = prefs.getString('companyEmail') ?? '';
       companyPhone = prefs.getString('companyPhoneNumber') ?? '';
       companyAddress = prefs.getString('companyAddress') ?? '';
-      
+
       isLoadingCompanyData = false;
     });
+  }
+
+  Future<void> _shareQuotationPdf(
+    BuildContext context, {
+    required List<QuotationItem> items,
+    required double totalSum,
+  }) async {
+    if (isSharing) return;
+    setState(() => isSharing = true);
+
+    final navigator = Navigator.of(context, rootNavigator: true);
+    final messenger = ScaffoldMessenger.of(context);
+
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Color(0xFFA16438)),
+        ),
+      );
+
+      final pdf = await _generateQuotationPdf(items: items, totalSum: totalSum);
+
+      if (!mounted) return;
+      navigator.pop();
+
+      final directory = await getTemporaryDirectory();
+      final ts = DateTime.now().millisecondsSinceEpoch;
+      final safeName = widget.name
+          .trim()
+          .replaceAll(RegExp(r'\\s+'), '_')
+          .replaceAll(RegExp(r'[^A-Za-z0-9_\\-]'), '');
+      final filePath = '${directory.path}/quotation_${safeName}_$ts.pdf';
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+
+      await Share.shareXFiles([
+        XFile(filePath),
+      ], text: 'Quotation for ${widget.name}');
+    } catch (e) {
+      if (mounted) {
+        navigator.maybePop();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Failed to share quotation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isSharing = false);
+    }
+  }
+
+  Future<pw.Document> _generateQuotationPdf({
+    required List<QuotationItem> items,
+    required double totalSum,
+  }) async {
+    final pdf = pw.Document();
+    final dateFormat = DateFormat('d MMM yyyy');
+
+    pw.Widget infoBlock(String title, Map<String, String> rows) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(12),
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey400),
+          borderRadius: pw.BorderRadius.circular(8),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            ...rows.entries.map(
+              (e) => pw.Padding(
+                padding: const pw.EdgeInsets.only(bottom: 4),
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.SizedBox(
+                      width: 90,
+                      child: pw.Text(
+                        '${e.key}:',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    pw.Expanded(
+                      child: pw.Text(
+                        e.value,
+                        style: const pw.TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget tableCell(
+      String text, {
+      bool header = false,
+      pw.TextAlign? align,
+    }) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+        child: pw.Text(
+          text,
+          textAlign: align ?? pw.TextAlign.left,
+          style: pw.TextStyle(
+            fontSize: 10.5,
+            fontWeight: header ? pw.FontWeight.bold : pw.FontWeight.normal,
+          ),
+        ),
+      );
+    }
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          return [
+            pw.Container(
+              padding: const pw.EdgeInsets.all(16),
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromHex('#A16438'),
+                borderRadius: pw.BorderRadius.circular(8),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        companyName,
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Quotation',
+                        style: const pw.TextStyle(
+                          fontSize: 12,
+                          color: PdfColors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  pw.Text(
+                    dateFormat.format(DateTime.now()),
+                    style: const pw.TextStyle(
+                      fontSize: 11,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 16),
+            infoBlock('Company Information', {
+              'Name': companyName,
+              'Phone': companyPhone.isNotEmpty ? companyPhone : 'N/A',
+              'Email': companyEmail.isNotEmpty ? companyEmail : 'N/A',
+              'Address': companyAddress.isNotEmpty ? companyAddress : 'N/A',
+            }),
+            pw.SizedBox(height: 12),
+            infoBlock('Client Information', {
+              'Name': widget.name,
+              'Phone': widget.phone,
+              'Email': widget.email,
+              'Address': widget.address,
+              'Bus stop': widget.nearestBusStop,
+            }),
+            pw.SizedBox(height: 16),
+            pw.Text(
+              'Items',
+              style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey400),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(2),
+                1: pw.FlexColumnWidth(4),
+                2: pw.FlexColumnWidth(1.2),
+                3: pw.FlexColumnWidth(1.8),
+                4: pw.FlexColumnWidth(2),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('#F5F8F2'),
+                  ),
+                  children: [
+                    tableCell('Product', header: true),
+                    tableCell('Desc', header: true),
+                    tableCell('Qty', header: true, align: pw.TextAlign.center),
+                    tableCell('Price', header: true, align: pw.TextAlign.right),
+                    tableCell('Total', header: true, align: pw.TextAlign.right),
+                  ],
+                ),
+                ...items.map((i) {
+                  final desc = i.description.trim().isEmpty
+                      ? '-'
+                      : i.description;
+                  return pw.TableRow(
+                    children: [
+                      tableCell(i.product),
+                      tableCell(desc),
+                      tableCell(
+                        i.quantity.toString(),
+                        align: pw.TextAlign.center,
+                      ),
+                      tableCell(i.unitPrice, align: pw.TextAlign.right),
+                      tableCell(i.total, align: pw.TextAlign.right),
+                    ],
+                  );
+                }),
+              ],
+            ),
+            pw.SizedBox(height: 12),
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Container(
+                padding: const pw.EdgeInsets.all(10),
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400),
+                  borderRadius: pw.BorderRadius.circular(8),
+                ),
+                child: pw.Row(
+                  mainAxisSize: pw.MainAxisSize.min,
+                  children: [
+                    pw.Text(
+                      'Grand Total: ',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      '₦${totalSum.toStringAsFixed(2)}',
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ];
+        },
+      ),
+    );
+
+    return pdf;
   }
 
   // ✅ Get cost price from quotation
@@ -125,8 +404,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
 
     double additionalTotal = 0.0;
     for (final cost in additionalCosts) {
-      final amount =
-          double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      final amount = double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
       final disableIncrement = cost["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
       additionalTotal += amount * multiplier;
@@ -142,7 +420,10 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     return total;
   }
 
-  double _calculateTotalSellingPrice(Map<String, dynamic> quotation, int quantity) {
+  double _calculateTotalSellingPrice(
+    Map<String, dynamic> quotation,
+    int quantity,
+  ) {
     final baseCost = _getCostPrice(quotation);
     final baseSelling = _getSellingPrice(quotation);
     if (baseCost <= 0) return 0.0;
@@ -209,17 +490,17 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                 title: "Company Information",
                 contact: ContactInfo(
                   name: companyName,
-                  address: companyAddress.isNotEmpty 
-                      ? companyAddress 
+                  address: companyAddress.isNotEmpty
+                      ? companyAddress
                       : "No address provided",
-                  nearestBusStop: companyAddress.isNotEmpty 
-                      ? companyAddress 
+                  nearestBusStop: companyAddress.isNotEmpty
+                      ? companyAddress
                       : "No address provided",
-                  phone: companyPhone.isNotEmpty 
-                      ? companyPhone 
+                  phone: companyPhone.isNotEmpty
+                      ? companyPhone
                       : "No phone provided",
-                  email: companyEmail.isNotEmpty 
-                      ? companyEmail 
+                  email: companyEmail.isNotEmpty
+                      ? companyEmail
                       : "No email provided",
                 ),
               ),
@@ -252,6 +533,20 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        text: isSharing ? "Sharing..." : "Share",
+                        icon: Icons.share,
+                        outlined: true,
+                        onPressed: isSharing || isLoading
+                            ? null
+                            : () => _shareQuotationPdf(
+                                context,
+                                items: allItems,
+                                totalSum: totalSum,
+                              ),
+                      ),
+                    ),
                     // Expanded(
                     //   child: CustomButton(
                     //     text: "Send to Client",
@@ -307,7 +602,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
             final unitPrice =
                 double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
             final disableIncrement = m["disableIncrement"] == true;
-            final totalQuantity = materialQty * (disableIncrement ? 1 : quantity);
+            final totalQuantity =
+                materialQty * (disableIncrement ? 1 : quantity);
 
             // Calculate proportional selling price for this material
             final materialCostShare = costPricePerUnit > 0
@@ -346,9 +642,6 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     String? expectedPeriod;
 
     for (var quotation in widget.selectedQuotations) {
-      final costPrice = _getCostPrice(quotation);
-      final sellingPrice = _getSellingPrice(quotation);
-
       final quantity =
           widget.quotationQuantities[quotation["id"] as String] ?? 1;
 
@@ -368,14 +661,11 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       }
     }
 
-    final firstProduct =
-        widget.selectedQuotations.isNotEmpty
-            ? (widget.selectedQuotations.first["product"] ?? {})
-            : {};
+    final firstProduct = widget.selectedQuotations.isNotEmpty
+        ? (widget.selectedQuotations.first["product"] ?? {})
+        : {};
     final productId =
-        firstProduct["productId"] ??
-        firstProduct["id"] ??
-        firstProduct["_id"];
+        firstProduct["productId"] ?? firstProduct["id"] ?? firstProduct["_id"];
 
     final service = {
       "product": "Materials Service",

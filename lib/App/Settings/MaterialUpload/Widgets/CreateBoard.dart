@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
+import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
 
 class CreateBoardMaterialPage extends StatefulWidget {
   const CreateBoardMaterialPage({super.key});
 
   @override
-  State<CreateBoardMaterialPage> createState() => _CreateBoardMaterialPageState();
+  State<CreateBoardMaterialPage> createState() =>
+      _CreateBoardMaterialPageState();
 }
 
 class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
@@ -14,15 +16,20 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   final MaterialService _materialService = MaterialService();
 
   // Controllers
-  final TextEditingController _nameController = TextEditingController(text: 'Board');
-  final TextEditingController _standardWidthController = TextEditingController();
-  final TextEditingController _standardLengthController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _standardWidthController =
+      TextEditingController();
+  final TextEditingController _standardLengthController =
+      TextEditingController();
   final TextEditingController _pricePerSqmController = TextEditingController();
-  final TextEditingController _wasteThresholdController = TextEditingController(text: '0.75');
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String _thicknessUnit = 'mm';
   String? _imagePath;
+  Map<String, dynamic>? _selectedCatalogMaterial;
   bool isCreating = false;
 
   // Board types and thicknesses
@@ -35,6 +42,15 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
+    if (_selectedCatalogMaterial == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Select a supported catalog material first'),
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please fill all required fields')),
@@ -44,10 +60,32 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
 
     setState(() => isCreating = true);
 
+    final selectedSize = (_selectedCatalogMaterial!['size'] ?? '')
+        .toString()
+        .trim();
+    final thicknessValue = parseThicknessFromSizeString(selectedSize);
+    final thicknessUnit = selectedSize.isNotEmpty
+        ? inferThicknessUnitFromSizeString(selectedSize)
+        : _thicknessUnit;
+
+    if (thicknessValue == null) {
+      setState(() => isCreating = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'This Board material needs a thickness. Select a catalog variant with a thickness size (e.g. 0.5").',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     final request = {
-      'name': _nameController.text.trim(),
-      'category': 'BOARD',
+      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
       if (_imagePath != null) 'imagePath': _imagePath,
+      'thickness': thicknessValue,
+      'thicknessUnit': thicknessUnit,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
@@ -56,15 +94,18 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       if (_pricePerSqmController.text.isNotEmpty)
         'pricePerSqm': double.parse(_pricePerSqmController.text),
       if (boardTypes.isNotEmpty)
-        'types': boardTypes.map((t) => {
-              'name': t.name,
-              if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
-            }).toList(),
+        'types': boardTypes
+            .map(
+              (t) => {
+                'name': t.name,
+                if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
+              },
+            )
+            .toList(),
       if (commonThicknesses.isNotEmpty)
-        'commonThicknesses': commonThicknesses.map((t) => {
-              'thickness': t.thickness,
-              'unit': _thicknessUnit,
-            }).toList(),
+        'commonThicknesses': commonThicknesses
+            .map((t) => {'thickness': t.thickness, 'unit': _thicknessUnit})
+            .toList(),
     };
 
     final result = await _materialService.createMaterial(request);
@@ -85,6 +126,20 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
         ),
       );
     }
+  }
+
+  Future<void> _pickCatalogMaterial() async {
+    final selected = await pickSupportedCatalogMaterial(
+      context: context,
+      materialService: _materialService,
+      preferredCategory: 'Board',
+      title: 'Select Board Catalog Material',
+    );
+    if (selected == null) return;
+    setState(() {
+      _selectedCatalogMaterial = selected;
+      _nameController.text = catalogMaterialDisplayName(selected);
+    });
   }
 
   void _addThickness() {
@@ -116,7 +171,9 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                 if (value != null) {
                   setState(() {
                     commonThicknesses.add(ThicknessOption(thickness: value));
-                    commonThicknesses.sort((a, b) => a.thickness.compareTo(b.thickness));
+                    commonThicknesses.sort(
+                      (a, b) => a.thickness.compareTo(b.thickness),
+                    );
                   });
                   Navigator.pop(context);
                 }
@@ -195,93 +252,101 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             ),
             const SizedBox(height: 20),
 
-            _buildSectionCard(
-              'Basic Information',
-              [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material Name *',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Basic Information', [
+              TextFormField(
+                controller: _nameController,
+                readOnly: true,
+                decoration: const InputDecoration(
+                  labelText: 'Material Name *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _pickCatalogMaterial,
+                icon: const Icon(Icons.fact_check_outlined),
+                label: Text(
+                  _selectedCatalogMaterial == null
+                      ? 'Select From Supported Catalog'
+                      : 'Change Catalog Material',
+                ),
+              ),
+            ]),
             const SizedBox(height: 16),
 
-            _buildSectionCard(
-              'Standard Sheet Size',
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardWidthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Width *',
-                          border: OutlineInputBorder(),
-                          hintText: '48',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Standard Sheet Size', [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardWidthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Width *',
+                        border: OutlineInputBorder(),
+                        hintText: '48',
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardLengthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Length *',
-                          border: OutlineInputBorder(),
-                          hintText: '96',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _standardUnit,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit *',
-                    border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                    DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
-                    DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
-                    DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
-                    DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
-                  ],
-                  onChanged: (value) => setState(() => _standardUnit = value!),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardLengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Length *',
+                        border: OutlineInputBorder(),
+                        hintText: '96',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _standardUnit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'mm',
+                    child: Text('Millimeters (mm)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cm',
+                    child: Text('Centimeters (cm)'),
+                  ),
+                  DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
+                  DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
+                  DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
+                ],
+                onChanged: (value) => setState(() => _standardUnit = value!),
+              ),
+            ]),
             const SizedBox(height: 16),
 
             _buildThicknessSection(),
             const SizedBox(height: 16),
 
-            _buildSectionCard(
-              'Material Settings',
-              [
-                TextFormField(
-                  controller: _wasteThresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waste Threshold',
-                    border: OutlineInputBorder(),
-                    hintText: '0.75 = 75%',
-                  ),
-                  keyboardType: TextInputType.number,
+            _buildSectionCard('Material Settings', [
+              TextFormField(
+                controller: _wasteThresholdController,
+                decoration: const InputDecoration(
+                  labelText: 'Waste Threshold',
+                  border: OutlineInputBorder(),
+                  hintText: '0.75 = 75%',
                 ),
-              ],
-            ),
+                keyboardType: TextInputType.number,
+              ),
+            ]),
             const SizedBox(height: 16),
 
             _buildBoardTypesSection(),
@@ -359,7 +424,8 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                       DropdownMenuItem(value: 'mm', child: Text('mm')),
                       DropdownMenuItem(value: 'inches', child: Text('inches')),
                     ],
-                    onChanged: (value) => setState(() => _thicknessUnit = value!),
+                    onChanged: (value) =>
+                        setState(() => _thicknessUnit = value!),
                   ),
                   const SizedBox(width: 8),
                   TextButton.icon(
@@ -546,8 +612,9 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   Future<void> _openBoardTypeSheet({int? editIndex}) async {
-    final isEditing = editIndex != null;
-    final existing = isEditing ? boardTypes[editIndex!] : null;
+    final idx = editIndex;
+    final isEditing = idx != null;
+    final existing = isEditing ? boardTypes[idx] : null;
     final nameController = TextEditingController(text: existing?.name ?? '');
     final priceController = TextEditingController(
       text: existing?.pricePerSqm?.toString() ?? '',
@@ -597,7 +664,8 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                     if (isEditing)
                       TextButton(
                         onPressed: () {
-                          setState(() => boardTypes.removeAt(editIndex!));
+                          final editIdx = idx;
+                          setState(() => boardTypes.removeAt(editIdx));
                           Navigator.pop(context);
                         },
                         child: const Text(
@@ -654,7 +722,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                               : null,
                         );
                         if (isEditing) {
-                          boardTypes[editIndex!] = updated;
+                          boardTypes[idx] = updated;
                         } else {
                           boardTypes.add(updated);
                         }
@@ -681,7 +749,9 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   String _formatNumber(double number) {
-    return number.toStringAsFixed(2).replaceAllMapped(
+    return number
+        .toStringAsFixed(2)
+        .replaceAllMapped(
           RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
           (Match m) => '${m[1]},',
         );

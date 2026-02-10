@@ -1,5 +1,6 @@
 // invoice_template_elegant.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ElegantInvoiceTemplate extends StatefulWidget {
@@ -60,6 +61,15 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
   String companyEmail = '';
   bool isLoading = true;
 
+  final NumberFormat _money2 = NumberFormat.currency(
+    symbol: '₦',
+    decimalDigits: 2,
+  );
+  final NumberFormat _money0 = NumberFormat.currency(
+    symbol: '₦',
+    decimalDigits: 0,
+  );
+
   @override
   void initState() {
     super.initState();
@@ -69,14 +79,14 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
   // ✅ Load company data from SharedPreferences
   Future<void> _loadCompanyData() async {
     final prefs = await SharedPreferences.getInstance();
-     if (!mounted) return;
-    
+    if (!mounted) return;
+
     setState(() {
       companyName = prefs.getString('companyName') ?? 'Your Company';
       companyEmail = prefs.getString('companyEmail') ?? '';
       companyPhone = prefs.getString('companyPhoneNumber') ?? '';
       companyAddress = prefs.getString('companyAddress') ?? '';
-      
+
       isLoading = false;
     });
   }
@@ -88,6 +98,19 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
         child: CircularProgressIndicator(color: Color(0xFF8B9D8A)),
       );
     }
+
+    final computedGrandTotal = widget.items.fold<double>(0.0, (sum, item) {
+      try {
+        final unit = (item.sellingPrice as num?)?.toDouble() ?? 0.0;
+        final qty = (item.quantity as num?)?.toDouble() ?? 0.0;
+        return sum + (unit * qty);
+      } catch (_) {
+        return sum;
+      }
+    });
+    final grandTotal = computedGrandTotal > 0
+        ? computedGrandTotal
+        : widget.grandTotal;
 
     return SingleChildScrollView(
       child: Container(
@@ -106,7 +129,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
             ],
             _buildItemsTable(),
             const SizedBox(height: 24),
-            _buildFinancialSummary(),
+            _buildFinancialSummary(grandTotal: grandTotal),
             const SizedBox(height: 32),
             _buildFooter(),
             const SizedBox(height: 24),
@@ -117,6 +140,9 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
       ),
     );
   }
+
+  String _formatMoney2(num? value) => _money2.format((value ?? 0).toDouble());
+  String _formatMoney0(num? value) => _money0.format((value ?? 0).toDouble());
 
   Widget _buildHeader() {
     return Row(
@@ -138,17 +164,11 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
             const SizedBox(height: 16),
             Text(
               'Invoice To :',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
             ),
             Text(
               widget.clientName,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 8),
             Text(widget.clientPhone, style: const TextStyle(fontSize: 12)),
@@ -164,11 +184,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                 border: Border.all(color: const Color(0xFF8B9D8A), width: 2),
                 borderRadius: BorderRadius.circular(50),
               ),
-              child: const Icon(
-                Icons.eco,
-                color: Color(0xFF8B9D8A),
-                size: 32,
-              ),
+              child: const Icon(Icons.eco, color: Color(0xFF8B9D8A), size: 32),
             ),
             const SizedBox(height: 16),
             _buildDetailRow('Date :', _formatDate(widget.invoiceDate)),
@@ -184,17 +200,11 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11),
-          ),
+          Text(label, style: const TextStyle(fontSize: 11)),
           const SizedBox(width: 8),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -219,10 +229,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            widget.clientAddress,
-            style: const TextStyle(fontSize: 13),
-          ),
+          Text(widget.clientAddress, style: const TextStyle(fontSize: 13)),
           if (widget.clientBusStop.isNotEmpty) ...[
             const SizedBox(height: 4),
             Text(
@@ -242,9 +249,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
       decoration: BoxDecoration(
         color: const Color(0xFFE8F0E8),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF8B9D8A).withOpacity(0.3),
-        ),
+        border: Border.all(color: const Color(0xFF8B9D8A).withOpacity(0.3)),
       ),
       child: Text(
         widget.description,
@@ -379,7 +384,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                   ),
                   Expanded(
                     child: Text(
-                      '₦${item.sellingPrice.toStringAsFixed(0)}',
+                      _formatMoney0(item.sellingPrice as num?),
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 12),
                     ),
@@ -387,7 +392,10 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                   Expanded(
                     flex: 2,
                     child: Text(
-                      '₦${(item.sellingPrice * item.quantity).toStringAsFixed(2)}',
+                      _formatMoney2(
+                        ((item.sellingPrice as num?) ?? 0) *
+                            ((item.quantity as num?) ?? 0),
+                      ),
                       textAlign: TextAlign.right,
                       style: const TextStyle(
                         fontSize: 13,
@@ -404,7 +412,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
     );
   }
 
-  Widget _buildFinancialSummary() {
+  Widget _buildFinancialSummary({required double grandTotal}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -427,7 +435,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
               Expanded(
                 child: Column(
                   children: [
-                    _buildSummaryRow('Sub-total:', widget.grandTotal),
+                    _buildSummaryRow('Sub-total:', grandTotal),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -449,7 +457,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                             ),
                           ),
                           Text(
-                            '₦${widget.grandTotal.toStringAsFixed(2)}',
+                            _formatMoney2(grandTotal),
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
@@ -461,9 +469,17 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                     ),
                     if (widget.isExistingInvoice) ...[
                       const SizedBox(height: 16),
-                      _buildSummaryRow('Amount Paid:', widget.amountPaid, isGreen: true),
+                      _buildSummaryRow(
+                        'Amount Paid:',
+                        widget.amountPaid,
+                        isGreen: true,
+                      ),
                       const SizedBox(height: 8),
-                      _buildSummaryRow('Balance:', widget.balance, isBold: true),
+                      _buildSummaryRow(
+                        'Balance:',
+                        widget.balance,
+                        isBold: true,
+                      ),
                     ],
                   ],
                 ),
@@ -475,8 +491,12 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
     );
   }
 
-  Widget _buildSummaryRow(String label, double value,
-      {bool isBold = false, bool isGreen = false}) {
+  Widget _buildSummaryRow(
+    String label,
+    double value, {
+    bool isBold = false,
+    bool isGreen = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
       child: Row(
@@ -490,7 +510,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
             ),
           ),
           Text(
-            '₦${value.toStringAsFixed(2)}',
+            _formatMoney2(value),
             style: TextStyle(
               fontSize: 13,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
@@ -514,10 +534,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
         children: [
           const Text(
             'Payment to :',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Row(
@@ -554,7 +571,10 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                       children: [
                         const Icon(Icons.phone, size: 12),
                         const SizedBox(width: 6),
-                        Text(companyPhone, style: const TextStyle(fontSize: 10)),
+                        Text(
+                          companyPhone,
+                          style: const TextStyle(fontSize: 10),
+                        ),
                       ],
                     ),
                   if (companyPhone.isNotEmpty) const SizedBox(height: 4),
@@ -563,7 +583,10 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                       children: [
                         const Icon(Icons.email, size: 12),
                         const SizedBox(width: 6),
-                        Text(companyEmail, style: const TextStyle(fontSize: 10)),
+                        Text(
+                          companyEmail,
+                          style: const TextStyle(fontSize: 10),
+                        ),
                       ],
                     ),
                   if (companyEmail.isNotEmpty) const SizedBox(height: 4),
@@ -572,7 +595,10 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
                       children: [
                         const Icon(Icons.language, size: 12),
                         const SizedBox(width: 6),
-                        Text(companyAddress, style: const TextStyle(fontSize: 10)),
+                        Text(
+                          companyAddress,
+                          style: const TextStyle(fontSize: 10),
+                        ),
                       ],
                     ),
                 ],
@@ -589,11 +615,7 @@ class _ElegantInvoiceTemplateState extends State<ElegantInvoiceTemplate> {
       alignment: Alignment.bottomRight,
       child: Opacity(
         opacity: 0.3,
-        child: Icon(
-          Icons.eco,
-          size: 80,
-          color: Colors.grey[400],
-        ),
+        child: Icon(Icons.eco, size: 80, color: Colors.grey[400]),
       ),
     );
   }
