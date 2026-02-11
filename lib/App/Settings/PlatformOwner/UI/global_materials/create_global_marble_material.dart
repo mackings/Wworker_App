@@ -16,16 +16,17 @@ class _CreateGlobalMarbleMaterialPageState
   final _formKey = GlobalKey<FormState>();
   final PlatformOwnerService _service = PlatformOwnerService();
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Marble');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'Marble',
+  );
   final TextEditingController _standardWidthController =
       TextEditingController();
   final TextEditingController _standardLengthController =
       TextEditingController();
-  final TextEditingController _pricePerSqmController =
-      TextEditingController();
-  final TextEditingController _wasteThresholdController =
-      TextEditingController(text: '0.75');
+  final TextEditingController _pricePerSqmController = TextEditingController();
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String? _imagePath;
@@ -62,12 +63,15 @@ class _CreateGlobalMarbleMaterialPageState
       return;
     }
 
-    final variantsWithPrices =
-        sizeVariants.where((v) => v.pricePerUnit != null).toList();
+    final variantsWithPrices = sizeVariants
+        .where((v) => v.pricePerUnit != null)
+        .toList();
     if (variantsWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please set a base price or at least one variant price'),
+          content: Text(
+            'Please set a base price or at least one variant price',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -89,13 +93,15 @@ class _CreateGlobalMarbleMaterialPageState
       pricingUnit: 'sqm',
       wasteThreshold: double.parse(_wasteThresholdController.text),
       sizeVariants: sizeVariants
-          .map((v) => {
-                'name': v.name,
-                'width': v.width,
-                'length': v.length,
-                'unit': v.unit,
-                if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
-              })
+          .map(
+            (v) => {
+              'name': v.name,
+              'width': v.width,
+              'length': v.length,
+              'unit': v.unit,
+              if (v.pricePerUnit != null) 'pricePerUnit': v.pricePerUnit,
+            },
+          )
           .toList(),
     );
 
@@ -148,8 +154,9 @@ class _CreateGlobalMarbleMaterialPageState
                         labelText: 'Width *',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -158,8 +165,9 @@ class _CreateGlobalMarbleMaterialPageState
                         labelText: 'Length *',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -169,12 +177,20 @@ class _CreateGlobalMarbleMaterialPageState
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'inches', child: Text('Inches')),
-                        DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                        DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('Inches'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'mm',
+                          child: Text('Millimeters (mm)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'cm',
+                          child: Text('Centimeters (cm)'),
+                        ),
                       ],
-                      onChanged: (value) =>
-                          setDialogState(() => unit = value!),
+                      onChanged: (value) => setDialogState(() => unit = value!),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -184,8 +200,9 @@ class _CreateGlobalMarbleMaterialPageState
                         border: OutlineInputBorder(),
                         prefixText: '₦',
                       ),
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ],
                 ),
@@ -201,7 +218,8 @@ class _CreateGlobalMarbleMaterialPageState
                     final length = double.tryParse(lengthController.text);
                     if (nameController.text.isEmpty ||
                         width == null ||
-                        length == null) return;
+                        length == null)
+                      return;
 
                     setState(() {
                       sizeVariants.add(
@@ -238,13 +256,11 @@ class _CreateGlobalMarbleMaterialPageState
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Create Marble Material",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -285,98 +301,94 @@ class _CreateGlobalMarbleMaterialPageState
               ),
             ),
             const SizedBox(height: 20),
-            _buildSectionCard(
-              'Basic Information',
-              [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material Name *',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Basic Information', [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Material Name *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+            ]),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Standard Sheet Size',
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardWidthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Width *',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Standard Sheet Size', [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardWidthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Width *',
+                        border: OutlineInputBorder(),
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardLengthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Length *',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _standardUnit,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit *',
-                    border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                    DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
-                    DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
-                    DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
-                    DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _standardUnit = value!),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardLengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Length *',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _standardUnit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'mm',
+                    child: Text('Millimeters (mm)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cm',
+                    child: Text('Centimeters (cm)'),
+                  ),
+                  DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
+                  DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
+                  DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
+                ],
+                onChanged: (value) => setState(() => _standardUnit = value!),
+              ),
+            ]),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Base Pricing (Optional)',
-              [
-                TextFormField(
-                  controller: _pricePerSqmController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Price per m²',
-                    border: OutlineInputBorder(),
-                    prefixText: '₦',
-                    hintText: 'Leave empty if variants have different prices',
-                  ),
-                  keyboardType: TextInputType.number,
+            _buildSectionCard('Base Pricing (Optional)', [
+              TextFormField(
+                controller: _pricePerSqmController,
+                decoration: const InputDecoration(
+                  labelText: 'Base Price per m²',
+                  border: OutlineInputBorder(),
+                  prefixText: '₦',
+                  hintText: 'Leave empty if variants have different prices',
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _wasteThresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waste Threshold',
-                    border: OutlineInputBorder(),
-                    hintText: '0.75 = 75%',
-                  ),
-                  keyboardType: TextInputType.number,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _wasteThresholdController,
+                decoration: const InputDecoration(
+                  labelText: 'Waste Threshold',
+                  border: OutlineInputBorder(),
+                  hintText: '0.75 = 75%',
                 ),
-              ],
-            ),
+                keyboardType: TextInputType.number,
+              ),
+            ]),
             const SizedBox(height: 16),
             _buildSizeVariantsSection(),
             const SizedBox(height: 32),
@@ -503,16 +515,12 @@ class _CreateGlobalMarbleMaterialPageState
                   ),
                   child: Row(
                     children: [
-                      Expanded(
-                        child: Text(variant.name),
-                      ),
+                      Expanded(child: Text(variant.name)),
                       Text(
                         variant.pricePerUnit != null
                             ? '₦${variant.pricePerUnit}'
                             : 'No price',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

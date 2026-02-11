@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
+import 'package:wworker/Constant/colors.dart';
 
 class CreateFoamMaterialPage extends StatefulWidget {
   const CreateFoamMaterialPage({super.key});
@@ -28,6 +29,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   String _standardUnit = 'inches';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  bool _useCatalog = true;
   bool isCreating = false;
 
   // Foam variants (thickness + density combinations)
@@ -39,11 +41,9 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
-    if (_selectedCatalogMaterial == null) {
+    if (_useCatalog && _selectedCatalogMaterial == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a supported catalog material first'),
-        ),
+        const SnackBar(content: Text('Select a supported catalog material')),
       );
       return;
     }
@@ -57,8 +57,16 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
 
     setState(() => isCreating = true);
 
+    final baseRequest = _useCatalog
+        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
+        : <String, dynamic>{
+            'useCatalog': false,
+            'name': _nameController.text.trim(),
+            'category': 'Foam',
+          };
+
     final request = {
-      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
+      ...baseRequest,
       if (_imagePath != null) 'imagePath': _imagePath,
       'standardWidth': double.parse(_standardWidthController.text),
       'standardLength': double.parse(_standardLengthController.text),
@@ -426,16 +434,13 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Foam Material",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -445,6 +450,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
           children: [
             CustomImgBg(
               placeholderText: 'Add Material Image (Optional)',
+              selectedImagePath: _imagePath,
               onImageSelected: (image) {
                 setState(() => _imagePath = image?.path);
               },
@@ -480,9 +486,29 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
 
             // Basic Information
             _buildSectionCard('Basic Information', [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Use Supported Catalog (Recommended)'),
+                subtitle: const Text(
+                  'Turn this off to enter a custom material name (non-catalog).',
+                ),
+                value: _useCatalog,
+                onChanged: (v) {
+                  setState(() {
+                    _useCatalog = v;
+                    if (!_useCatalog) {
+                      _selectedCatalogMaterial = null;
+                    } else if (_selectedCatalogMaterial != null) {
+                      _nameController.text = catalogMaterialDisplayName(
+                        _selectedCatalogMaterial!,
+                      );
+                    }
+                  });
+                },
+              ),
               TextFormField(
                 controller: _nameController,
-                readOnly: true,
+                readOnly: _useCatalog,
                 decoration: const InputDecoration(
                   labelText: 'Material Name *',
                   border: OutlineInputBorder(),
@@ -492,7 +518,7 @@ class _CreateFoamMaterialPageState extends State<CreateFoamMaterialPage> {
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _pickCatalogMaterial,
+                onPressed: _useCatalog ? _pickCatalogMaterial : null,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: Text(
                   _selectedCatalogMaterial == null

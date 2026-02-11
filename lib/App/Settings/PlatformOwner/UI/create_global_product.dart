@@ -54,8 +54,9 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
       if (result['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(result['message'] ?? 'Global product created successfully'),
+            content: Text(
+              result['message'] ?? 'Global product created successfully',
+            ),
             backgroundColor: Colors.green,
           ),
         );
@@ -71,10 +72,7 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -92,6 +90,7 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Create Global Product',
@@ -150,7 +149,8 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
                               const SizedBox(height: 20),
                               _buildSectionTitle(
                                 title: 'Basics',
-                                subtitle: 'Core details used across the platform',
+                                subtitle:
+                                    'Core details used across the platform',
                                 icon: Icons.inventory_2_outlined,
                               ),
                               const SizedBox(height: 12),
@@ -191,13 +191,15 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
                               const SizedBox(height: 20),
                               _buildSectionTitle(
                                 title: 'Description',
-                                subtitle: 'Optional details to help teams search',
+                                subtitle:
+                                    'Optional details to help teams search',
                                 icon: Icons.notes_outlined,
                               ),
                               const SizedBox(height: 12),
                               CustomTextField(
                                 label: 'Description',
-                                hintText: 'Enter product description (optional)',
+                                hintText:
+                                    'Enter product description (optional)',
                                 controller: descController,
                                 maxLines: 4,
                               ),
@@ -226,9 +228,7 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
           ),
           if (isLoading)
             Positioned.fill(
-              child: Container(
-                color: Colors.black.withOpacity(0.2),
-              ),
+              child: Container(color: Colors.black.withOpacity(0.2)),
             ),
         ],
       ),
@@ -240,10 +240,7 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            ColorsApp.btnColor,
-            ColorsApp.btnColor.withOpacity(0.75),
-          ],
+          colors: [ColorsApp.btnColor, ColorsApp.btnColor.withOpacity(0.75)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -265,11 +262,7 @@ class _CreateGlobalProductState extends ConsumerState<CreateGlobalProduct> {
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.public,
-              color: Colors.white,
-              size: 28,
-            ),
+            child: const Icon(Icons.public, color: Colors.white, size: 28),
           ),
           const SizedBox(width: 16),
           Expanded(

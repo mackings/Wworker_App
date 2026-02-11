@@ -4,6 +4,7 @@ import 'package:wworker/App/Settings/MaterialUpload/Widgets/CreateFabric.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/CreateFoam.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/CreateMarble.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/CreateWood.dart';
+import 'package:wworker/Constant/colors.dart';
 
 class SelectMaterialCategoryPage extends StatelessWidget {
   const SelectMaterialCategoryPage({super.key});
@@ -11,34 +12,26 @@ class SelectMaterialCategoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Select Material Category",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          const Padding(
-            padding: EdgeInsets.all(8.0),
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Text(
-              'What type of material would you like to add?',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
+              'Choose the material type to upload. Each category has its own structure and variants.',
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
             ),
           ),
-          const SizedBox(height: 16),
-          
+
           // Wood Category
           _CategoryCard(
             title: 'Wood',
@@ -53,7 +46,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Board Category
           _CategoryCard(
             title: 'Board',
@@ -68,7 +61,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Foam Category
           _CategoryCard(
             title: 'Foam',
@@ -83,7 +76,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Marble Category
           _CategoryCard(
             title: 'Marble',
@@ -98,7 +91,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Fabric Category
           _CategoryCard(
             title: 'Fabric',
@@ -113,7 +106,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Hardware Category
           _CategoryCard(
             title: 'Hardware',
@@ -128,7 +121,7 @@ class SelectMaterialCategoryPage extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Other Category
           _CategoryCard(
             title: 'Other',
@@ -194,14 +187,10 @@ class _CategoryCard extends StatelessWidget {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: color,
-              ),
+              child: Icon(icon, size: 32, color: color),
             ),
             const SizedBox(width: 16),
-            
+
             // Content
             Expanded(
               child: Column(
@@ -218,10 +207,7 @@ class _CategoryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -235,13 +221,9 @@ class _CategoryCard extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Arrow
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),

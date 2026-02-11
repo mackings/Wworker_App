@@ -11,6 +11,7 @@ class CustomImgBg extends StatefulWidget {
   final String placeholderText;
   final String? defaultImage;
   final String? initialImageUrl; // ✅ added
+  final String? selectedImagePath; // optional: let parent control preview
   final void Function(File?)? onImageSelected;
 
   const CustomImgBg({
@@ -20,6 +21,7 @@ class CustomImgBg extends StatefulWidget {
     this.placeholderText = "Add Design Image",
     this.defaultImage,
     this.initialImageUrl, // ✅ added
+    this.selectedImagePath,
     this.onImageSelected,
   });
 
@@ -29,6 +31,15 @@ class CustomImgBg extends StatefulWidget {
 
 class _CustomImgBgState extends State<CustomImgBg> {
   File? _selectedImage;
+
+  File? _resolveSelectedFile() {
+    if (_selectedImage != null) return _selectedImage;
+    final p = widget.selectedImagePath;
+    if (p == null || p.isEmpty) return null;
+    final f = File(p);
+    if (!f.existsSync()) return null;
+    return f;
+  }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
@@ -44,9 +55,10 @@ class _CustomImgBgState extends State<CustomImgBg> {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Prioritize user-selected image → initial network image → fallback image
-    final imageProvider = _selectedImage != null
-        ? FileImage(_selectedImage!)
+    // ✅ Prioritize selected file (internal or controlled) → initial network image → fallback image
+    final selectedFile = _resolveSelectedFile();
+    final imageProvider = selectedFile != null
+        ? FileImage(selectedFile)
         : (widget.initialImageUrl != null && widget.initialImageUrl!.isNotEmpty
                   ? NetworkImage(widget.initialImageUrl!)
                   : (widget.defaultImage != null
@@ -59,36 +71,61 @@ class _CustomImgBgState extends State<CustomImgBg> {
       child: Container(
         width: double.infinity,
         height: widget.height,
-        padding: const EdgeInsets.symmetric(horizontal: 64, vertical: 56),
+        padding: selectedFile == null
+            ? const EdgeInsets.symmetric(horizontal: 64, vertical: 56)
+            : EdgeInsets.zero,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
         ),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.4),
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.add_a_photo, size: 66, color: Colors.white),
-                const SizedBox(height: 8),
-                Text(
-                  widget.placeholderText,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.openSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    height: 1.6,
+        child: selectedFile == null
+            ? Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.add_a_photo,
+                        size: 66,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        widget.placeholderText,
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.openSans(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-        ),
+              )
+            : Align(
+                alignment: Alignment.bottomRight,
+                child: Padding(
+                  padding: const EdgeInsets.all(10),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.35),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
       ),
     );
   }

@@ -23,8 +23,6 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
-
-
 class AllQuotations extends ConsumerStatefulWidget {
   const AllQuotations({super.key});
 
@@ -85,7 +83,10 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     }
   }
 
-  Future<void> _editBomBeforeImport(BuildContext context, _BomImportItem bom) async {
+  Future<void> _editBomBeforeImport(
+    BuildContext context,
+    _BomImportItem bom,
+  ) async {
     final materialNotifier = ref.read(materialProvider.notifier);
     final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
 
@@ -147,57 +148,58 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   return SafeArea(
                     top: false,
                     child: Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(999),
+                      children: [
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          children: [
-                            const Expanded(
-                              child: Text(
-                                "Import BOMs",
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF302E2E),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  "Import BOMs",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF302E2E),
+                                  ),
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.close),
-                              color: Colors.grey.shade600,
-                            ),
-                          ],
+                              IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(Icons.close),
+                                color: Colors.grey.shade600,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Expanded(
-                        child: ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: boms.length,
-                          itemBuilder: (context, index) {
-                            final bom = boms[index];
-                            return _ImportBomDetailsCard(
-                              bom: bom,
-                              onImport: () => _importBom(context, bom),
-                              onEdit: () => _editBomBeforeImport(context, bom),
-                            );
-                          },
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: ListView.builder(
+                            controller: scrollController,
+                            padding: const EdgeInsets.all(16),
+                            itemCount: boms.length,
+                            itemBuilder: (context, index) {
+                              final bom = boms[index];
+                              return _ImportBomDetailsCard(
+                                bom: bom,
+                                onImport: () => _importBom(context, bom),
+                                onEdit: () =>
+                                    _editBomBeforeImport(context, bom),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -338,8 +340,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
 
     double additionalTotal = 0.0;
     for (final cost in additionalCosts) {
-      final amount =
-          double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      final amount = double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
       final disableIncrement = cost["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
       additionalTotal += amount * multiplier;
@@ -467,8 +468,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                   onEdit: () async {
                                     final updated =
                                         await _showMaterialFormSheet(
-                                      initial: item,
-                                    );
+                                          initial: item,
+                                        );
                                     if (updated == null) return;
                                     setSheetState(() {
                                       materials[idx] = updated;
@@ -508,8 +509,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                   onEdit: () async {
                                     final updated =
                                         await _showAdditionalCostFormSheet(
-                                      initial: item,
-                                    );
+                                          initial: item,
+                                        );
                                     if (updated == null) return;
                                     setSheetState(() {
                                       additionalCosts[idx] = updated;
@@ -526,8 +527,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                             CustomButton(
                               text: "Save Changes",
                               onPressed: () async {
-                                final updated =
-                                    _buildUpdatedQuotationForSave(
+                                final updated = _buildUpdatedQuotationForSave(
                                   quotation,
                                   materials,
                                   additionalCosts,
@@ -573,9 +573,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     );
   }
 
-  Future<void> _openMaterialEditorForBom(
-    Map<String, dynamic> quotation,
-  ) async {
+  Future<void> _openMaterialEditorForBom(Map<String, dynamic> quotation) async {
     final materialNotifier = ref.read(materialProvider.notifier);
     final quotationId = quotation["id"] as String?;
     if (quotationId == null || quotationId.isEmpty) return;
@@ -646,10 +644,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     });
     updated["costPrice"] = baseCost;
 
-    final existingCost =
-        (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
-    final existingSell =
-        (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
+    final existingCost = (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
+    final existingSell = (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
     if (existingCost > 0 && existingSell > 0) {
       final ratio = existingSell / existingCost;
       updated["sellingPrice"] = baseCost * ratio;
@@ -684,9 +680,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
           onPressed: onAdd,
           icon: const Icon(Icons.add, size: 18),
           label: const Text("Add"),
-          style: TextButton.styleFrom(
-            foregroundColor: ColorsApp.btnColor,
-          ),
+          style: TextButton.styleFrom(foregroundColor: ColorsApp.btnColor),
         ),
       ],
     );
@@ -762,8 +756,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       text: initial?["quantity"]?.toString() ?? "1",
     );
     bool disableIncrement = initial?["disableIncrement"] == true;
-    String? unitValue =
-        unitController.text.trim().isEmpty ? null : unitController.text.trim();
+    String? unitValue = unitController.text.trim().isEmpty
+        ? null
+        : unitController.text.trim();
     const linearUnits = ["mm", "cm", "m", "ft", "in"];
     double? latestPriceValue;
 
@@ -804,19 +799,19 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(20),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: StatefulBuilder(
                   builder: (context, setModalState) {
                     Future<void> calculateCost() async {
                       if (isCalculating) return;
                       setModalState(() => isCalculating = true);
-                      final width =
-                          double.tryParse(widthController.text.trim());
-                      final length =
-                          double.tryParse(lengthController.text.trim());
+                      final width = double.tryParse(
+                        widthController.text.trim(),
+                      );
+                      final length = double.tryParse(
+                        lengthController.text.trim(),
+                      );
                       final unit = unitValue ?? unitController.text.trim();
                       final quantity =
                           int.tryParse(quantityController.text.trim()) ?? 1;
@@ -825,8 +820,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         setModalState(() => isCalculating = false);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                            content:
-                                Text("Enter width, length, and unit first."),
+                            content: Text(
+                              "Enter width, length, and unit first.",
+                            ),
                           ),
                         );
                         return;
@@ -845,31 +841,44 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         return;
                       }
 
-                      final result = await materialService.calculateMaterialCost(
-                        materialId: materialId,
-                        requiredWidth: width,
-                        requiredLength: length,
-                        requiredUnit: unit,
-                        materialType:
-                            nameController.text.trim().isEmpty
+                      final result = await materialService
+                          .calculateMaterialCost(
+                            materialId: materialId,
+                            requiredWidth: width,
+                            requiredLength: length,
+                            requiredUnit: unit,
+                            materialType: nameController.text.trim().isEmpty
                                 ? null
                                 : nameController.text.trim(),
-                        foamThickness:
-                            double.tryParse(thicknessController.text.trim()),
-                        quantity: quantity,
-                      );
+                            foamThickness: double.tryParse(
+                              thicknessController.text.trim(),
+                            ),
+                            quantity: quantity,
+                          );
 
                       setModalState(() {
                         isCalculating = false;
-                        costCalculation = result;
                         if (result != null) {
-                          sqmController.text =
-                              result.dimensions.projectAreaSqm
-                                  .toStringAsFixed(2);
-                          latestPriceValue =
-                              result.pricing.totalMaterialCost.roundToDouble();
+                          costCalculation = result;
+                          sqmController.text = result.dimensions.projectAreaSqm
+                              .toStringAsFixed(2);
+                          latestPriceValue = result.pricing.totalMaterialCost
+                              .roundToDouble();
                           priceController.text = NumberFormat.decimalPattern()
                               .format(latestPriceValue!.toInt());
+
+                          if (result.calculation.needsPricing == true) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  "This material is unpriced and will be saved with 0 cost.",
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        } else {
+                          costCalculation = null;
                         }
                       });
                     }
@@ -965,8 +974,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                         onChanged: (value) {
                                           setModalState(() {
                                             unitValue = value;
-                                            unitController.text =
-                                                value ?? "";
+                                            unitController.text = value ?? "";
                                           });
                                         },
                                       ),
@@ -1103,8 +1111,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                   text: "Save Changes",
                                   onPressed: costCalculation == null
                                       ? () {
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
                                             const SnackBar(
                                               content: Text(
                                                 "Please calculate cost before saving.",
@@ -1113,47 +1122,38 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                           );
                                         }
                                       : () {
-                                          Navigator.pop(
-                                            context,
-                                            {
-                                              "Product":
-                                                  initial?["Product"] ?? "",
-                                              "Materialname":
-                                                  nameController.text.trim(),
-                                              "Width":
-                                                  widthController.text.trim(),
-                                              "Length":
-                                                  lengthController.text.trim(),
-                                              "Thickness": thicknessController
-                                                  .text
-                                                  .trim(),
-                                              "Unit":
-                                                  unitValue ??
-                                                      unitController.text
-                                                          .trim(),
-                                              "Sqm":
-                                                  sqmController.text.trim(),
-                                              "Price":
-                                                  latestPriceValue != null
-                                                      ? latestPriceValue!
-                                                          .toStringAsFixed(0)
-                                                      : priceController.text
-                                                          .trim()
-                                                          .replaceAll(
-                                                            ",",
-                                                            "",
-                                                          ),
-                                              "quantity": quantityController
-                                                      .text
+                                          Navigator.pop(context, {
+                                            "Product":
+                                                initial?["Product"] ?? "",
+                                            "Materialname": nameController.text
+                                                .trim(),
+                                            "Width": widthController.text
+                                                .trim(),
+                                            "Length": lengthController.text
+                                                .trim(),
+                                            "Thickness": thicknessController
+                                                .text
+                                                .trim(),
+                                            "Unit":
+                                                unitValue ??
+                                                unitController.text.trim(),
+                                            "Sqm": sqmController.text.trim(),
+                                            "Price": latestPriceValue != null
+                                                ? latestPriceValue!
+                                                      .toStringAsFixed(0)
+                                                : priceController.text
                                                       .trim()
-                                                      .isEmpty
-                                                  ? "1"
-                                                  : quantityController.text
+                                                      .replaceAll(",", ""),
+                                            "quantity":
+                                                quantityController.text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? "1"
+                                                : quantityController.text
                                                       .trim(),
-                                              "disableIncrement":
-                                                  disableIncrement,
-                                            },
-                                          );
+                                            "disableIncrement":
+                                                disableIncrement,
+                                          });
                                         },
                                 ),
                               ],
@@ -1246,17 +1246,13 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                   ),
                   const SizedBox(height: 16),
                   CustomButton(
-                    text:
-                        initial == null ? "Add Cost" : "Save Changes",
+                    text: initial == null ? "Add Cost" : "Save Changes",
                     onPressed: () {
-                      Navigator.pop(
-                        context,
-                        {
-                          "type": typeController.text.trim(),
-                          "description": descriptionController.text.trim(),
-                          "amount": amountController.text.trim(),
-                        },
-                      );
+                      Navigator.pop(context, {
+                        "type": typeController.text.trim(),
+                        "description": descriptionController.text.trim(),
+                        "amount": amountController.text.trim(),
+                      });
                     },
                   ),
                 ],
@@ -1338,10 +1334,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                 currentQuantity,
                               ),
                               quantity: currentQuantity,
-                              onEdit: () => _showBomBreakdownSheet(
-                                quotation,
-                                index,
-                              ),
+                              onEdit: () =>
+                                  _showBomBreakdownSheet(quotation, index),
                               onIncrease: () => _increaseQuantity(index),
                               onDecrease: () => _decreaseQuantity(index),
                               onDelete: () =>
@@ -1423,13 +1417,14 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         // ),
                         const SizedBox(width: 12),
 
-                    Expanded(child:  CustomButton(
-                      text: "Import BOM",
-                      outlined: true,
-                      onPressed: _showImportBomsSheet,
-                    ),)
+                        Expanded(
+                          child: CustomButton(
+                            text: "Import BOM",
+                            outlined: true,
+                            onPressed: _showImportBomsSheet,
+                          ),
+                        ),
 
-                        
                         // Expanded(
                         //   child: CustomButton(
                         //     textSize: 15,
@@ -1444,8 +1439,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         // ),
                       ],
                     ),
+
                     //const SizedBox(height: 12),
- 
                   ],
                 ),
               ),
@@ -1768,18 +1763,12 @@ class _ImportBomDetailsCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   bom.bomNumber,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   bom.description.isEmpty ? "No description" : bom.description,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -1807,10 +1796,7 @@ class _ImportBomDetailsCard extends StatelessWidget {
                   children: [
                     const Text(
                       "Cost Price",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     Text(
                       "₦$costLabel",
@@ -1827,10 +1813,7 @@ class _ImportBomDetailsCard extends StatelessWidget {
                   children: [
                     const Text(
                       "Overhead Cost",
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     Text(
                       "₦$overheadLabel",

@@ -124,6 +124,7 @@ class CalculationInfo {
   final String mode;
   final int minimumUnits;
   final double quantity;
+  final bool needsPricing;
   final double wasteThreshold;
   final String rawRemainder;
   final String wasteThresholdArea;
@@ -133,6 +134,7 @@ class CalculationInfo {
     required this.mode,
     required this.minimumUnits,
     required this.quantity,
+    required this.needsPricing,
     required this.wasteThreshold,
     required this.rawRemainder,
     required this.wasteThresholdArea,
@@ -144,6 +146,7 @@ class CalculationInfo {
       mode: json['mode']?.toString() ?? 'sheet_based',
       minimumUnits: _toInt(json['minimumUnits']),
       quantity: _toDouble(json['quantity'], fallback: 1),
+      needsPricing: json['needsPricing'] == true,
       wasteThreshold: _toDouble(json['wasteThreshold'], fallback: 0.75),
       rawRemainder: json['rawRemainder']?.toString() ?? '0',
       wasteThresholdArea: json['wasteThresholdArea']?.toString() ?? '0',

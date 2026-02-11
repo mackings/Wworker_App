@@ -40,7 +40,9 @@ class _CreateGlobalFabricMaterialPageState
       imagePath: _imagePath,
       pricePerUnit: double.parse(_priceController.text),
       pricingUnit: _pricingUnit,
-      notes: _notesController.text.isNotEmpty ? _notesController.text.trim() : null,
+      notes: _notesController.text.isNotEmpty
+          ? _notesController.text.trim()
+          : null,
     );
 
     setState(() => isCreating = false);
@@ -67,13 +69,11 @@ class _CreateGlobalFabricMaterialPageState
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Create Fabric Material",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -122,7 +122,8 @@ class _CreateGlobalFabricMaterialPageState
                   border: OutlineInputBorder(),
                   hintText: 'e.g., Leather, Velvet, Ankara',
                 ),
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
@@ -133,7 +134,8 @@ class _CreateGlobalFabricMaterialPageState
                   prefixText: '₦',
                 ),
                 keyboardType: TextInputType.number,
-                validator: (value) => value?.isEmpty ?? true ? 'Required' : null,
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(

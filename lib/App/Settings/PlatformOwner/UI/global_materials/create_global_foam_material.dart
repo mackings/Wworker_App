@@ -16,16 +16,17 @@ class _CreateGlobalFoamMaterialPageState
   final _formKey = GlobalKey<FormState>();
   final PlatformOwnerService _service = PlatformOwnerService();
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Foam');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'Foam',
+  );
   final TextEditingController _standardWidthController =
       TextEditingController();
   final TextEditingController _standardLengthController =
       TextEditingController();
-  final TextEditingController _pricePerSqmController =
-      TextEditingController();
-  final TextEditingController _wasteThresholdController =
-      TextEditingController(text: '0.75');
+  final TextEditingController _pricePerSqmController = TextEditingController();
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String? _imagePath;
@@ -102,12 +103,15 @@ class _CreateGlobalFoamMaterialPageState
       return;
     }
 
-    final variantsWithPrices =
-        foamVariants.where((v) => v.pricePerSqm != null).toList();
+    final variantsWithPrices = foamVariants
+        .where((v) => v.pricePerSqm != null)
+        .toList();
     if (variantsWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please set a base price or at least one variant price'),
+          content: Text(
+            'Please set a base price or at least one variant price',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -129,15 +133,17 @@ class _CreateGlobalFoamMaterialPageState
       pricingUnit: 'sqm',
       wasteThreshold: double.parse(_wasteThresholdController.text),
       foamVariants: foamVariants
-          .map((v) => {
-                'thickness': v.thickness,
-                'thicknessUnit': v.thicknessUnit,
-                'density': v.density,
-                'width': v.width,
-                'length': v.length,
-                'dimensionUnit': v.dimensionUnit,
-                if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
-              })
+          .map(
+            (v) => {
+              'thickness': v.thickness,
+              'thicknessUnit': v.thicknessUnit,
+              'density': v.density,
+              'width': v.width,
+              'length': v.length,
+              'dimensionUnit': v.dimensionUnit,
+              if (v.pricePerSqm != null) 'pricePerSqm': v.pricePerSqm,
+            },
+          )
           .toList(),
     );
 
@@ -184,7 +190,9 @@ class _CreateGlobalFoamMaterialPageState
                         labelText: 'Thickness *',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -194,8 +202,14 @@ class _CreateGlobalFoamMaterialPageState
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'inches', child: Text('Inches')),
-                        DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('Inches'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'mm',
+                          child: Text('Millimeters (mm)'),
+                        ),
                       ],
                       onChanged: (value) =>
                           setDialogState(() => thicknessUnit = value!),
@@ -208,7 +222,10 @@ class _CreateGlobalFoamMaterialPageState
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'ordinary', child: Text('Ordinary')),
+                        DropdownMenuItem(
+                          value: 'ordinary',
+                          child: Text('Ordinary'),
+                        ),
                         DropdownMenuItem(value: 'lemon', child: Text('Lemon')),
                         DropdownMenuItem(value: 'grey', child: Text('Grey')),
                       ],
@@ -222,7 +239,9 @@ class _CreateGlobalFoamMaterialPageState
                         labelText: 'Width *',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -231,7 +250,9 @@ class _CreateGlobalFoamMaterialPageState
                         labelText: 'Length *',
                         border: OutlineInputBorder(),
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
@@ -241,9 +262,18 @@ class _CreateGlobalFoamMaterialPageState
                         border: OutlineInputBorder(),
                       ),
                       items: const [
-                        DropdownMenuItem(value: 'inches', child: Text('Inches')),
-                        DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                        DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('Inches'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'mm',
+                          child: Text('Millimeters (mm)'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'cm',
+                          child: Text('Centimeters (cm)'),
+                        ),
                       ],
                       onChanged: (value) =>
                           setDialogState(() => dimensionUnit = value!),
@@ -256,7 +286,9 @@ class _CreateGlobalFoamMaterialPageState
                         border: OutlineInputBorder(),
                         prefixText: '₦',
                       ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
                     ),
                   ],
                 ),
@@ -271,7 +303,8 @@ class _CreateGlobalFoamMaterialPageState
                     final thickness = double.tryParse(thicknessController.text);
                     final width = double.tryParse(widthController.text);
                     final length = double.tryParse(lengthController.text);
-                    if (thickness == null || width == null || length == null) return;
+                    if (thickness == null || width == null || length == null)
+                      return;
 
                     setState(() {
                       foamVariants.add(
@@ -310,13 +343,11 @@ class _CreateGlobalFoamMaterialPageState
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Create Foam Material",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -357,98 +388,94 @@ class _CreateGlobalFoamMaterialPageState
               ),
             ),
             const SizedBox(height: 20),
-            _buildSectionCard(
-              'Basic Information',
-              [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material Name *',
-                    border: OutlineInputBorder(),
-                  ),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Basic Information', [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Material Name *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+            ]),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Standard Sheet Size',
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardWidthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Width *',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Standard Sheet Size', [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardWidthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Width *',
+                        border: OutlineInputBorder(),
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardLengthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Length *',
-                          border: OutlineInputBorder(),
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _standardUnit,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit *',
-                    border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                    DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
-                    DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
-                    DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
-                    DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _standardUnit = value!),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardLengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Length *',
+                        border: OutlineInputBorder(),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _standardUnit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'mm',
+                    child: Text('Millimeters (mm)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cm',
+                    child: Text('Centimeters (cm)'),
+                  ),
+                  DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
+                  DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
+                  DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
+                ],
+                onChanged: (value) => setState(() => _standardUnit = value!),
+              ),
+            ]),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Base Pricing (Optional)',
-              [
-                TextFormField(
-                  controller: _pricePerSqmController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Price per m²',
-                    border: OutlineInputBorder(),
-                    prefixText: '₦',
-                    hintText: 'Leave empty if variants have different prices',
-                  ),
-                  keyboardType: TextInputType.number,
+            _buildSectionCard('Base Pricing (Optional)', [
+              TextFormField(
+                controller: _pricePerSqmController,
+                decoration: const InputDecoration(
+                  labelText: 'Base Price per m²',
+                  border: OutlineInputBorder(),
+                  prefixText: '₦',
+                  hintText: 'Leave empty if variants have different prices',
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _wasteThresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waste Threshold',
-                    border: OutlineInputBorder(),
-                    hintText: '0.75 = 75%',
-                  ),
-                  keyboardType: TextInputType.number,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _wasteThresholdController,
+                decoration: const InputDecoration(
+                  labelText: 'Waste Threshold',
+                  border: OutlineInputBorder(),
+                  hintText: '0.75 = 75%',
                 ),
-              ],
-            ),
+                keyboardType: TextInputType.number,
+              ),
+            ]),
             const SizedBox(height: 16),
             _buildFoamVariantsSection(),
             const SizedBox(height: 32),
@@ -584,9 +611,7 @@ class _CreateGlobalFoamMaterialPageState
                         variant.pricePerSqm != null
                             ? '₦${variant.pricePerSqm}'
                             : 'No price',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
                       IconButton(
                         icon: const Icon(Icons.delete, color: Colors.red),

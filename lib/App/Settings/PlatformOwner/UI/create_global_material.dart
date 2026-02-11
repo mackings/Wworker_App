@@ -18,6 +18,7 @@ class CreateGlobalMaterial extends StatelessWidget {
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Select Material Category',
@@ -181,11 +182,7 @@ class _CategoryCard extends StatelessWidget {
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                icon,
-                size: 32,
-                color: color,
-              ),
+              child: Icon(icon, size: 32, color: color),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -203,10 +200,7 @@ class _CategoryCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -220,11 +214,7 @@ class _CategoryCard extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
           ],
         ),
       ),

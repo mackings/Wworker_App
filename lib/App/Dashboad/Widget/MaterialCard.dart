@@ -675,6 +675,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       return;
     }
 
+    // Thickness is required before calling the cost API.
+    // This prevents auto-calling as soon as width/length are prefilled.
+    final t = thicknessController.text.trim().isNotEmpty
+        ? thicknessController.text.trim()
+        : (thickness ?? '').trim();
+    if (t.isEmpty) return;
+
     final w = double.tryParse(widthController.text);
     final l = double.tryParse(lengthController.text);
 
@@ -756,6 +763,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "Unit": unit,
       "Sqm": _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
       "Price": _costCalculation!.pricing.projectCost.toStringAsFixed(2),
+      "needsPricing": _costCalculation!.calculation.needsPricing,
       "quantity": "1",
     };
 
@@ -995,7 +1003,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                         "Thickness",
                         _availableThicknesses,
                         thickness,
-                        (v) => setState(() => thickness = v),
+                        (v) {
+                          setState(() => thickness = v);
+                          _calculateCosts();
+                        },
                       )
                     : Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1046,7 +1057,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              "Note: Thickness is auto-populated from material data and is for reference only",
+              "Note: Thickness is required before costs can be calculated.",
               style: GoogleFonts.openSans(
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
@@ -1299,6 +1310,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   Widget _buildCalculationResults() {
+    final needsPricing = _costCalculation?.calculation.needsPricing == true;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -1317,6 +1329,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               color: const Color(0xFFA16438),
             ),
           ),
+          if (needsPricing) ...[
+            const SizedBox(height: 6),
+            Text(
+              "This material is unpriced. It will be added with 0 cost.",
+              style: GoogleFonts.openSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.redAccent,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           _buildResultRow(
             "Project Area:",

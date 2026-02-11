@@ -60,6 +60,7 @@ class _PlatformAnalyticsState extends ConsumerState<PlatformAnalytics> {
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Platform Analytics',
@@ -74,8 +75,8 @@ class _PlatformAnalyticsState extends ConsumerState<PlatformAnalytics> {
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
             : error != null
-                ? _buildErrorView()
-                : _buildAnalyticsContent(),
+            ? _buildErrorView()
+            : _buildAnalyticsContent(),
       ),
     );
   }
@@ -111,8 +112,13 @@ class _PlatformAnalyticsState extends ConsumerState<PlatformAnalytics> {
     final numberFormat = NumberFormat.compact();
 
     // Calculate totals
-    int totalProducts = overview!.products.byStatus.fold(0, (sum, item) => sum + item.count) + overview!.products.global;
-    int totalOrders = overview!.orders.byStatus.fold(0, (sum, item) => sum + item.count);
+    int totalProducts =
+        overview!.products.byStatus.fold(0, (sum, item) => sum + item.count) +
+        overview!.products.global;
+    int totalOrders = overview!.orders.byStatus.fold(
+      0,
+      (sum, item) => sum + item.count,
+    );
 
     return SingleChildScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -151,7 +157,11 @@ class _PlatformAnalyticsState extends ConsumerState<PlatformAnalytics> {
     );
   }
 
-  Widget _buildMetricsGrid(NumberFormat numberFormat, int totalProducts, int totalOrders) {
+  Widget _buildMetricsGrid(
+    NumberFormat numberFormat,
+    int totalProducts,
+    int totalOrders,
+  ) {
     final screenWidth = MediaQuery.of(context).size.width;
     final cardAspectRatio = screenWidth < 360 ? 1.0 : 1.2;
 

@@ -56,11 +56,7 @@ class CompanyStats {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'total': total,
-      'active': active,
-      'inactive': inactive,
-    };
+    return {'total': total, 'active': active, 'inactive': inactive};
   }
 }
 
@@ -107,11 +103,13 @@ class DashboardActivity {
 
   factory DashboardActivity.fromJson(Map<String, dynamic> json) {
     return DashboardActivity(
-      pendingProducts: (json['pendingProducts'] as List<dynamic>?)
+      pendingProducts:
+          (json['pendingProducts'] as List<dynamic>?)
               ?.map((item) => PendingProduct.fromJson(item))
               .toList() ??
           [],
-      recentCompanies: (json['recentCompanies'] as List<dynamic>?)
+      recentCompanies:
+          (json['recentCompanies'] as List<dynamic>?)
               ?.map((item) => CompanyInfo.fromJson(item))
               .toList() ??
           [],
@@ -176,10 +174,13 @@ class PendingProduct {
       submittedAt: json['submittedAt'] != null
           ? DateTime.parse(json['submittedAt'])
           : null,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
       image: json['image'],
       description: json['description'],
-      approvalHistory: (json['approvalHistory'] as List<dynamic>?)
+      approvalHistory:
+          (json['approvalHistory'] as List<dynamic>?)
               ?.map((item) => ApprovalHistory.fromJson(item))
               .toList() ??
           [],
@@ -230,7 +231,9 @@ class ApprovalHistory {
       performedBy: json['performedBy'] ?? '',
       performedByName: json['performedByName'] ?? '',
       reason: json['reason'],
-      timestamp: DateTime.parse(json['timestamp'] ?? DateTime.now().toIso8601String()),
+      timestamp: DateTime.parse(
+        json['timestamp'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -279,8 +282,12 @@ class CompanyInfo {
       address: json['address'],
       isActive: json['isActive'] ?? true,
       owner: json['owner'] != null ? UserInfo.fromJson(json['owner']) : null,
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
-      updatedAt: DateTime.parse(json['updatedAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
+      updatedAt: DateTime.parse(
+        json['updatedAt'] ?? DateTime.now().toIso8601String(),
+      ),
       stats: json['stats'] != null
           ? CompanyUsageStats.fromJson(json['stats'])
           : null,
@@ -350,7 +357,8 @@ class CompanyUsageDetails {
     return CompanyUsageDetails(
       company: CompanyInfo.fromJson(json['company'] ?? {}),
       stats: DetailedProductStats.fromJson(json['stats'] ?? {}),
-      recentOrders: (json['recentOrders'] as List<dynamic>?)
+      recentOrders:
+          (json['recentOrders'] as List<dynamic>?)
               ?.map((item) => RecentOrder.fromJson(item))
               .toList() ??
           [],
@@ -440,10 +448,7 @@ class RevenueData {
   final double totalRevenue;
   final double totalPaid;
 
-  RevenueData({
-    required this.totalRevenue,
-    required this.totalPaid,
-  });
+  RevenueData({required this.totalRevenue, required this.totalPaid});
 
   factory RevenueData.fromJson(Map<String, dynamic> json) {
     return RevenueData(
@@ -453,10 +458,7 @@ class RevenueData {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'totalRevenue': totalRevenue,
-      'totalPaid': totalPaid,
-    };
+    return {'totalRevenue': totalRevenue, 'totalPaid': totalPaid};
   }
 }
 
@@ -484,7 +486,9 @@ class RecentOrder {
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
       status: json['status'] ?? '',
       paymentStatus: json['paymentStatus'] ?? '',
-      createdAt: DateTime.parse(json['createdAt'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+        json['createdAt'] ?? DateTime.now().toIso8601String(),
+      ),
     );
   }
 
@@ -555,12 +559,7 @@ class PaginationInfo {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'page': page,
-      'limit': limit,
-      'total': total,
-      'pages': pages,
-    };
+    return {'page': page, 'limit': limit, 'total': total, 'pages': pages};
   }
 }
 
@@ -605,11 +604,13 @@ class ProductOverview {
 
   factory ProductOverview.fromJson(Map<String, dynamic> json) {
     return ProductOverview(
-      byStatus: (json['byStatus'] as List<dynamic>?)
+      byStatus:
+          (json['byStatus'] as List<dynamic>?)
               ?.map((item) => StatusCount.fromJson(item))
               .toList() ??
           [],
-      byCompany: (json['byCompany'] as List<dynamic>?)
+      byCompany:
+          (json['byCompany'] as List<dynamic>?)
               ?.map((item) => CompanyProductCount.fromJson(item))
               .toList() ??
           [],
@@ -622,18 +623,17 @@ class OrderOverview {
   final List<OrderStatusCount> byStatus;
   final List<CompanyOrderCount> byCompany;
 
-  OrderOverview({
-    required this.byStatus,
-    required this.byCompany,
-  });
+  OrderOverview({required this.byStatus, required this.byCompany});
 
   factory OrderOverview.fromJson(Map<String, dynamic> json) {
     return OrderOverview(
-      byStatus: (json['byStatus'] as List<dynamic>?)
+      byStatus:
+          (json['byStatus'] as List<dynamic>?)
               ?.map((item) => OrderStatusCount.fromJson(item))
               .toList() ??
           [],
-      byCompany: (json['byCompany'] as List<dynamic>?)
+      byCompany:
+          (json['byCompany'] as List<dynamic>?)
               ?.map((item) => CompanyOrderCount.fromJson(item))
               .toList() ??
           [],
@@ -665,10 +665,7 @@ class CompanyOverview {
   final int total;
   final int active;
 
-  CompanyOverview({
-    required this.total,
-    required this.active,
-  });
+  CompanyOverview({required this.total, required this.active});
 
   factory CompanyOverview.fromJson(Map<String, dynamic> json) {
     return CompanyOverview(
@@ -695,10 +692,7 @@ class StatusCount {
   StatusCount({required this.id, required this.count});
 
   factory StatusCount.fromJson(Map<String, dynamic> json) {
-    return StatusCount(
-      id: json['_id'] ?? '',
-      count: json['count'] ?? 0,
-    );
+    return StatusCount(id: json['_id'] ?? '', count: json['count'] ?? 0);
   }
 }
 
@@ -787,12 +781,15 @@ class CompanyProfile {
   factory CompanyProfile.fromJson(Map<String, dynamic> json) {
     return CompanyProfile(
       company: CompanyInfo.fromJson(json['company'] ?? {}),
-      staff: (json['staff'] as List<dynamic>?)
+      staff:
+          (json['staff'] as List<dynamic>?)
               ?.map((item) => StaffMember.fromJson(item))
               .toList() ??
           [],
       statistics: CompanyStatistics.fromJson(json['statistics'] ?? {}),
-      recentActivity: CompanyRecentActivity.fromJson(json['recentActivity'] ?? {}),
+      recentActivity: CompanyRecentActivity.fromJson(
+        json['recentActivity'] ?? {},
+      ),
     );
   }
 }
@@ -829,7 +826,9 @@ class StaffMember {
       role: json['role'] ?? '',
       position: json['position'],
       accessGranted: json['accessGranted'] ?? false,
-      joinedAt: json['joinedAt'] != null ? DateTime.parse(json['joinedAt']) : null,
+      joinedAt: json['joinedAt'] != null
+          ? DateTime.parse(json['joinedAt'])
+          : null,
       permissions: json['permissions'] != null
           ? StaffPermissions.fromJson(json['permissions'])
           : null,
@@ -893,7 +892,9 @@ class CompanyStatistics {
       orders: CompanyOrderStats.fromJson(json['orders'] ?? {}),
       quotations: json['quotations'] ?? 0,
       staff: json['staff'] ?? 0,
-      revenue: json['revenue'] != null ? RevenueData.fromJson(json['revenue']) : null,
+      revenue: json['revenue'] != null
+          ? RevenueData.fromJson(json['revenue'])
+          : null,
     );
   }
 }
@@ -954,18 +955,17 @@ class CompanyRecentActivity {
   final List<PendingProduct> products;
   final List<RecentOrder> orders;
 
-  CompanyRecentActivity({
-    required this.products,
-    required this.orders,
-  });
+  CompanyRecentActivity({required this.products, required this.orders});
 
   factory CompanyRecentActivity.fromJson(Map<String, dynamic> json) {
     return CompanyRecentActivity(
-      products: (json['products'] as List<dynamic>?)
+      products:
+          (json['products'] as List<dynamic>?)
               ?.map((item) => PendingProduct.fromJson(item))
               .toList() ??
           [],
-      orders: (json['orders'] as List<dynamic>?)
+      orders:
+          (json['orders'] as List<dynamic>?)
               ?.map((item) => RecentOrder.fromJson(item))
               .toList() ??
           [],
@@ -978,10 +978,22 @@ class PendingMaterial {
   final String id;
   final String name;
   final String category;
+  final String? subCategory;
+  final String? size;
+  final String? unit;
+  final String? color;
+  final double? thickness;
+  final String? thicknessUnit;
   final String? image;
   final String companyName;
   final String status;
   final bool isGlobal;
+  final double? unitPrice;
+  final bool? isPriced;
+  final String? catalogKey;
+  final double? catalogPrice;
+  final bool? isCatalogMaterial;
+  final bool? isCatalogPriced;
   final MaterialSubmitter? submittedBy;
   final String? submittedAt;
   final String? approvedBy;
@@ -1005,10 +1017,22 @@ class PendingMaterial {
     required this.id,
     required this.name,
     required this.category,
+    this.subCategory,
+    this.size,
+    this.unit,
+    this.color,
+    this.thickness,
+    this.thicknessUnit,
     this.image,
     required this.companyName,
     required this.status,
     required this.isGlobal,
+    this.unitPrice,
+    this.isPriced,
+    this.catalogKey,
+    this.catalogPrice,
+    this.isCatalogMaterial,
+    this.isCatalogPriced,
     this.submittedBy,
     this.submittedAt,
     this.approvedBy,
@@ -1034,10 +1058,22 @@ class PendingMaterial {
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
       category: json['category'] ?? '',
+      subCategory: json['subCategory'],
+      size: json['size'],
+      unit: json['unit'],
+      color: json['color'],
+      thickness: (json['thickness'] as num?)?.toDouble(),
+      thicknessUnit: json['thicknessUnit'],
       image: json['image'],
       companyName: json['companyName'] ?? '',
       status: json['status'] ?? 'pending',
       isGlobal: json['isGlobal'] ?? false,
+      unitPrice: (json['unitPrice'] as num?)?.toDouble(),
+      isPriced: json['isPriced'],
+      catalogKey: json['catalogKey'],
+      catalogPrice: (json['catalogPrice'] as num?)?.toDouble(),
+      isCatalogMaterial: json['isCatalogMaterial'],
+      isCatalogPriced: json['isCatalogPriced'],
       submittedBy: json['submittedBy'] != null
           ? MaterialSubmitter.fromJson(json['submittedBy'])
           : null,
@@ -1045,7 +1081,8 @@ class PendingMaterial {
       approvedBy: json['approvedBy'],
       approvedAt: json['approvedAt'],
       rejectionReason: json['rejectionReason'],
-      approvalHistory: (json['approvalHistory'] as List<dynamic>?)
+      approvalHistory:
+          (json['approvalHistory'] as List<dynamic>?)
               ?.map((item) => ApprovalHistoryItem.fromJson(item))
               .toList() ??
           [],
@@ -1121,10 +1158,7 @@ class MaterialType {
   final String name;
   final double pricePerSqm;
 
-  MaterialType({
-    required this.name,
-    required this.pricePerSqm,
-  });
+  MaterialType({required this.name, required this.pricePerSqm});
 
   factory MaterialType.fromJson(Map<String, dynamic> json) {
     return MaterialType(
@@ -1138,10 +1172,7 @@ class MaterialThickness {
   final double thickness;
   final String unit;
 
-  MaterialThickness({
-    required this.thickness,
-    required this.unit,
-  });
+  MaterialThickness({required this.thickness, required this.unit});
 
   factory MaterialThickness.fromJson(Map<String, dynamic> json) {
     return MaterialThickness(

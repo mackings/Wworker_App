@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
+import 'package:wworker/Constant/colors.dart';
 
 class CreateFabricMaterialPage extends StatefulWidget {
   const CreateFabricMaterialPage({super.key});
@@ -22,14 +23,13 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
   String _pricingUnit = 'piece';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  bool _useCatalog = true;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (_selectedCatalogMaterial == null) {
+    if (_useCatalog && _selectedCatalogMaterial == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a supported catalog material first'),
-        ),
+        const SnackBar(content: Text('Select a supported catalog material')),
       );
       return;
     }
@@ -43,8 +43,16 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
 
     setState(() => isCreating = true);
 
+    final baseRequest = _useCatalog
+        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
+        : <String, dynamic>{
+            'useCatalog': false,
+            'name': _nameController.text.trim(),
+            'category': 'Fabric',
+          };
+
     final request = {
-      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
+      ...baseRequest,
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
@@ -89,16 +97,13 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Fabric Material",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -108,6 +113,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
           children: [
             CustomImgBg(
               placeholderText: 'Add Material Image (Optional)',
+              selectedImagePath: _imagePath,
               onImageSelected: (image) {
                 setState(() => _imagePath = image?.path);
               },
@@ -141,9 +147,29 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
             const SizedBox(height: 20),
 
             _buildSectionCard([
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Use Supported Catalog (Recommended)'),
+                subtitle: const Text(
+                  'Turn this off to enter a custom material name (non-catalog).',
+                ),
+                value: _useCatalog,
+                onChanged: (v) {
+                  setState(() {
+                    _useCatalog = v;
+                    if (!_useCatalog) {
+                      _selectedCatalogMaterial = null;
+                    } else if (_selectedCatalogMaterial != null) {
+                      _nameController.text = catalogMaterialDisplayName(
+                        _selectedCatalogMaterial!,
+                      );
+                    }
+                  });
+                },
+              ),
               TextFormField(
                 controller: _nameController,
-                readOnly: true,
+                readOnly: _useCatalog,
                 decoration: const InputDecoration(
                   labelText: 'Fabric Name *',
                   border: OutlineInputBorder(),
@@ -154,7 +180,7 @@ class _CreateFabricMaterialPageState extends State<CreateFabricMaterialPage> {
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _pickCatalogMaterial,
+                onPressed: _useCatalog ? _pickCatalogMaterial : null,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: Text(
                   _selectedCatalogMaterial == null
@@ -281,20 +307,24 @@ class _CreateHardwareMaterialPageState
   final MaterialService _materialService = MaterialService();
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _subCategoryController = TextEditingController();
+  final TextEditingController _sizeController = TextEditingController();
+  final TextEditingController _unitController = TextEditingController();
+  final TextEditingController _colorController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
   String _pricingUnit = 'piece';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  bool _useCatalog = true;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (_selectedCatalogMaterial == null) {
+    if (_useCatalog && _selectedCatalogMaterial == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a supported catalog material first'),
-        ),
+        const SnackBar(content: Text('Select a supported catalog material')),
       );
       return;
     }
@@ -308,8 +338,24 @@ class _CreateHardwareMaterialPageState
 
     setState(() => isCreating = true);
 
+    final baseRequest = _useCatalog
+        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
+        : <String, dynamic>{
+            'useCatalog': false,
+            'name': _nameController.text.trim(),
+            'category': _categoryController.text.trim(),
+            if (_subCategoryController.text.trim().isNotEmpty)
+              'subCategory': _subCategoryController.text.trim(),
+            if (_sizeController.text.trim().isNotEmpty)
+              'size': _sizeController.text.trim(),
+            if (_unitController.text.trim().isNotEmpty)
+              'unit': _unitController.text.trim(),
+            if (_colorController.text.trim().isNotEmpty)
+              'color': _colorController.text.trim(),
+          };
+
     final request = {
-      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
+      ...baseRequest,
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
@@ -353,16 +399,13 @@ class _CreateHardwareMaterialPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Hardware Material",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -372,6 +415,7 @@ class _CreateHardwareMaterialPageState
           children: [
             CustomImgBg(
               placeholderText: 'Add Material Image (Optional)',
+              selectedImagePath: _imagePath,
               onImageSelected: (image) {
                 setState(() => _imagePath = image?.path);
               },
@@ -405,9 +449,29 @@ class _CreateHardwareMaterialPageState
             const SizedBox(height: 20),
 
             _buildSectionCard([
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Use Supported Catalog (Recommended)'),
+                subtitle: const Text(
+                  'Turn this off to enter a custom material name (non-catalog).',
+                ),
+                value: _useCatalog,
+                onChanged: (v) {
+                  setState(() {
+                    _useCatalog = v;
+                    if (!_useCatalog) {
+                      _selectedCatalogMaterial = null;
+                    } else if (_selectedCatalogMaterial != null) {
+                      _nameController.text = catalogMaterialDisplayName(
+                        _selectedCatalogMaterial!,
+                      );
+                    }
+                  });
+                },
+              ),
               TextFormField(
                 controller: _nameController,
-                readOnly: true,
+                readOnly: _useCatalog,
                 decoration: const InputDecoration(
                   labelText: 'Hardware Name *',
                   border: OutlineInputBorder(),
@@ -416,9 +480,68 @@ class _CreateHardwareMaterialPageState
                 validator: (value) =>
                     value?.isEmpty ?? true ? 'Required' : null,
               ),
+              if (!_useCatalog) ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category *',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., Angle_bracket, Handle, Edge_tape',
+                  ),
+                  validator: (value) {
+                    if (_useCatalog) return null;
+                    return (value?.trim().isEmpty ?? true) ? 'Required' : null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _subCategoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sub Category (Optional)',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., Aluminium, Iron',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _sizeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Size (Optional)',
+                          border: OutlineInputBorder(),
+                          hintText: 'e.g., 8',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _unitController,
+                        decoration: const InputDecoration(
+                          labelText: 'Unit (Optional)',
+                          border: OutlineInputBorder(),
+                          hintText: 'e.g., Piece, Pack',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _colorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Color (Optional)',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., Gold, Black',
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _pickCatalogMaterial,
+                onPressed: _useCatalog ? _pickCatalogMaterial : null,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: Text(
                   _selectedCatalogMaterial == null
@@ -526,6 +649,11 @@ class _CreateHardwareMaterialPageState
   @override
   void dispose() {
     _nameController.dispose();
+    _categoryController.dispose();
+    _subCategoryController.dispose();
+    _sizeController.dispose();
+    _unitController.dispose();
+    _colorController.dispose();
     _priceController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -546,20 +674,24 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
   final MaterialService _materialService = MaterialService();
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
+  final TextEditingController _subCategoryController = TextEditingController();
+  final TextEditingController _sizeController = TextEditingController();
+  final TextEditingController _unitController = TextEditingController();
+  final TextEditingController _colorController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _notesController = TextEditingController();
 
   String _pricingUnit = 'liter';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  bool _useCatalog = true;
   bool isCreating = false;
 
   Future<void> _createMaterial() async {
-    if (_selectedCatalogMaterial == null) {
+    if (_useCatalog && _selectedCatalogMaterial == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a supported catalog material first'),
-        ),
+        const SnackBar(content: Text('Select a supported catalog material')),
       );
       return;
     }
@@ -573,8 +705,24 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
 
     setState(() => isCreating = true);
 
+    final baseRequest = _useCatalog
+        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
+        : <String, dynamic>{
+            'useCatalog': false,
+            'name': _nameController.text.trim(),
+            'category': _categoryController.text.trim(),
+            if (_subCategoryController.text.trim().isNotEmpty)
+              'subCategory': _subCategoryController.text.trim(),
+            if (_sizeController.text.trim().isNotEmpty)
+              'size': _sizeController.text.trim(),
+            if (_unitController.text.trim().isNotEmpty)
+              'unit': _unitController.text.trim(),
+            if (_colorController.text.trim().isNotEmpty)
+              'color': _colorController.text.trim(),
+          };
+
     final request = {
-      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
+      ...baseRequest,
       if (_imagePath != null) 'imagePath': _imagePath,
       'pricePerUnit': double.parse(_priceController.text),
       'pricingUnit': _pricingUnit,
@@ -618,16 +766,13 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Other Material",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -637,6 +782,7 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
           children: [
             CustomImgBg(
               placeholderText: 'Add Material Image (Optional)',
+              selectedImagePath: _imagePath,
               onImageSelected: (image) {
                 setState(() => _imagePath = image?.path);
               },
@@ -670,9 +816,29 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
             const SizedBox(height: 20),
 
             _buildSectionCard([
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Use Supported Catalog (Recommended)'),
+                subtitle: const Text(
+                  'Turn this off to enter a custom material name (non-catalog).',
+                ),
+                value: _useCatalog,
+                onChanged: (v) {
+                  setState(() {
+                    _useCatalog = v;
+                    if (!_useCatalog) {
+                      _selectedCatalogMaterial = null;
+                    } else if (_selectedCatalogMaterial != null) {
+                      _nameController.text = catalogMaterialDisplayName(
+                        _selectedCatalogMaterial!,
+                      );
+                    }
+                  });
+                },
+              ),
               TextFormField(
                 controller: _nameController,
-                readOnly: true,
+                readOnly: _useCatalog,
                 decoration: const InputDecoration(
                   labelText: 'Material Name *',
                   border: OutlineInputBorder(),
@@ -681,9 +847,64 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
                 validator: (value) =>
                     value?.isEmpty ?? true ? 'Required' : null,
               ),
+              if (!_useCatalog) ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _categoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Category *',
+                    border: OutlineInputBorder(),
+                    hintText: 'e.g., Paint, Glue, Varnish',
+                  ),
+                  validator: (value) {
+                    if (_useCatalog) return null;
+                    return (value?.trim().isEmpty ?? true) ? 'Required' : null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _subCategoryController,
+                  decoration: const InputDecoration(
+                    labelText: 'Sub Category (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _sizeController,
+                        decoration: const InputDecoration(
+                          labelText: 'Size (Optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _unitController,
+                        decoration: const InputDecoration(
+                          labelText: 'Unit (Optional)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _colorController,
+                  decoration: const InputDecoration(
+                    labelText: 'Color (Optional)',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _pickCatalogMaterial,
+                onPressed: _useCatalog ? _pickCatalogMaterial : null,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: Text(
                   _selectedCatalogMaterial == null
@@ -790,6 +1011,11 @@ class _CreateOtherMaterialPageState extends State<CreateOtherMaterialPage> {
   @override
   void dispose() {
     _nameController.dispose();
+    _categoryController.dispose();
+    _subCategoryController.dispose();
+    _sizeController.dispose();
+    _unitController.dispose();
+    _colorController.dispose();
     _priceController.dispose();
     _notesController.dispose();
     super.dispose();

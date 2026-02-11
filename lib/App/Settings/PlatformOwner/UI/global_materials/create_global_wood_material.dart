@@ -16,16 +16,17 @@ class _CreateGlobalWoodMaterialPageState
   final _formKey = GlobalKey<FormState>();
   final PlatformOwnerService _service = PlatformOwnerService();
 
-  final TextEditingController _nameController =
-      TextEditingController(text: 'Wood');
+  final TextEditingController _nameController = TextEditingController(
+    text: 'Wood',
+  );
   final TextEditingController _standardWidthController =
       TextEditingController();
   final TextEditingController _standardLengthController =
       TextEditingController();
-  final TextEditingController _pricePerSqmController =
-      TextEditingController();
-  final TextEditingController _wasteThresholdController =
-      TextEditingController(text: '0.75');
+  final TextEditingController _pricePerSqmController = TextEditingController();
+  final TextEditingController _wasteThresholdController = TextEditingController(
+    text: '0.75',
+  );
 
   String _standardUnit = 'inches';
   String _thicknessUnit = 'inches';
@@ -65,8 +66,9 @@ class _CreateGlobalWoodMaterialPageState
       return;
     }
 
-    final typesWithPrices =
-        woodTypes.where((t) => t.pricePerSqm != null).toList();
+    final typesWithPrices = woodTypes
+        .where((t) => t.pricePerSqm != null)
+        .toList();
     if (typesWithPrices.isEmpty && _pricePerSqmController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -102,16 +104,15 @@ class _CreateGlobalWoodMaterialPageState
       pricingUnit: 'sqm',
       wasteThreshold: double.parse(_wasteThresholdController.text),
       types: woodTypes
-          .map((t) => {
-                'name': t.name,
-                if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
-              })
+          .map(
+            (t) => {
+              'name': t.name,
+              if (t.pricePerSqm != null) 'pricePerSqm': t.pricePerSqm,
+            },
+          )
           .toList(),
       commonThicknesses: commonThicknesses
-          .map((t) => {
-                'thickness': t.thickness,
-                'unit': _thicknessUnit,
-              })
+          .map((t) => {'thickness': t.thickness, 'unit': _thicknessUnit})
           .toList(),
     );
 
@@ -162,8 +163,9 @@ class _CreateGlobalWoodMaterialPageState
                 if (value != null) {
                   setState(() {
                     commonThicknesses.add(ThicknessOption(thickness: value));
-                    commonThicknesses
-                        .sort((a, b) => a.thickness.compareTo(b.thickness));
+                    commonThicknesses.sort(
+                      (a, b) => a.thickness.compareTo(b.thickness),
+                    );
                   });
                   Navigator.pop(context);
                 }
@@ -194,13 +196,11 @@ class _CreateGlobalWoodMaterialPageState
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Create Wood Material",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -241,103 +241,99 @@ class _CreateGlobalWoodMaterialPageState
               ),
             ),
             const SizedBox(height: 20),
-            _buildSectionCard(
-              'Basic Information',
-              [
-                TextFormField(
-                  controller: _nameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Material Name *',
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g., Mahogany, Iroko',
-                  ),
-                  validator: (value) =>
-                      value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Basic Information', [
+              TextFormField(
+                controller: _nameController,
+                decoration: const InputDecoration(
+                  labelText: 'Material Name *',
+                  border: OutlineInputBorder(),
+                  hintText: 'e.g., Mahogany, Iroko',
                 ),
-              ],
-            ),
+                validator: (value) =>
+                    value?.isEmpty ?? true ? 'Required' : null,
+              ),
+            ]),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Standard Sheet Size',
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardWidthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Width *',
-                          border: OutlineInputBorder(),
-                          hintText: '48',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
+            _buildSectionCard('Standard Sheet Size', [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardWidthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Width *',
+                        border: OutlineInputBorder(),
+                        hintText: '48',
                       ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _standardLengthController,
-                        decoration: const InputDecoration(
-                          labelText: 'Length *',
-                          border: OutlineInputBorder(),
-                          hintText: '96',
-                        ),
-                        keyboardType: TextInputType.number,
-                        validator: (value) =>
-                            value?.isEmpty ?? true ? 'Required' : null,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: _standardUnit,
-                  decoration: const InputDecoration(
-                    labelText: 'Unit *',
-                    border: OutlineInputBorder(),
                   ),
-                  items: const [
-                    DropdownMenuItem(value: 'mm', child: Text('Millimeters (mm)')),
-                    DropdownMenuItem(value: 'cm', child: Text('Centimeters (cm)')),
-                    DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
-                    DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
-                    DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
-                  ],
-                  onChanged: (value) =>
-                      setState(() => _standardUnit = value!),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _standardLengthController,
+                      decoration: const InputDecoration(
+                        labelText: 'Length *',
+                        border: OutlineInputBorder(),
+                        hintText: '96',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          value?.isEmpty ?? true ? 'Required' : null,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _standardUnit,
+                decoration: const InputDecoration(
+                  labelText: 'Unit *',
+                  border: OutlineInputBorder(),
                 ),
-              ],
-            ),
+                items: const [
+                  DropdownMenuItem(
+                    value: 'mm',
+                    child: Text('Millimeters (mm)'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'cm',
+                    child: Text('Centimeters (cm)'),
+                  ),
+                  DropdownMenuItem(value: 'm', child: Text('Meters (m)')),
+                  DropdownMenuItem(value: 'inches', child: Text('Inches (in)')),
+                  DropdownMenuItem(value: 'ft', child: Text('Feet (ft)')),
+                ],
+                onChanged: (value) => setState(() => _standardUnit = value!),
+              ),
+            ]),
             const SizedBox(height: 16),
             _buildThicknessSection(),
             const SizedBox(height: 16),
-            _buildSectionCard(
-              'Base Pricing (Optional)',
-              [
-                TextFormField(
-                  controller: _pricePerSqmController,
-                  decoration: const InputDecoration(
-                    labelText: 'Base Price per m²',
-                    border: OutlineInputBorder(),
-                    prefixText: '₦',
-                    hintText: 'Leave empty if types have different prices',
-                  ),
-                  keyboardType: TextInputType.number,
+            _buildSectionCard('Base Pricing (Optional)', [
+              TextFormField(
+                controller: _pricePerSqmController,
+                decoration: const InputDecoration(
+                  labelText: 'Base Price per m²',
+                  border: OutlineInputBorder(),
+                  prefixText: '₦',
+                  hintText: 'Leave empty if types have different prices',
                 ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _wasteThresholdController,
-                  decoration: const InputDecoration(
-                    labelText: 'Waste Threshold',
-                    border: OutlineInputBorder(),
-                    hintText: '0.75 = 75%',
-                  ),
-                  keyboardType: TextInputType.number,
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _wasteThresholdController,
+                decoration: const InputDecoration(
+                  labelText: 'Waste Threshold',
+                  border: OutlineInputBorder(),
+                  hintText: '0.75 = 75%',
                 ),
-              ],
-            ),
+                keyboardType: TextInputType.number,
+              ),
+            ]),
             const SizedBox(height: 16),
             _buildWoodTypesSection(),
             const SizedBox(height: 32),
@@ -518,9 +514,7 @@ class _CreateGlobalWoodMaterialPageState
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: Text(type.name),
-                    ),
+                    Expanded(child: Text(type.name)),
                     const SizedBox(width: 12),
                     SizedBox(
                       width: 120,

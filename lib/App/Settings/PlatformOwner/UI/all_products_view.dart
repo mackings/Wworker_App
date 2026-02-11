@@ -84,6 +84,7 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'All Products',
@@ -105,10 +106,10 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : error != null
-                      ? _buildErrorView()
-                      : products.isEmpty
-                          ? _buildEmptyView()
-                          : _buildProductsList(),
+                  ? _buildErrorView()
+                  : products.isEmpty
+                  ? _buildEmptyView()
+                  : _buildProductsList(),
             ),
           ),
         ],
@@ -158,14 +159,27 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildFilterChip('All', null,
-                    (stats?['pending'] ?? 0) + (stats?['approved'] ?? 0) + (stats?['rejected'] ?? 0)),
+                _buildFilterChip(
+                  'All',
+                  null,
+                  (stats?['pending'] ?? 0) +
+                      (stats?['approved'] ?? 0) +
+                      (stats?['rejected'] ?? 0),
+                ),
                 const SizedBox(width: 8),
                 _buildFilterChip('Pending', 'pending', stats?['pending'] ?? 0),
                 const SizedBox(width: 8),
-                _buildFilterChip('Approved', 'approved', stats?['approved'] ?? 0),
+                _buildFilterChip(
+                  'Approved',
+                  'approved',
+                  stats?['approved'] ?? 0,
+                ),
                 const SizedBox(width: 8),
-                _buildFilterChip('Rejected', 'rejected', stats?['rejected'] ?? 0),
+                _buildFilterChip(
+                  'Rejected',
+                  'rejected',
+                  stats?['rejected'] ?? 0,
+                ),
               ],
             ),
           ),
@@ -237,13 +251,12 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
         children: [
           Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
           const SizedBox(height: 16),
-          Text(error ?? 'An error occurred',
-              style: GoogleFonts.openSans(fontSize: 16, color: Colors.red)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _loadProducts,
-            child: const Text('Retry'),
+          Text(
+            error ?? 'An error occurred',
+            style: GoogleFonts.openSans(fontSize: 16, color: Colors.red),
           ),
+          const SizedBox(height: 20),
+          ElevatedButton(onPressed: _loadProducts, child: const Text('Retry')),
         ],
       ),
     );
@@ -254,8 +267,11 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 80, color: Colors.grey.shade300),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 80,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             'No Products Found',
@@ -333,8 +349,9 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
           // Product Image
           if (product.image != null)
             ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
               child: CachedNetworkImage(
                 imageUrl: product.image!,
                 height: 180,
@@ -348,8 +365,11 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
                 errorWidget: (context, url, error) => Container(
                   height: 180,
                   color: Colors.grey.shade200,
-                  child: Icon(Icons.image_not_supported,
-                      size: 50, color: Colors.grey.shade400),
+                  child: Icon(
+                    Icons.image_not_supported,
+                    size: 50,
+                    color: Colors.grey.shade400,
+                  ),
                 ),
               ),
             ),
@@ -365,7 +385,9 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: statusColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -428,7 +450,9 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
                     const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: ColorsApp.btnColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),

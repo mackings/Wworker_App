@@ -119,7 +119,8 @@ class MaterialService {
       // ✅ Get company name and attach to request
       final companyName = await _getCompanyName();
       request['companyName'] = companyName;
-      request['useCatalog'] = request['useCatalog'] ?? false;
+      // Per Materials API doc: useCatalog defaults to true.
+      request['useCatalog'] = request['useCatalog'] ?? true;
 
       final imagePath = request.remove('imagePath');
       final formPayload = <String, dynamic>{};
@@ -497,14 +498,47 @@ class MaterialService {
       debugPrint("📤 [CALCULATE MATERIAL COST] => Material ID: $materialId");
       debugPrint("📦 [REQUEST] => $request");
 
-      final response = await _dio.post(
-        '/api/product/material/$materialId/calculate-cost',
-        data: request,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
+      try {
+        final response = await _dio.post(
+          '/api/product/material/$materialId/calculate-cost',
+          data: request,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
 
-      debugPrint("✅ [CALCULATE MATERIAL COST SUCCESS] => ${response.data}");
-      return response.data;
+        debugPrint("✅ [CALCULATE MATERIAL COST SUCCESS] => ${response.data}");
+        return response.data;
+      } on DioException catch (e) {
+        final status = e.response?.statusCode;
+        final data = e.response?.data;
+        final message = data is Map ? data['message']?.toString() : null;
+
+        final shouldFallback =
+            status == 400 &&
+            (message ?? '').toLowerCase().contains(
+              'use quantity-based calculation',
+            );
+
+        if (!shouldFallback) {
+          rethrow;
+        }
+
+        final qtyRaw = request['quantity'];
+        final qty = qtyRaw is num
+            ? qtyRaw.toInt()
+            : int.tryParse(qtyRaw?.toString() ?? '') ?? 1;
+        final retryBody = {'quantity': qty};
+
+        debugPrint("🔁 [COST FALLBACK] Retrying unit-based => $retryBody");
+
+        final retry = await _dio.post(
+          '/api/product/material/$materialId/calculate-cost',
+          data: retryBody,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
+
+        debugPrint("✅ [CALCULATE MATERIAL COST SUCCESS] => ${retry.data}");
+        return retry.data;
+      }
     } on DioException catch (e) {
       debugPrint(
         "⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}",

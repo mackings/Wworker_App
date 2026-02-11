@@ -170,7 +170,8 @@ class MaterialService {
         return {'success': false, 'message': 'No auth token found'};
       }
 
-      materialData['useCatalog'] = materialData['useCatalog'] ?? false;
+      // Per Materials API doc: useCatalog defaults to true.
+      materialData['useCatalog'] = materialData['useCatalog'] ?? true;
       final imagePath = materialData.remove('imagePath');
       final formPayload = <String, dynamic>{};
 
@@ -259,7 +260,7 @@ class MaterialService {
       final token = prefs.getString("token");
       if (token == null) throw Exception("No auth token found");
 
-      final requestData = {
+      final sheetRequestData = {
         "requiredWidth": requiredWidth,
         "requiredLength": requiredLength,
         "requiredUnit": requiredUnit,
@@ -270,24 +271,59 @@ class MaterialService {
         "quantity": quantity,
       };
 
-      debugPrint("🔢 [CALCULATING COST] => $requestData");
+      debugPrint("🔢 [CALCULATING COST] => $sheetRequestData");
 
-      final response = await _dio.post(
-        "/api/product/material/$materialId/calculate-cost",
-        data: requestData,
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
+      try {
+        final response = await _dio.post(
+          "/api/product/material/$materialId/calculate-cost",
+          data: sheetRequestData,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
 
-      final data = response.data;
-      if (data["success"] == true && data["data"] != null) {
-        return MaterialCostModel.fromJson(data["data"]);
-      } else {
+        final data = response.data;
+        if (data["success"] == true && data["data"] != null) {
+          return MaterialCostModel.fromJson(data["data"]);
+        }
+        return null;
+      } on DioException catch (e) {
+        final status = e.response?.statusCode;
+        final respData = e.response?.data;
+        final message = respData is Map
+            ? respData["message"]?.toString()
+            : null;
+
+        final shouldFallback =
+            status == 400 &&
+            (message ?? '').toLowerCase().contains(
+              "use quantity-based calculation",
+            );
+
+        if (!shouldFallback) {
+          debugPrint(
+            "⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}",
+          );
+          return null;
+        }
+
+        final unitRequestData = {"quantity": quantity};
+        debugPrint(
+          "🔁 [COST FALLBACK] Retrying unit-based => $unitRequestData",
+        );
+
+        final retry = await _dio.post(
+          "/api/product/material/$materialId/calculate-cost",
+          data: unitRequestData,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
+
+        final data = retry.data;
+        if (data["success"] == true && data["data"] != null) {
+          return MaterialCostModel.fromJson(data["data"]);
+        }
         return null;
       }
-    } on DioException catch (e) {
-      debugPrint(
-        "⚠️ [CALCULATE MATERIAL COST ERROR] => ${e.response?.data ?? e.message}",
-      );
+    } catch (e) {
+      debugPrint("⚠️ [CALCULATE MATERIAL COST ERROR] => $e");
       return null;
     }
   }

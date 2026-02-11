@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.dart';
 import 'package:wworker/Constant/colors.dart';
@@ -27,15 +28,8 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   String? filterCategory;
   String? searchQuery;
 
-  final List<String> _categories = [
-    'WOOD',
-    'BOARD',
-    'FOAM',
-    'MARBLE',
-    'HARDWARE',
-    'FABRIC',
-    'OTHER'
-  ];
+  List<String> _categoryOptions = [];
+  final NumberFormat _moneyFmt = NumberFormat('#,##0.##');
 
   @override
   void initState() {
@@ -64,12 +58,21 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       );
 
       if (result['success'] == true) {
+        final loaded = (result['data'] as List)
+            .map((item) => PendingMaterial.fromJson(item))
+            .toList();
+
+        final nextCategories = <String>{
+          ..._categoryOptions,
+          ...loaded.map((m) => m.category.trim()).where((c) => c.isNotEmpty),
+        }.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
         setState(() {
-          materials = (result['data'] as List)
-              .map((item) => PendingMaterial.fromJson(item))
-              .toList();
-          pagination =
-              MaterialPaginationInfo.fromJson(result['pagination'] ?? {});
+          materials = loaded;
+          _categoryOptions = nextCategories;
+          pagination = MaterialPaginationInfo.fromJson(
+            result['pagination'] ?? {},
+          );
           isLoading = false;
         });
       } else {
@@ -126,6 +129,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       confirmLabel: 'Reject',
       confirmColor: ColorsApp.btnColor.withOpacity(0.9),
     );
+    if (!mounted) return;
     if (reason == null || reason.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Rejection reason is required')),
@@ -218,8 +222,9 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                       controller: controller,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText:
-                            optional ? 'Optional notes...' : 'Rejection reason *',
+                        hintText: optional
+                            ? 'Optional notes...'
+                            : 'Rejection reason *',
                         filled: true,
                         fillColor: Colors.grey.shade100,
                         border: OutlineInputBorder(
@@ -284,9 +289,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
           body: Center(
             child: Hero(
               tag: 'material-image-${material.id}',
-              child: InteractiveViewer(
-                child: Image.network(imageUrl),
-              ),
+              child: InteractiveViewer(child: Image.network(imageUrl)),
             ),
           ),
         ),
@@ -300,6 +303,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
         backgroundColor: ColorsApp.btnColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: Text(
           'Pending Materials',
@@ -318,10 +322,10 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : error != null
-                      ? _buildErrorView()
-                      : materials.isEmpty
-                          ? _buildEmptyView()
-                          : _buildMaterialsList(),
+                  ? _buildErrorView()
+                  : materials.isEmpty
+                  ? _buildEmptyView()
+                  : _buildMaterialsList(),
             ),
           ),
         ],
@@ -392,7 +396,9 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                   ),
                   onChanged: (_) => setState(() {}),
                   onSubmitted: (value) {
-                    setState(() => searchQuery = value.isNotEmpty ? value : null);
+                    setState(
+                      () => searchQuery = value.isNotEmpty ? value : null,
+                    );
                     _loadMaterials();
                   },
                 ),
@@ -403,10 +409,12 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                     children: [
                       _buildFilterChip('All', null),
                       const SizedBox(width: 8),
-                      ..._categories.map((cat) => Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: _buildFilterChip(cat, cat),
-                          )),
+                      ..._categoryOptions.map(
+                        (cat) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: _buildFilterChip(cat, cat),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -450,13 +458,12 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         children: [
           Icon(Icons.error_outline, size: 60, color: Colors.red.shade300),
           const SizedBox(height: 16),
-          Text(error ?? 'An error occurred',
-              style: GoogleFonts.openSans(fontSize: 16, color: Colors.red)),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _loadMaterials,
-            child: const Text('Retry'),
+          Text(
+            error ?? 'An error occurred',
+            style: GoogleFonts.openSans(fontSize: 16, color: Colors.red),
           ),
+          const SizedBox(height: 20),
+          ElevatedButton(onPressed: _loadMaterials, child: const Text('Retry')),
         ],
       ),
     );
@@ -467,8 +474,11 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inventory_2_outlined,
-              size: 80, color: Colors.grey.shade300),
+          Icon(
+            Icons.inventory_2_outlined,
+            size: 80,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             'No Pending Materials',
@@ -506,6 +516,27 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   }
 
   Widget _buildMaterialCard(PendingMaterial material) {
+    final hasTypePricing = (material.types ?? []).any((t) => t.pricePerSqm > 0);
+    final hasFoamVariantPricing = (material.foamVariants ?? []).any(
+      (v) => v.pricePerSqm > 0,
+    );
+
+    final isPriced =
+        material.isPriced ??
+        ((material.unitPrice ?? 0) > 0 ||
+            (material.pricePerSqm ?? 0) > 0 ||
+            hasTypePricing ||
+            hasFoamVariantPricing);
+
+    final effectiveUnitPrice =
+        material.unitPrice ?? material.pricePerUnit ?? material.catalogPrice;
+    final unitLabel = (material.pricingUnit ?? material.unit)?.trim();
+
+    String? fmtMoney(num? v) {
+      if (v == null) return null;
+      return _moneyFmt.format(v);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -532,7 +563,9 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
@@ -546,11 +579,34 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                         ),
                       ),
                     ),
+                    if (!isPriced) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'UNPRICED',
+                          style: GoogleFonts.openSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
                     const Spacer(),
                     if (material.isGlobal)
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.purple.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(8),
@@ -558,8 +614,11 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.public,
-                                size: 14, color: Colors.purple),
+                            const Icon(
+                              Icons.public,
+                              size: 14,
+                              color: Colors.purple,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               'GLOBAL',
@@ -599,19 +658,76 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                         material.submittedBy!.fullname,
                         Colors.grey,
                       ),
+                    if (material.subCategory != null &&
+                        material.subCategory!.trim().isNotEmpty)
+                      _buildMetaChip(
+                        Icons.layers_outlined,
+                        material.subCategory!.trim(),
+                        Colors.deepPurple,
+                      ),
+                    if (material.size != null &&
+                        material.size!.trim().isNotEmpty)
+                      _buildMetaChip(
+                        Icons.straighten,
+                        material.size!.trim(),
+                        Colors.teal,
+                      ),
+                    if (material.unit != null &&
+                        material.unit!.trim().isNotEmpty)
+                      _buildMetaChip(
+                        Icons.inventory_2_outlined,
+                        material.unit!.trim(),
+                        Colors.indigo,
+                      ),
+                    if (material.color != null &&
+                        material.color!.trim().isNotEmpty)
+                      _buildMetaChip(
+                        Icons.palette_outlined,
+                        material.color!.trim(),
+                        Colors.pink,
+                      ),
+                    if (material.thickness != null)
+                      _buildMetaChip(
+                        Icons.line_weight_outlined,
+                        '${material.thickness}${material.thicknessUnit != null ? ' ${material.thicknessUnit}' : ''}',
+                        Colors.brown,
+                      ),
                   ],
                 ),
-                if (material.pricePerSqm != null) ...[
+                if (effectiveUnitPrice != null) ...[
                   const SizedBox(height: 12),
                   _buildPriceRow(
-                    '₦${material.pricePerSqm!.toStringAsFixed(2)}/sqm',
+                    '₦${fmtMoney(effectiveUnitPrice)}/${unitLabel ?? 'unit'}',
                   ),
                 ],
-                if (material.pricePerUnit != null) ...[
+                if (material.pricePerSqm != null) ...[
                   const SizedBox(height: 12),
-                  _buildPriceRow(
-                    '₦${material.pricePerUnit!.toStringAsFixed(2)}/${material.pricingUnit ?? 'unit'}',
+                  _buildPriceRow('₦${fmtMoney(material.pricePerSqm)}/sqm'),
+                ],
+                if (effectiveUnitPrice == null &&
+                    material.pricePerSqm == null &&
+                    hasTypePricing) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Type Pricing',
+                    style: GoogleFonts.openSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: ColorsApp.textColor,
+                    ),
                   ),
+                  const SizedBox(height: 8),
+                  ...material.types!
+                      .where((t) => t.pricePerSqm > 0)
+                      .take(6)
+                      .map(
+                        (t) => Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: _buildPriceRow(
+                            '${t.name}: ₦${fmtMoney(t.pricePerSqm)}/sqm',
+                          ),
+                        ),
+                      ),
                 ],
               ],
             ),
@@ -701,8 +817,11 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.image_not_supported,
-                        color: Colors.grey.shade400, size: 28),
+                    Icon(
+                      Icons.image_not_supported,
+                      color: Colors.grey.shade400,
+                      size: 28,
+                    ),
                     const SizedBox(height: 6),
                     Text(
                       'No image uploaded',
@@ -752,7 +871,11 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
             color: Colors.green.withOpacity(0.12),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.attach_money, size: 14, color: Colors.green.shade700),
+          child: Icon(
+            Icons.attach_money,
+            size: 14,
+            color: Colors.green.shade700,
+          ),
         ),
         const SizedBox(width: 8),
         Text(

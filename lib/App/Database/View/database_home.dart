@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Database/Api/database_service.dart';
 import 'package:wworker/App/Database/Model/database_models.dart';
 import 'package:wworker/Constant/colors.dart';
+import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
-
-
 
 class DatabaseHomePage extends StatelessWidget {
   const DatabaseHomePage({super.key});
@@ -52,7 +52,10 @@ class DatabaseHomePage extends StatelessWidget {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 labelPadding: const EdgeInsets.symmetric(horizontal: 6),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 tabs: tabs
                     .map(
                       (text) => Tab(
@@ -157,19 +160,23 @@ class _DatabaseQuotationsTabState extends State<DatabaseQuotationsTab> {
   }
 
   Future<void> _editQuotation(DatabaseQuotation quotation) async {
-    final clientNameController =
-        TextEditingController(text: quotation.clientName);
-    final clientAddressController =
-        TextEditingController(text: quotation.clientAddress);
-    final busStopController =
-        TextEditingController(text: quotation.nearestBusStop);
-    final phoneController =
-        TextEditingController(text: quotation.phoneNumber);
+    final clientNameController = TextEditingController(
+      text: quotation.clientName,
+    );
+    final clientAddressController = TextEditingController(
+      text: quotation.clientAddress,
+    );
+    final busStopController = TextEditingController(
+      text: quotation.nearestBusStop,
+    );
+    final phoneController = TextEditingController(text: quotation.phoneNumber);
     final emailController = TextEditingController(text: quotation.email);
-    final descriptionController =
-        TextEditingController(text: quotation.description);
-    final discountController =
-        TextEditingController(text: quotation.discount.toString());
+    final descriptionController = TextEditingController(
+      text: quotation.description,
+    );
+    final discountController = TextEditingController(
+      text: quotation.discount.toString(),
+    );
 
     String statusValue = quotation.status;
     final statusOptions = <String>{
@@ -260,15 +267,15 @@ class _DatabaseQuotationsTabState extends State<DatabaseQuotationsTab> {
                           keyboardType: TextInputType.number,
                         ),
                         const SizedBox(height: 12),
-                    CustomTextField(
-                      label: 'Status',
-                      isDropdown: true,
-                      dropdownItems: statusOptions,
-                      value: statusValue,
-                      onChanged: (value) {
-                        if (value != null) {
-                          setModalState(() => statusValue = value);
-                        }
+                        CustomTextField(
+                          label: 'Status',
+                          isDropdown: true,
+                          dropdownItems: statusOptions,
+                          value: statusValue,
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() => statusValue = value);
+                            }
                           },
                         ),
                         const SizedBox(height: 12),
@@ -322,8 +329,9 @@ class _DatabaseQuotationsTabState extends State<DatabaseQuotationsTab> {
                               quotation.description,
                             );
 
-                            final discountValue =
-                                double.tryParse(discountController.text.trim());
+                            final discountValue = double.tryParse(
+                              discountController.text.trim(),
+                            );
                             if (discountValue != null &&
                                 discountValue != quotation.discount) {
                               updates['discount'] = discountValue;
@@ -333,9 +341,11 @@ class _DatabaseQuotationsTabState extends State<DatabaseQuotationsTab> {
                               updates['status'] = statusValue;
                             }
 
-                            if (dueDate != null && dueDate != quotation.dueDate) {
-                              updates['dueDate'] =
-                                  DateFormat('yyyy-MM-dd').format(dueDate!);
+                            if (dueDate != null &&
+                                dueDate != quotation.dueDate) {
+                              updates['dueDate'] = DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(dueDate!);
                             }
 
                             if (updates.isEmpty) {
@@ -489,10 +499,7 @@ class _DatabaseBomsTabState extends State<DatabaseBomsTab> {
 
     final success = await _service.deleteBom(bom.id);
     if (!mounted) return;
-    _showSnack(
-      context,
-      success ? 'BOM deleted' : 'Failed to delete BOM',
-    );
+    _showSnack(context, success ? 'BOM deleted' : 'Failed to delete BOM');
     if (success) {
       _loadBoms(search: _searchController.text);
     }
@@ -500,8 +507,7 @@ class _DatabaseBomsTabState extends State<DatabaseBomsTab> {
 
   Future<void> _editBom(DatabaseBom bom) async {
     final nameController = TextEditingController(text: bom.name);
-    final descriptionController =
-        TextEditingController(text: bom.description);
+    final descriptionController = TextEditingController(text: bom.description);
     DateTime? dueDate = bom.dueDate;
 
     await showModalBottomSheet(
@@ -578,8 +584,9 @@ class _DatabaseBomsTabState extends State<DatabaseBomsTab> {
                             );
 
                             if (dueDate != bom.dueDate && dueDate != null) {
-                              updates['dueDate'] =
-                                  DateFormat('yyyy-MM-dd').format(dueDate!);
+                              updates['dueDate'] = DateFormat(
+                                'yyyy-MM-dd',
+                              ).format(dueDate!);
                             }
 
                             if (updates.isEmpty) {
@@ -587,8 +594,10 @@ class _DatabaseBomsTabState extends State<DatabaseBomsTab> {
                               return;
                             }
 
-                            final success =
-                                await _service.updateBom(bom.id, updates);
+                            final success = await _service.updateBom(
+                              bom.id,
+                              updates,
+                            );
                             if (!mounted) return;
                             Navigator.pop(context);
                             _showSnack(
@@ -649,7 +658,9 @@ class _DatabaseBomsTabState extends State<DatabaseBomsTab> {
         return _DatabaseCard(
           leading: _QuotationImage(url: bom.productImage),
           title: bom.bomNumber.isEmpty ? 'BOM' : bom.bomNumber,
-          subtitle: bom.productName?.isNotEmpty == true ? bom.productName! : bom.name,
+          subtitle: bom.productName?.isNotEmpty == true
+              ? bom.productName!
+              : bom.name,
           trailing: Text(
             '₦${_formatAmount(bom.totalCost)}',
             style: const TextStyle(
@@ -719,10 +730,7 @@ class _DatabaseClientsTabState extends State<DatabaseClientsTab> {
     final match = _clientMatch(client);
     final success = await _service.deleteClient(match: match);
     if (!mounted) return;
-    _showSnack(
-      context,
-      success ? 'Client deleted' : 'Failed to delete client',
-    );
+    _showSnack(context, success ? 'Client deleted' : 'Failed to delete client');
     if (success) {
       _loadClients();
     }
@@ -730,7 +738,10 @@ class _DatabaseClientsTabState extends State<DatabaseClientsTab> {
 
   Map<String, dynamic> _clientMatch(DatabaseClient client) {
     if (client.phoneNumber.isNotEmpty) {
-      return {'clientName': client.clientName, 'phoneNumber': client.phoneNumber};
+      return {
+        'clientName': client.clientName,
+        'phoneNumber': client.phoneNumber,
+      };
     }
     if (client.email.isNotEmpty) {
       return {'clientName': client.clientName, 'email': client.email};
@@ -741,7 +752,9 @@ class _DatabaseClientsTabState extends State<DatabaseClientsTab> {
   Future<void> _editClient(DatabaseClient client) async {
     final nameController = TextEditingController(text: client.clientName);
     final addressController = TextEditingController(text: client.clientAddress);
-    final busStopController = TextEditingController(text: client.nearestBusStop);
+    final busStopController = TextEditingController(
+      text: client.nearestBusStop,
+    );
     final phoneController = TextEditingController(text: client.phoneNumber);
     final emailController = TextEditingController(text: client.email);
 
@@ -856,7 +869,9 @@ class _DatabaseClientsTabState extends State<DatabaseClientsTab> {
                         Navigator.pop(context);
                         _showSnack(
                           context,
-                          success ? 'Client updated' : 'Failed to update client',
+                          success
+                              ? 'Client updated'
+                              : 'Failed to update client',
                         );
                         if (success) {
                           _loadClients();
@@ -897,8 +912,9 @@ class _DatabaseClientsTabState extends State<DatabaseClientsTab> {
       itemCount: _clients.length,
       itemBuilder: (context, index) {
         final client = _clients[index];
-        final contact =
-            client.phoneNumber.isNotEmpty ? client.phoneNumber : client.email;
+        final contact = client.phoneNumber.isNotEmpty
+            ? client.phoneNumber
+            : client.email;
         return _DatabaseCard(
           title: client.clientName,
           subtitle: contact,
@@ -944,7 +960,9 @@ class _DatabaseStaffTabState extends State<DatabaseStaffTab> {
         _staff = data;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint("❌ [STAFF TAB LOAD ERROR] $e");
+      debugPrint("$st");
       setState(() {
         _error = 'Failed to load staff';
         _isLoading = false;
@@ -962,10 +980,7 @@ class _DatabaseStaffTabState extends State<DatabaseStaffTab> {
 
     final success = await _service.deleteStaff(staff.id);
     if (!mounted) return;
-    _showSnack(
-      context,
-      success ? 'Staff removed' : 'Failed to remove staff',
-    );
+    _showSnack(context, success ? 'Staff removed' : 'Failed to remove staff');
     if (success) {
       _loadStaff();
     }
@@ -1091,7 +1106,9 @@ class _DatabaseStaffTabState extends State<DatabaseStaffTab> {
                             Navigator.pop(context);
                             _showSnack(
                               context,
-                              success ? 'Staff updated' : 'Failed to update staff',
+                              success
+                                  ? 'Staff updated'
+                                  : 'Failed to update staff',
                             );
                             if (success) {
                               _loadStaff();
@@ -1137,7 +1154,9 @@ class _DatabaseStaffTabState extends State<DatabaseStaffTab> {
         return _DatabaseCard(
           title: staff.fullname,
           subtitle: staff.position.isEmpty ? staff.role : staff.position,
-          trailing: _buildStatusChip(staff.accessGranted ? 'active' : 'blocked'),
+          trailing: _buildStatusChip(
+            staff.accessGranted ? 'active' : 'blocked',
+          ),
           onEdit: () => _editStaff(staff),
           onDelete: () => _deleteStaff(staff),
           footer: staff.phoneNumber.isEmpty
@@ -1211,10 +1230,12 @@ class _DatabaseProductsTabState extends State<DatabaseProductsTab> {
   Future<void> _editProduct(DatabaseProduct product) async {
     final nameController = TextEditingController(text: product.name);
     final categoryController = TextEditingController(text: product.category);
-    final subCategoryController =
-        TextEditingController(text: product.subCategory);
-    final descriptionController =
-        TextEditingController(text: product.description);
+    final subCategoryController = TextEditingController(
+      text: product.subCategory,
+    );
+    final descriptionController = TextEditingController(
+      text: product.description,
+    );
     final productIdController = TextEditingController(text: product.productId);
 
     await showModalBottomSheet(
@@ -1252,10 +1273,7 @@ class _DatabaseProductsTabState extends State<DatabaseProductsTab> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    CustomTextField(
-                      label: 'Name',
-                      controller: nameController,
-                    ),
+                    CustomTextField(label: 'Name', controller: nameController),
                     const SizedBox(height: 12),
                     CustomTextField(
                       label: 'Category',
@@ -1384,8 +1402,9 @@ class _DatabaseProductsTabState extends State<DatabaseProductsTab> {
         return _DatabaseCard(
           leading: _QuotationImage(url: product.image),
           title: product.name,
-          subtitle:
-              product.category.isEmpty ? product.subCategory : product.category,
+          subtitle: product.category.isEmpty
+              ? product.subCategory
+              : product.category,
           trailing: _buildStatusChip(product.status),
           details: _buildProductDetails(product),
           onEdit: () => _editProduct(product),
@@ -1406,13 +1425,31 @@ class DatabaseMaterialsTab extends StatefulWidget {
 class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
   final DatabaseService _service = DatabaseService();
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _companyController = TextEditingController();
   bool _isLoading = true;
   String? _error;
   List<DatabaseMaterial> _materials = [];
+  bool _isPlatformOwner = false;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _companyController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
     super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    // Platform owners can scope database endpoints by companyName.
+    final prefs = await SharedPreferences.getInstance();
+    final isPO = prefs.getBool("isPlatformOwner") ?? false;
+    if (!mounted) return;
+    setState(() => _isPlatformOwner = isPO);
     _loadMaterials();
   }
 
@@ -1423,7 +1460,10 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
     });
 
     try {
-      final data = await _service.getMaterials(search: search);
+      final data = await _service.getMaterials(
+        search: search,
+        companyName: null,
+      );
       setState(() {
         _materials = data;
         _isLoading = false;
@@ -1458,14 +1498,27 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
   Future<void> _editMaterial(DatabaseMaterial material) async {
     final nameController = TextEditingController(text: material.name);
     final categoryController = TextEditingController(text: material.category);
-    final priceController =
-        TextEditingController(text: material.pricePerSqm.toString());
-    final widthController =
-        TextEditingController(text: material.standardWidth?.toString() ?? '');
-    final lengthController =
-        TextEditingController(text: material.standardLength?.toString() ?? '');
-    final unitController =
-        TextEditingController(text: material.standardUnit ?? '');
+    final priceSqmController = TextEditingController(
+      text: material.pricePerSqm != null
+          ? _formatAmount(material.pricePerSqm!)
+          : '',
+    );
+    final priceUnitController = TextEditingController(
+      text: material.pricePerUnit != null
+          ? _formatAmount(material.pricePerUnit!)
+          : '',
+    );
+    _attachThousandsFormatter(priceSqmController);
+    _attachThousandsFormatter(priceUnitController);
+    final widthController = TextEditingController(
+      text: material.standardWidth?.toString() ?? '',
+    );
+    final lengthController = TextEditingController(
+      text: material.standardLength?.toString() ?? '',
+    );
+    final unitController = TextEditingController(
+      text: material.standardUnit ?? '',
+    );
 
     await showModalBottomSheet(
       context: context,
@@ -1502,10 +1555,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    CustomTextField(
-                      label: 'Name',
-                      controller: nameController,
-                    ),
+                    CustomTextField(label: 'Name', controller: nameController),
                     const SizedBox(height: 12),
                     CustomTextField(
                       label: 'Category',
@@ -1514,7 +1564,13 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                     const SizedBox(height: 12),
                     CustomTextField(
                       label: 'Price Per Sqm',
-                      controller: priceController,
+                      controller: priceSqmController,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Price Per Unit',
+                      controller: priceUnitController,
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 12),
@@ -1552,21 +1608,41 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                           material.category,
                         );
 
-                        final price =
-                            double.tryParse(priceController.text.trim());
-                        if (price != null && price != material.pricePerSqm) {
-                          updates['pricePerSqm'] = price;
+                        final priceSqm = _parseAmountInput(
+                          priceSqmController.text.trim(),
+                        );
+                        if (priceSqmController.text.trim().isEmpty) {
+                          if (material.pricePerSqm != null) {
+                            updates['pricePerSqm'] = null;
+                          }
+                        } else if (priceSqm != null &&
+                            priceSqm != material.pricePerSqm) {
+                          updates['pricePerSqm'] = priceSqm;
                         }
 
-                        final width =
-                            double.tryParse(widthController.text.trim());
+                        final priceUnit = _parseAmountInput(
+                          priceUnitController.text.trim(),
+                        );
+                        if (priceUnitController.text.trim().isEmpty) {
+                          if (material.pricePerUnit != null) {
+                            updates['pricePerUnit'] = null;
+                          }
+                        } else if (priceUnit != null &&
+                            priceUnit != material.pricePerUnit) {
+                          updates['pricePerUnit'] = priceUnit;
+                        }
+
+                        final width = double.tryParse(
+                          widthController.text.trim(),
+                        );
                         if (width != material.standardWidth &&
                             widthController.text.trim().isNotEmpty) {
                           updates['standardWidth'] = width;
                         }
 
-                        final length =
-                            double.tryParse(lengthController.text.trim());
+                        final length = double.tryParse(
+                          lengthController.text.trim(),
+                        );
                         if (length != material.standardLength &&
                             lengthController.text.trim().isNotEmpty) {
                           updates['standardLength'] = length;
@@ -1611,8 +1687,164 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
     );
   }
 
+  String _cleanLabel(String? input) {
+    final s = (input ?? '').trim();
+    if (s.isEmpty) return '';
+    // Excel/catalog values sometimes contain quotes (e.g., 8"), strip them for UI.
+    return s.replaceAll('"', '').replaceAll("'", '').trim();
+  }
+
+  bool _hasAnyPrice(DatabaseMaterial m) {
+    final unitPrice = (m.pricePerUnit ?? m.catalogPrice ?? 0);
+    final sqmPrice = (m.pricePerSqm ?? 0);
+    if (unitPrice > 0 || sqmPrice > 0) return true;
+    for (final t in m.types) {
+      final tu = (t.pricePerUnit ?? 0);
+      final ts = (t.pricePerSqm ?? 0);
+      if (tu > 0 || ts > 0) return true;
+    }
+    return false;
+  }
+
+  double? _effectiveUnitPrice(DatabaseMaterial m) =>
+      m.pricePerUnit ?? m.catalogPrice;
+
+  String _materialSubtitleLine(DatabaseMaterial m) {
+    final parts = <String>[];
+    final company = _cleanLabel(m.companyName);
+    final unit = _cleanLabel(m.unit);
+    final size = _cleanLabel(m.size);
+    final color = _cleanLabel(m.color);
+    if (company.isNotEmpty) parts.add('Company: $company');
+    if (unit.isNotEmpty) parts.add('Unit: $unit');
+    if (size.isNotEmpty) parts.add('Size: $size');
+    if (color.isNotEmpty) parts.add('Color: $color');
+    return parts.isEmpty ? m.category : parts.join(' • ');
+  }
+
+  String _priceShortLabel(DatabaseMaterial m) {
+    final unitPrice = _effectiveUnitPrice(m);
+    if ((unitPrice ?? 0) > 0) return _formatAmount(unitPrice!);
+    final sqm = m.pricePerSqm;
+    if ((sqm ?? 0) > 0) return '${_formatAmount(sqm!)}/sqm';
+    final typeSqm = <double>[];
+    final typeUnit = <double>[];
+    for (final t in m.types) {
+      if ((t.pricePerSqm ?? 0) > 0) typeSqm.add(t.pricePerSqm!);
+      if ((t.pricePerUnit ?? 0) > 0) typeUnit.add(t.pricePerUnit!);
+    }
+    if (typeUnit.isNotEmpty) {
+      typeUnit.sort();
+      final min = typeUnit.first;
+      final max = typeUnit.last;
+      return min == max
+          ? _formatAmount(min)
+          : '${_formatAmount(min)} - ${_formatAmount(max)}';
+    }
+    if (typeSqm.isNotEmpty) {
+      typeSqm.sort();
+      final min = typeSqm.first;
+      final max = typeSqm.last;
+      return min == max
+          ? '${_formatAmount(min)}/sqm'
+          : '${_formatAmount(min)} - ${_formatAmount(max)}/sqm';
+    }
+    return '0';
+  }
+
+  String? _apiMessageText(dynamic payload) {
+    if (payload == null) return null;
+    if (payload is Map<String, dynamic>) {
+      final message = payload['message']?.toString().trim();
+      if (message != null && message.isNotEmpty) return message;
+      return null;
+    }
+    if (payload is String && payload.trim().isNotEmpty) return payload.trim();
+    return null;
+  }
+
+  double? _parseAmountInput(String value) {
+    final cleaned = value.replaceAll(',', '').trim();
+    if (cleaned.isEmpty) return null;
+    return double.tryParse(cleaned);
+  }
+
+  void _attachThousandsFormatter(TextEditingController controller) {
+    bool isUpdating = false;
+    controller.addListener(() {
+      if (isUpdating) return;
+      final text = controller.text;
+      if (text.isEmpty) return;
+
+      final sanitized = text.replaceAll(',', '');
+      if (sanitized.isEmpty) return;
+
+      final parts = sanitized.split('.');
+      final intPart = int.tryParse(parts.first);
+      if (intPart == null) return;
+
+      final formattedInt = NumberFormat.decimalPattern().format(intPart);
+      final hasTrailingDot = sanitized.endsWith('.');
+      final fraction = parts.length > 1 ? parts.sublist(1).join('.') : '';
+      final formatted = hasTrailingDot
+          ? '$formattedInt.'
+          : fraction.isNotEmpty
+          ? '$formattedInt.$fraction'
+          : formattedInt;
+
+      if (formatted == text) return;
+      isUpdating = true;
+      controller.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+      isUpdating = false;
+    });
+  }
+
+  String _variantTitle(DatabaseMaterial m) {
+    final type = _cleanLabel(m.subCategory);
+    final size = _cleanLabel(m.size);
+    final color = _cleanLabel(m.color);
+    final unit = _cleanLabel(m.unit);
+
+    final parts = <String>[];
+    if (type.isNotEmpty) parts.add(type);
+    if (size.isNotEmpty) {
+      parts.add(size);
+    } else if (color.isNotEmpty) {
+      parts.add(color);
+    } else if (unit.isNotEmpty) {
+      // Helps disambiguate variants like "Iron Pack" when size/color are empty.
+      parts.add(unit);
+    }
+
+    if (parts.isEmpty) {
+      return _cleanLabel(m.name).isNotEmpty ? _cleanLabel(m.name) : 'Material';
+    }
+    return parts.join(' ');
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isPlatformOwner) {
+      return Column(
+        children: [
+          _buildSearchRow(
+            controller: _searchController,
+            onSearch: () => _loadMaterials(search: _searchController.text),
+          ),
+          Expanded(
+            child: RefreshIndicator(
+              color: ColorsApp.btnColor,
+              onRefresh: () => _loadMaterials(search: _searchController.text),
+              child: _buildPlatformOwnerPricingView(),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       children: [
         _buildSearchRow(
@@ -1623,14 +1855,14 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
           child: RefreshIndicator(
             color: ColorsApp.btnColor,
             onRefresh: () => _loadMaterials(search: _searchController.text),
-            child: _buildContent(),
+            child: _buildFlatContent(),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildFlatContent() {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1653,8 +1885,604 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
             material.status.isEmpty ? 'pending' : material.status,
           ),
           details: _buildMaterialDetails(material),
+          showActions: _isPlatformOwner,
           onEdit: () => _editMaterial(material),
           onDelete: () => _deleteMaterial(material),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlatformOwnerPricingView() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
+      return _buildErrorView(_error!);
+    }
+    if (_materials.isEmpty) {
+      return _buildEmptyView('No materials found');
+    }
+
+    // Group: Category -> SubCategory(Type) -> variants
+    final Map<String, Map<String, List<DatabaseMaterial>>> grouped = {};
+    for (final m in _materials) {
+      final cat = _cleanLabel(m.category);
+      if (cat.isEmpty) continue;
+      final subRaw = (m.subCategory ?? '').trim();
+      grouped.putIfAbsent(cat, () => {});
+      grouped[cat]!.putIfAbsent(subRaw, () => []);
+      grouped[cat]![subRaw]!.add(m);
+    }
+
+    final categories = grouped.keys.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Material Pricing',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: ColorsApp.textColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'If a Category/Type is marked as "Priced", at least one material under it has a price. Tap a Type to see current pricing and update it.',
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        for (final cat in categories) _buildCategorySection(cat, grouped[cat]!),
+      ],
+    );
+  }
+
+  Widget _buildCategorySection(
+    String category,
+    Map<String, List<DatabaseMaterial>> byType,
+  ) {
+    final allVariants = byType.values.expand((e) => e).toList();
+    final pricedCount = allVariants.where(_hasAnyPrice).length;
+    final unpricedCount = allVariants.length - pricedCount;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
+        title: Text(
+          category,
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: ColorsApp.textColor,
+          ),
+        ),
+        subtitle: Text(
+          '${byType.length} types • ${allVariants.length} materials • $pricedCount priced • $unpricedCount unpriced',
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+        ),
+        trailing: _buildPriceStatusChip(pricedCount > 0),
+        children: [
+          const SizedBox(height: 6),
+          ..._buildTypeTiles(category, byType),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceStatusChip(bool isPriced) {
+    final bg = isPriced ? const Color(0xFFE9F7EF) : const Color(0xFFF3F4F6);
+    final fg = isPriced ? const Color(0xFF1E7A3A) : const Color(0xFF6B7280);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        isPriced ? 'Priced' : 'Unpriced',
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
+      ),
+    );
+  }
+
+  List<Widget> _buildTypeTiles(
+    String category,
+    Map<String, List<DatabaseMaterial>> byType,
+  ) {
+    final entries = byType.entries.toList()
+      ..sort((a, b) {
+        final al = _cleanLabel(a.key).isEmpty ? 'General' : _cleanLabel(a.key);
+        final bl = _cleanLabel(b.key).isEmpty ? 'General' : _cleanLabel(b.key);
+        return al.toLowerCase().compareTo(bl.toLowerCase());
+      });
+
+    return [
+      for (final e in entries)
+        Builder(
+          builder: (context) {
+            final typeRaw = e.key;
+            final typeLabel = _cleanLabel(typeRaw).isEmpty
+                ? 'General'
+                : _cleanLabel(typeRaw);
+            final variants = e.value;
+            final pricedCount = variants.where(_hasAnyPrice).length;
+            final unpricedCount = variants.length - pricedCount;
+            final companies =
+                <String>{
+                    for (final m in variants)
+                      if (_cleanLabel(m.companyName).isNotEmpty)
+                        _cleanLabel(m.companyName),
+                  }.toList()
+                  ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+            final companyText = companies.isEmpty
+                ? 'Company: N/A'
+                : companies.length == 1
+                ? 'Company: ${companies.first}'
+                : 'Companies: ${companies.join(', ')}';
+
+            final unitPrices = <double>[];
+            for (final m in variants) {
+              final p = _effectiveUnitPrice(m);
+              if ((p ?? 0) > 0) unitPrices.add(p!);
+              for (final t in m.types) {
+                if ((t.pricePerUnit ?? 0) > 0) {
+                  unitPrices.add(t.pricePerUnit!);
+                }
+              }
+            }
+            unitPrices.sort();
+
+            final sqmPrices = <double>[];
+            for (final m in variants) {
+              final p = m.pricePerSqm;
+              if ((p ?? 0) > 0) sqmPrices.add(p!);
+              for (final t in m.types) {
+                if ((t.pricePerSqm ?? 0) > 0) {
+                  sqmPrices.add(t.pricePerSqm!);
+                }
+              }
+            }
+            sqmPrices.sort();
+
+            String priceHint = '';
+            if (unitPrices.isNotEmpty) {
+              final min = unitPrices.first;
+              final max = unitPrices.last;
+              priceHint = min == max
+                  ? _formatAmount(min)
+                  : '${_formatAmount(min)} - ${_formatAmount(max)}';
+            } else if (sqmPrices.isNotEmpty) {
+              final min = sqmPrices.first;
+              final max = sqmPrices.last;
+              priceHint = min == max
+                  ? '${_formatAmount(min)}/sqm'
+                  : '${_formatAmount(min)} - ${_formatAmount(max)}/sqm';
+            } else {
+              priceHint = 'No price yet';
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAFAFA),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                title: Text(
+                  typeLabel,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                subtitle: Text(
+                  '${variants.length} materials • $pricedCount priced • $unpricedCount unpriced\n$companyText\n$priceHint',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                ),
+                isThreeLine: true,
+                trailing: _buildPriceStatusChip(pricedCount > 0),
+                onTap: () => _openTypePricingEditor(
+                  category: category,
+                  subCategoryRaw: typeRaw,
+                  subCategoryLabel: typeLabel,
+                  variants: variants,
+                ),
+              ),
+            );
+          },
+        ),
+    ];
+  }
+
+  Future<void> _openTypePricingEditor({
+    required String category,
+    required String subCategoryRaw,
+    required String subCategoryLabel,
+    required List<DatabaseMaterial> variants,
+  }) async {
+    bool isSaving = false;
+
+    final unitOptions = <String>{
+      for (final v in variants)
+        if ((_cleanLabel(v.unit)).isNotEmpty) _cleanLabel(v.unit),
+    }.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+
+    final pricePerUnitAll = <double?>{
+      for (final v in variants) v.pricePerUnit,
+    }.toList();
+    final samePricePerUnit =
+        pricePerUnitAll.isNotEmpty &&
+        pricePerUnitAll.every((p) => p == pricePerUnitAll.first);
+
+    final pricePerSqmAll = <double?>{
+      for (final v in variants) v.pricePerSqm,
+    }.toList();
+    final samePricePerSqm =
+        pricePerSqmAll.isNotEmpty &&
+        pricePerSqmAll.every((p) => p == pricePerSqmAll.first);
+
+    final unitController = TextEditingController();
+    final pricePerUnitController = TextEditingController(
+      text: samePricePerUnit && (pricePerUnitAll.first ?? 0) > 0
+          ? _formatAmount(pricePerUnitAll.first!)
+          : '',
+    );
+    final pricePerSqmController = TextEditingController(
+      text: samePricePerSqm && (pricePerSqmAll.first ?? 0) > 0
+          ? _formatAmount(pricePerSqmAll.first!)
+          : '',
+    );
+    _attachThousandsFormatter(pricePerUnitController);
+    _attachThousandsFormatter(pricePerSqmController);
+    bool onlyUnpriced = false;
+
+    final priced = variants.where(_hasAnyPrice).toList()
+      ..sort((a, b) => _variantTitle(a).compareTo(_variantTitle(b)));
+    final unpriced = variants.where((m) => !_hasAnyPrice(m)).toList()
+      ..sort((a, b) => _variantTitle(a).compareTo(_variantTitle(b)));
+    final companies = <String>{
+      for (final m in variants)
+        if (_cleanLabel(m.companyName).isNotEmpty) _cleanLabel(m.companyName),
+    }.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    final companyText = companies.isEmpty
+        ? 'Company: N/A'
+        : companies.length == 1
+        ? 'Company: ${companies.first}'
+        : 'Companies: ${companies.join(', ')}';
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.86,
+          minChildSize: 0.6,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return StatefulBuilder(
+              builder: (context, setModalState) {
+                return Container(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(24),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildSheetHandle(),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Update Material Pricing',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            color: ColorsApp.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          '$category • $subCategoryLabel',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          companyText,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFAFAFA),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current Pricing',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: ColorsApp.textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (priced.isEmpty)
+                                Text(
+                                  'No priced materials under this type yet.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade700,
+                                  ),
+                                )
+                              else ...[
+                                for (final m in priced.take(10))
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 4,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Text(
+                                            _variantTitle(m),
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          _priceShortLabel(m),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                if (priced.length > 10)
+                                  Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Text(
+                                      '...and ${priced.length - 10} more',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade700,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Update',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: ColorsApp.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (subCategoryRaw.trim().isEmpty)
+                          Text(
+                            'This type has no SubCategory on record. Scope will be resolved from selected material ID.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                        const SizedBox(height: 10),
+                        if (unitOptions.isNotEmpty)
+                          DropdownButtonFormField<String>(
+                            value: null,
+                            items: [
+                              const DropdownMenuItem<String>(
+                                value: '',
+                                child: Text('All units'),
+                              ),
+                              ...unitOptions.map(
+                                (u) => DropdownMenuItem<String>(
+                                  value: u,
+                                  child: Text(u),
+                                ),
+                              ),
+                            ],
+                            decoration: InputDecoration(
+                              labelText: 'Unit filter (optional)',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onChanged: (v) {
+                              unitController.text = (v ?? '').trim();
+                            },
+                          )
+                        else
+                          CustomTextField(
+                            label: 'Unit filter (optional)',
+                            controller: unitController,
+                          ),
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CustomTextField(
+                                label: 'Price Per Unit',
+                                controller: pricePerUnitController,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: CustomTextField(
+                                label: 'Price Per Sqm',
+                                controller: pricePerSqmController,
+                                keyboardType: TextInputType.number,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Only unpriced'),
+                          value: onlyUnpriced,
+                          onChanged: (v) =>
+                              setModalState(() => onlyUnpriced = v),
+                        ),
+                        const SizedBox(height: 8),
+                        CustomButton(
+                          text: 'Apply Update',
+                          loading: isSaving,
+                          onPressed: () async {
+                            final pricePerUnit = _parseAmountInput(
+                              pricePerUnitController.text.trim(),
+                            );
+                            final pricePerSqm = _parseAmountInput(
+                              pricePerSqmController.text.trim(),
+                            );
+                            if (pricePerUnit == null && pricePerSqm == null) {
+                              _showSnack(
+                                context,
+                                'Provide at least one price (unit or sqm)',
+                              );
+                              return;
+                            }
+
+                            setModalState(() => isSaving = true);
+                            final materialId = variants.isNotEmpty
+                                ? variants.first.id
+                                : null;
+                            final result = await _service
+                                .updateMaterialPricingByType(
+                                  materialId: materialId,
+                                  category: category,
+                                  subCategory: subCategoryRaw.trim(),
+                                  unit: unitController.text,
+                                  pricePerUnit: pricePerUnit,
+                                  pricePerSqm: pricePerSqm,
+                                  onlyUnpriced: onlyUnpriced,
+                                  showDialogs: false,
+                                );
+                            debugPrint(
+                              "📦 [TYPE PRICE UPDATE RESULT] ${result['data']}",
+                            );
+                            if (!mounted) return;
+                            setModalState(() => isSaving = false);
+
+                            final ok = result['ok'] == true;
+                            if (!ok) {
+                              Navigator.pop(context);
+                              ApiModalSheet.showError(
+                                _apiMessageText(result['data']) ??
+                                    'Failed to update pricing',
+                              );
+                              return;
+                            }
+
+                            Navigator.pop(context);
+                            ApiModalSheet.showSuccess(
+                              _apiMessageText(result['data']) ??
+                                  'Pricing updated successfully',
+                            );
+                            _loadMaterials(search: _searchController.text);
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Materials',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: ColorsApp.textColor,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        for (final m in priced)
+                          _DatabaseCard(
+                            leading: _MaterialAvatar(category: m.category),
+                            title: _variantTitle(m),
+                            subtitle: _materialSubtitleLine(m),
+                            trailing: _buildPriceStatusChip(true),
+                            details: _buildMaterialDetails(m),
+                            showActions: _isPlatformOwner,
+                            onEdit: () => _editMaterial(m),
+                            onDelete: () => _deleteMaterial(m),
+                          ),
+                        if (unpriced.isNotEmpty) ...[
+                          const SizedBox(height: 10),
+                          Text(
+                            'Unpriced',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          for (final m in unpriced)
+                            _DatabaseCard(
+                              leading: _MaterialAvatar(category: m.category),
+                              title: _variantTitle(m),
+                              subtitle: _materialSubtitleLine(m),
+                              trailing: _buildPriceStatusChip(false),
+                              details: _buildMaterialDetails(m),
+                              showActions: _isPlatformOwner,
+                              onEdit: () => _editMaterial(m),
+                              onDelete: () => _deleteMaterial(m),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );
@@ -1721,11 +2549,13 @@ class _DatabaseInvoicesTabState extends State<DatabaseInvoicesTab> {
   }
 
   Future<void> _editInvoice(DatabaseInvoice invoice) async {
-    final clientNameController =
-        TextEditingController(text: invoice.clientName);
+    final clientNameController = TextEditingController(
+      text: invoice.clientName,
+    );
     final emailController = TextEditingController(text: invoice.email);
-    final amountPaidController =
-        TextEditingController(text: invoice.amountPaid.toString());
+    final amountPaidController = TextEditingController(
+      text: invoice.amountPaid.toString(),
+    );
     final notesController = TextEditingController();
     String statusValue = invoice.status;
     String paymentStatusValue = invoice.paymentStatus;
@@ -1838,12 +2668,12 @@ class _DatabaseInvoicesTabState extends State<DatabaseInvoicesTab> {
                           text: 'Save Changes',
                           onPressed: () async {
                             final updates = <String, dynamic>{
-                              "clientName":
-                                  clientNameController.text.trim(),
+                              "clientName": clientNameController.text.trim(),
                               "email": emailController.text.trim(),
                               "status": statusValue,
                               "paymentStatus": paymentStatusValue,
-                              "amountPaid": double.tryParse(
+                              "amountPaid":
+                                  double.tryParse(
                                     amountPaidController.text.trim(),
                                   ) ??
                                   0,
@@ -1865,9 +2695,7 @@ class _DatabaseInvoicesTabState extends State<DatabaseInvoicesTab> {
                                   : 'Failed to update invoice',
                             );
                             if (success) {
-                              _loadInvoices(
-                                search: _searchController.text,
-                              );
+                              _loadInvoices(search: _searchController.text);
                             }
                           },
                         ),
@@ -1922,9 +2750,7 @@ class _DatabaseInvoicesTabState extends State<DatabaseInvoicesTab> {
           title: invoice.invoiceNumber,
           subtitle: invoice.clientName,
           trailing: _buildStatusChip(
-            invoice.paymentStatus.isEmpty
-                ? 'unpaid'
-                : invoice.paymentStatus,
+            invoice.paymentStatus.isEmpty ? 'unpaid' : invoice.paymentStatus,
           ),
           details: _buildInvoiceDetails(invoice),
           onEdit: () => _editInvoice(invoice),
@@ -1996,10 +2822,12 @@ class _DatabaseReceiptsTabState extends State<DatabaseReceiptsTab> {
 
   Future<void> _editReceipt(DatabaseReceipt receipt) async {
     final notesController = TextEditingController(text: receipt.notes ?? '');
-    final referenceController =
-        TextEditingController(text: receipt.reference ?? '');
-    final paymentMethodController =
-        TextEditingController(text: receipt.paymentMethod);
+    final referenceController = TextEditingController(
+      text: receipt.reference ?? '',
+    );
+    final paymentMethodController = TextEditingController(
+      text: receipt.paymentMethod,
+    );
     DateTime? receiptDate = receipt.receiptDate;
 
     await showModalBottomSheet(
@@ -2077,8 +2905,8 @@ class _DatabaseReceiptsTabState extends State<DatabaseReceiptsTab> {
                             final updates = <String, dynamic>{
                               "notes": notesController.text.trim(),
                               "reference": referenceController.text.trim(),
-                              "paymentMethod":
-                                  paymentMethodController.text.trim(),
+                              "paymentMethod": paymentMethodController.text
+                                  .trim(),
                               if (receiptDate != null)
                                 "receiptDate": receiptDate!.toIso8601String(),
                             };
@@ -2096,9 +2924,7 @@ class _DatabaseReceiptsTabState extends State<DatabaseReceiptsTab> {
                                   : 'Failed to update receipt',
                             );
                             if (success) {
-                              _loadReceipts(
-                                search: _searchController.text,
-                              );
+                              _loadReceipts(search: _searchController.text);
                             }
                           },
                         ),
@@ -2153,9 +2979,7 @@ class _DatabaseReceiptsTabState extends State<DatabaseReceiptsTab> {
           title: receipt.receiptNumber,
           subtitle: receipt.clientName,
           trailing: _buildStatusChip(
-            receipt.paymentMethod.isEmpty
-                ? 'payment'
-                : receipt.paymentMethod,
+            receipt.paymentMethod.isEmpty ? 'payment' : receipt.paymentMethod,
           ),
           details: _buildReceiptDetails(receipt),
           onEdit: () => _editReceipt(receipt),
@@ -2173,6 +2997,7 @@ class _DatabaseCard extends StatefulWidget {
   final String? footer;
   final Widget? leading;
   final Widget? details;
+  final bool showActions;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -2181,6 +3006,7 @@ class _DatabaseCard extends StatefulWidget {
     required this.subtitle,
     required this.onEdit,
     required this.onDelete,
+    this.showActions = true,
     this.trailing,
     this.footer,
     this.leading,
@@ -2249,20 +3075,21 @@ class _DatabaseCardState extends State<_DatabaseCard> {
                 children: [
                   if (widget.trailing != null) widget.trailing!,
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.edit, size: 18),
-                        color: ColorsApp.btnColor,
-                        onPressed: widget.onEdit,
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        color: Colors.redAccent,
-                        onPressed: widget.onDelete,
-                      ),
-                    ],
-                  ),
+                  if (widget.showActions)
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 18),
+                          color: ColorsApp.btnColor,
+                          onPressed: widget.onEdit,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, size: 18),
+                          color: Colors.redAccent,
+                          onPressed: widget.onDelete,
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ],
@@ -2345,11 +3172,7 @@ class _QuotationImage extends StatelessWidget {
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(
-        Icons.image_outlined,
-        color: Colors.grey.shade400,
-        size: 28,
-      ),
+      child: Icon(Icons.image_outlined, color: Colors.grey.shade400, size: 28),
     );
   }
 }
@@ -2391,10 +3214,7 @@ Widget _buildQuotationDetails(DatabaseQuotation quotation) {
     children: [
       const Text(
         "Items",
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF302E2E),
-        ),
+        style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF302E2E)),
       ),
       const SizedBox(height: 8),
       if (items.isEmpty)
@@ -2410,14 +3230,13 @@ Widget _buildQuotationDetails(DatabaseQuotation quotation) {
               title: item.description.isNotEmpty
                   ? item.description
                   : item.woodType.isNotEmpty
-                      ? item.woodType
-                      : item.foamType.isNotEmpty
-                          ? item.foamType
-                          : "Material",
+                  ? item.woodType
+                  : item.foamType.isNotEmpty
+                  ? item.foamType
+                  : "Material",
               subtitle:
                   "${item.quantity} ${item.unit} • ${item.width}×${item.length}×${item.thickness}",
-              trailing:
-                  "₦${_formatAmount(item.sellingPrice)}",
+              trailing: "₦${_formatAmount(item.sellingPrice)}",
             ),
           ),
         ),
@@ -2465,10 +3284,7 @@ Widget _buildBomDetails(DatabaseBom bom) {
     children: [
       const Text(
         "Materials",
-        style: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: Color(0xFF302E2E),
-        ),
+        style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF302E2E)),
       ),
       const SizedBox(height: 8),
       if (bom.materials.isEmpty)
@@ -2486,7 +3302,8 @@ Widget _buildBomDetails(DatabaseBom bom) {
                   : material.name,
               subtitle:
                   "${material.quantity} ${material.unit} • ${material.width}×${material.length}×${material.thickness}",
-              trailing: "₦${_formatAmount(material.subtotal > 0 ? material.subtotal : material.price)}",
+              trailing:
+                  "₦${_formatAmount(material.subtotal > 0 ? material.subtotal : material.price)}",
             ),
           ),
         ),
@@ -2562,19 +3379,51 @@ Widget _buildProductDetails(DatabaseProduct product) {
 }
 
 Widget _buildMaterialDetails(DatabaseMaterial material) {
+  final effectiveUnitPrice = material.pricePerUnit ?? material.catalogPrice;
+  final hasSqmPrice = (material.pricePerSqm ?? 0) > 0;
+  final hasUnitPrice = (effectiveUnitPrice ?? 0) > 0;
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if ((material.companyName ?? '').isNotEmpty)
+        _buildDetailRow('Company', material.companyName!, showCurrency: false),
       _buildDetailRow('Category', material.category, showCurrency: false),
-      _buildDetailRow(
-        'Price Per Sqm',
-        _formatAmount(material.pricePerSqm),
-      ),
+      if (hasSqmPrice)
+        _buildDetailRow(
+          'Price Per Sqm',
+          _formatAmount(material.pricePerSqm ?? 0),
+        ),
+      if (hasUnitPrice)
+        _buildDetailRow(
+          'Price Per Unit',
+          _formatAmount(effectiveUnitPrice ?? 0),
+        ),
+      if (!hasSqmPrice && !hasUnitPrice)
+        _buildDetailRow('Price', '0', showCurrency: true),
       _buildDetailRow(
         'Pricing Unit',
         material.pricingUnit.isEmpty ? '-' : material.pricingUnit,
         showCurrency: false,
       ),
+      if ((material.subCategory ?? '').trim().isNotEmpty)
+        _buildDetailRow(
+          'Sub Category',
+          material.subCategory!.trim(),
+          showCurrency: false,
+        ),
+      if ((material.size ?? '').trim().isNotEmpty)
+        _buildDetailRow('Size', material.size!.trim(), showCurrency: false),
+      if ((material.unit ?? '').trim().isNotEmpty)
+        _buildDetailRow('Unit', material.unit!.trim(), showCurrency: false),
+      if ((material.color ?? '').trim().isNotEmpty)
+        _buildDetailRow('Color', material.color!.trim(), showCurrency: false),
+      if (material.thickness != null)
+        _buildDetailRow(
+          'Thickness',
+          '${material.thickness}${material.thicknessUnit != null ? ' ${material.thicknessUnit}' : ''}',
+          showCurrency: false,
+        ),
       _buildDetailRow(
         'Global',
         material.isGlobal ? 'Yes' : 'No',
@@ -2582,22 +3431,22 @@ Widget _buildMaterialDetails(DatabaseMaterial material) {
       ),
       if (material.standardWidth != null ||
           material.standardLength != null ||
-          (material.standardUnit != null && material.standardUnit!.isNotEmpty))
-        ...[
-          const SizedBox(height: 8),
-          const Text(
-            'Standard Size',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF302E2E),
-            ),
+          (material.standardUnit != null &&
+              material.standardUnit!.isNotEmpty)) ...[
+        const SizedBox(height: 8),
+        const Text(
+          'Standard Size',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF302E2E),
           ),
-          const SizedBox(height: 6),
-          Text(
-            '${material.standardWidth ?? '-'} × ${material.standardLength ?? '-'} ${material.standardUnit ?? ''}',
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '${material.standardWidth ?? '-'} × ${material.standardLength ?? '-'} ${material.standardUnit ?? ''}',
+          style: const TextStyle(color: Colors.black54, fontSize: 12),
+        ),
+      ],
     ],
   );
 }
@@ -2606,7 +3455,11 @@ Widget _buildInvoiceDetails(DatabaseInvoice invoice) {
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _buildDetailRow('Quotation No', invoice.quotationNumber, showCurrency: false),
+      _buildDetailRow(
+        'Quotation No',
+        invoice.quotationNumber,
+        showCurrency: false,
+      ),
       _buildDetailRow('Final Total', _formatAmount(invoice.finalTotal)),
       _buildDetailRow('Amount Paid', _formatAmount(invoice.amountPaid)),
       _buildDetailRow('Balance', _formatAmount(invoice.balance)),
@@ -2630,7 +3483,11 @@ Widget _buildReceiptDetails(DatabaseReceipt receipt) {
       _buildDetailRow('Total', _formatAmount(receipt.totalAmount)),
       _buildDetailRow('Amount Paid', _formatAmount(receipt.amountPaid)),
       _buildDetailRow('Balance', _formatAmount(receipt.balance)),
-      _buildDetailRow('Payment Method', receipt.paymentMethod, showCurrency: false),
+      _buildDetailRow(
+        'Payment Method',
+        receipt.paymentMethod,
+        showCurrency: false,
+      ),
       if (receipt.receiptDate != null)
         _buildDetailRow(
           'Receipt Date',
@@ -2645,11 +3502,7 @@ Widget _buildReceiptDetails(DatabaseReceipt receipt) {
   );
 }
 
-Widget _buildDetailRow(
-  String label,
-  String value, {
-  bool showCurrency = true,
-}) {
+Widget _buildDetailRow(String label, String value, {bool showCurrency = true}) {
   return Padding(
     padding: const EdgeInsets.only(bottom: 6),
     child: Row(
@@ -2694,18 +3547,18 @@ Widget _buildDropdownField({
         value: value,
         items: items
             .map(
-              (item) => DropdownMenuItem<String>(
-                value: item,
-                child: Text(item),
-              ),
+              (item) =>
+                  DropdownMenuItem<String>(value: item, child: Text(item)),
             )
             .toList(),
         onChanged: onChanged,
         decoration: InputDecoration(
           filled: true,
           fillColor: Colors.grey.shade100,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -2756,9 +3609,7 @@ Widget _buildDatePickerField({
                     ? 'Select date'
                     : DateFormat('dd MMM yyyy').format(date),
                 style: TextStyle(
-                  color: date == null
-                      ? Colors.grey.shade600
-                      : Colors.black87,
+                  color: date == null ? Colors.grey.shade600 : Colors.black87,
                 ),
               ),
             ],
@@ -2925,11 +3776,7 @@ Widget _buildStatusChip(String status) {
     ),
     child: Text(
       status,
-      style: TextStyle(
-        color: color,
-        fontSize: 11,
-        fontWeight: FontWeight.w600,
-      ),
+      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
     ),
   );
 }
@@ -2976,7 +3823,9 @@ Widget _buildDatePicker(
   required DateTime? date,
   required ValueChanged<DateTime?> onDateSelected,
 }) {
-  final text = date == null ? 'Select date' : DateFormat('dd MMM, yyyy').format(date);
+  final text = date == null
+      ? 'Select date'
+      : DateFormat('dd MMM, yyyy').format(date);
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -3014,10 +3863,7 @@ Widget _buildDatePicker(
             children: [
               const Icon(Icons.date_range, size: 18, color: Color(0xFF7B7B7B)),
               const SizedBox(width: 8),
-              Text(
-                text,
-                style: const TextStyle(color: Colors.black87),
-              ),
+              Text(text, style: const TextStyle(color: Colors.black87)),
             ],
           ),
         ),
@@ -3055,9 +3901,7 @@ Future<bool> _showDeleteDialog(
 }
 
 void _showSnack(BuildContext context, String message) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message)),
-  );
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
 void _setIfChanged(

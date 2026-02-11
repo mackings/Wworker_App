@@ -31,7 +31,7 @@ class DatabaseService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -61,9 +61,7 @@ class DatabaseService {
 
     if (response.data?["success"] == true) {
       final data = response.data["data"]?["data"] as List<dynamic>? ?? [];
-      return data
-          .map((item) => DatabaseQuotation.fromJson(item))
-          .toList();
+      return data.map((item) => DatabaseQuotation.fromJson(item)).toList();
     }
     return [];
   }
@@ -175,9 +173,7 @@ class DatabaseService {
     return response.data?["success"] == true;
   }
 
-  Future<bool> deleteClient({
-    required Map<String, dynamic> match,
-  }) async {
+  Future<bool> deleteClient({required Map<String, dynamic> match}) async {
     final token = await _getToken();
     if (token == null) return false;
 
@@ -191,19 +187,61 @@ class DatabaseService {
   }
 
   Future<List<DatabaseStaff>> getStaff() async {
-    final token = await _getToken();
-    if (token == null) return [];
+    try {
+      final token = await _getToken();
+      if (token == null) return [];
 
-    final response = await _dio.get(
-      "/api/database/staff",
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
+      final response = await _dio.get(
+        "/api/database/staff",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
 
-    if (response.data?["success"] == true) {
-      final data = response.data["data"] as List<dynamic>? ?? [];
-      return data.map((item) => DatabaseStaff.fromJson(item)).toList();
+      debugPrint("📄 [DATABASE STAFF RESPONSE BODY] ${response.data}");
+
+      final payload = response.data;
+      if (payload is! Map<String, dynamic> || payload["success"] != true) {
+        debugPrint("⚠️ [DATABASE STAFF] Unexpected payload shape");
+        return [];
+      }
+
+      final dataNode = payload["data"];
+      List<dynamic> rawList = const [];
+      if (dataNode is List) {
+        rawList = dataNode;
+      } else if (dataNode is Map<String, dynamic> && dataNode["data"] is List) {
+        rawList = dataNode["data"] as List<dynamic>;
+      } else {
+        debugPrint("⚠️ [DATABASE STAFF] Missing data list in payload");
+      }
+
+      final staffList = <DatabaseStaff>[];
+      for (int i = 0; i < rawList.length; i++) {
+        final item = rawList[i];
+        if (item is! Map<String, dynamic>) {
+          debugPrint("⚠️ [DATABASE STAFF] Item $i is not a JSON object: $item");
+          continue;
+        }
+        try {
+          staffList.add(DatabaseStaff.fromJson(item));
+        } catch (e, st) {
+          debugPrint("❌ [DATABASE STAFF PARSE ERROR] index=$i error=$e");
+          debugPrint("📄 [DATABASE STAFF BAD ITEM] $item");
+          debugPrint("$st");
+        }
+      }
+
+      debugPrint("✅ [DATABASE STAFF PARSED COUNT] ${staffList.length}");
+      return staffList;
+    } on DioException catch (e) {
+      debugPrint(
+        "❌ [DATABASE STAFF REQUEST ERROR] ${e.response?.statusCode ?? ''} ${e.requestOptions.uri} ${e.response?.data ?? e.message}",
+      );
+      return [];
+    } catch (e, st) {
+      debugPrint("❌ [DATABASE STAFF UNKNOWN ERROR] $e");
+      debugPrint("$st");
+      return [];
     }
-    return [];
   }
 
   Future<bool> updateStaff({
@@ -401,6 +439,7 @@ class DatabaseService {
     String? search,
     String? category,
     String? status,
+    String? companyName,
   }) async {
     final token = await _getToken();
     if (token == null) return [];
@@ -410,6 +449,8 @@ class DatabaseService {
       queryParameters: {
         'page': page,
         'limit': limit,
+        if (companyName != null && companyName.trim().isNotEmpty)
+          'companyName': companyName.trim(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
         if (category != null && category.trim().isNotEmpty)
           'category': category.trim(),
@@ -462,5 +503,82 @@ class DatabaseService {
     );
 
     return response.data?["success"] == true;
+  }
+
+  /// Bulk update pricing for a "type" group:
+  /// category -> subCategory (type) -> variants.
+  ///
+  /// Docs: PUT /api/database/materials/pricing/type
+  /// - Platform owner may pass companyName OR materialId (auto-resolve scope).
+  Future<Map<String, dynamic>> updateMaterialPricingByType({
+    String? materialId,
+    String? companyName,
+    String? category,
+    String? subCategory,
+    String? unit,
+    double? pricePerUnit,
+    double? pricePerSqm,
+    String? pricingUnit,
+    bool onlyUnpriced = false,
+    bool showDialogs = true,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {
+          'ok': false,
+          'statusCode': 401,
+          'message': 'Missing auth token',
+        };
+      }
+
+      final body = <String, dynamic>{
+        if (materialId != null && materialId.trim().isNotEmpty)
+          'materialId': materialId.trim(),
+        if (category != null && category.trim().isNotEmpty)
+          'category': category.trim(),
+        if (subCategory != null && subCategory.trim().isNotEmpty)
+          'subCategory': subCategory.trim(),
+        if (unit != null && unit.trim().isNotEmpty) 'unit': unit.trim(),
+        if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+        if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
+        if (pricingUnit != null && pricingUnit.trim().isNotEmpty)
+          'pricingUnit': pricingUnit.trim(),
+        'onlyUnpriced': onlyUnpriced,
+      };
+
+      final response = await _dio.put(
+        "/api/database/materials/pricing/type",
+        queryParameters: {
+          if (companyName != null && companyName.trim().isNotEmpty)
+            'companyName': companyName.trim(),
+        },
+        data: body,
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+          extra: {
+            'showSuccessDialog': showDialogs,
+            'showErrorDialog': showDialogs,
+          },
+        ),
+      );
+
+      debugPrint("📦 [DATABASE TYPE PRICING UPDATE RESPONSE] ${response.data}");
+      return {
+        'ok': response.data?["success"] == true,
+        'statusCode': response.statusCode,
+        'data': response.data,
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "❌ [DATABASE TYPE PRICING UPDATE ERROR] ${e.response?.statusCode ?? ''} ${e.requestOptions.uri} ${e.response?.data ?? e.message}",
+      );
+      return {
+        'ok': false,
+        'statusCode': e.response?.statusCode,
+        'data': e.response?.data,
+        'message': e.message,
+      };
+    }
   }
 }

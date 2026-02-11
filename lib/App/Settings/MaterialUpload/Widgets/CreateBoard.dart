@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Api/SmaterialService.dart';
 import 'package:wworker/App/Settings/MaterialUpload/Widgets/catalog_material_picker.dart';
+import 'package:wworker/Constant/colors.dart';
 
 class CreateBoardMaterialPage extends StatefulWidget {
   const CreateBoardMaterialPage({super.key});
@@ -17,6 +18,8 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
 
   // Controllers
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _manualThicknessController =
+      TextEditingController();
   final TextEditingController _standardWidthController =
       TextEditingController();
   final TextEditingController _standardLengthController =
@@ -30,6 +33,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   String _thicknessUnit = 'mm';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  bool _useCatalog = true;
   bool isCreating = false;
 
   // Board types and thicknesses
@@ -42,11 +46,9 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   }
 
   Future<void> _createMaterial() async {
-    if (_selectedCatalogMaterial == null) {
+    if (_useCatalog && _selectedCatalogMaterial == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Select a supported catalog material first'),
-        ),
+        const SnackBar(content: Text('Select a supported catalog material')),
       );
       return;
     }
@@ -60,29 +62,42 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
 
     setState(() => isCreating = true);
 
-    final selectedSize = (_selectedCatalogMaterial!['size'] ?? '')
-        .toString()
-        .trim();
-    final thicknessValue = parseThicknessFromSizeString(selectedSize);
-    final thicknessUnit = selectedSize.isNotEmpty
-        ? inferThicknessUnitFromSizeString(selectedSize)
-        : _thicknessUnit;
+    double? thicknessValue;
+    String thicknessUnit = _thicknessUnit;
+    if (_useCatalog) {
+      final selectedSize = (_selectedCatalogMaterial!['size'] ?? '')
+          .toString()
+          .trim();
+      thicknessValue = parseThicknessFromSizeString(selectedSize);
+      thicknessUnit = selectedSize.isNotEmpty
+          ? inferThicknessUnitFromSizeString(selectedSize)
+          : _thicknessUnit;
+    } else {
+      thicknessValue = double.tryParse(_manualThicknessController.text.trim());
+      thicknessUnit = _thicknessUnit;
+    }
 
     if (thicknessValue == null) {
       setState(() => isCreating = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'This Board material needs a thickness. Select a catalog variant with a thickness size (e.g. 0.5").',
-          ),
+          content: Text('This Board material needs a thickness.'),
           backgroundColor: Colors.orange,
         ),
       );
       return;
     }
 
+    final baseRequest = _useCatalog
+        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
+        : <String, dynamic>{
+            'useCatalog': false,
+            'name': _nameController.text.trim(),
+            'category': 'Board',
+          };
+
     final request = {
-      ...buildCatalogMaterialCreateFields(_selectedCatalogMaterial!),
+      ...baseRequest,
       if (_imagePath != null) 'imagePath': _imagePath,
       'thickness': thicknessValue,
       'thicknessUnit': thicknessUnit,
@@ -201,16 +216,13 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: ColorsApp.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: ColorsApp.btnColor,
         elevation: 0,
         title: const Text(
           "Create Board Material",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
         ),
       ),
       body: Form(
@@ -220,6 +232,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
           children: [
             CustomImgBg(
               placeholderText: 'Add Material Image (Optional)',
+              selectedImagePath: _imagePath,
               onImageSelected: (image) {
                 setState(() => _imagePath = image?.path);
               },
@@ -253,9 +266,29 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
             const SizedBox(height: 20),
 
             _buildSectionCard('Basic Information', [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Use Supported Catalog (Recommended)'),
+                subtitle: const Text(
+                  'Turn this off to enter a custom material name (non-catalog).',
+                ),
+                value: _useCatalog,
+                onChanged: (v) {
+                  setState(() {
+                    _useCatalog = v;
+                    if (!_useCatalog) {
+                      _selectedCatalogMaterial = null;
+                    } else if (_selectedCatalogMaterial != null) {
+                      _nameController.text = catalogMaterialDisplayName(
+                        _selectedCatalogMaterial!,
+                      );
+                    }
+                  });
+                },
+              ),
               TextFormField(
                 controller: _nameController,
-                readOnly: true,
+                readOnly: _useCatalog,
                 decoration: const InputDecoration(
                   labelText: 'Material Name *',
                   border: OutlineInputBorder(),
@@ -263,9 +296,57 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
                 validator: (value) =>
                     value?.isEmpty ?? true ? 'Required' : null,
               ),
+              if (!_useCatalog) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _manualThicknessController,
+                        decoration: InputDecoration(
+                          labelText: 'Thickness *',
+                          border: const OutlineInputBorder(),
+                          suffixText: _thicknessUnit,
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          if (_useCatalog) return null;
+                          return (value?.trim().isEmpty ?? true)
+                              ? 'Required'
+                              : null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _thicknessUnit,
+                        decoration: const InputDecoration(
+                          labelText: 'Thickness Unit *',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'mm', child: Text('mm')),
+                          DropdownMenuItem(value: 'cm', child: Text('cm')),
+                          DropdownMenuItem(value: 'm', child: Text('m')),
+                          DropdownMenuItem(
+                            value: 'inches',
+                            child: Text('inches'),
+                          ),
+                          DropdownMenuItem(value: 'ft', child: Text('ft')),
+                        ],
+                        onChanged: (value) =>
+                            setState(() => _thicknessUnit = value ?? 'mm'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _pickCatalogMaterial,
+                onPressed: _useCatalog ? _pickCatalogMaterial : null,
                 icon: const Icon(Icons.fact_check_outlined),
                 label: Text(
                   _selectedCatalogMaterial == null

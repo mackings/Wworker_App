@@ -5,7 +5,6 @@ import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.da
 import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/all_companies.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/all_products_view.dart';
-import 'package:wworker/App/Settings/PlatformOwner/UI/pending_products.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/pending_materials.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/platform_analytics.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/create_global_product.dart';
@@ -14,16 +13,13 @@ import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:intl/intl.dart';
 
-
-
-
 class PlatformDashboardNew extends ConsumerStatefulWidget {
   const PlatformDashboardNew({super.key});
 
   @override
-  ConsumerState<PlatformDashboardNew> createState() => _PlatformDashboardNewState();
+  ConsumerState<PlatformDashboardNew> createState() =>
+      _PlatformDashboardNewState();
 }
-
 
 class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     with SingleTickerProviderStateMixin {
@@ -51,24 +47,18 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
   }
-
-
 
   @override
   void dispose() {
@@ -88,7 +78,9 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       if (result['success'] == true) {
         setState(() {
           stats = DashboardStats.fromJson(result['data']['stats']);
-          activity = DashboardActivity.fromJson(result['data']['recentActivity']);
+          activity = DashboardActivity.fromJson(
+            result['data']['recentActivity'],
+          );
           isLoading = false;
         });
         _animationController.forward();
@@ -128,11 +120,13 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
   double _actionsAspectRatio(double width, int columns) {
     final spacing = 12.0;
     final tileWidth = (width - (columns - 1) * spacing) / columns;
-    final tileHeight = width < 360 ? 56.0 : width < 700 ? 62.0 : 70.0;
+    final tileHeight = width < 360
+        ? 56.0
+        : width < 700
+        ? 62.0
+        : 70.0;
     return tileWidth / tileHeight;
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -154,11 +148,11 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                       child: const Center(child: CircularProgressIndicator()),
                     )
                   : error != null
-                      ? SizedBox(
-                          height: MediaQuery.of(context).size.height - 200,
-                          child: _buildErrorView(),
-                        )
-                      : _buildDashboardContent(),
+                  ? SizedBox(
+                      height: MediaQuery.of(context).size.height - 200,
+                      child: _buildErrorView(),
+                    )
+                  : _buildDashboardContent(),
             ),
           ),
         ],
@@ -166,23 +160,20 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     );
   }
 
-
   Widget _buildSliverAppBar() {
     return SliverAppBar(
       expandedHeight: 160,
       floating: false,
       pinned: true,
       backgroundColor: ColorsApp.btnColor,
+      foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                ColorsApp.btnColor,
-                ColorsApp.btnColor.withOpacity(0.8),
-              ],
+              colors: [ColorsApp.btnColor, ColorsApp.btnColor.withOpacity(0.8)],
             ),
           ),
           child: SafeArea(
@@ -262,7 +253,10 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               label: const Text('Retry'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ColorsApp.btnColor,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
             ),
           ],
@@ -291,20 +285,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               // Quick Actions Grid
               _buildQuickActionsGrid(),
 
-            //  const SizedBox(height: 6),
-
-              // Pending Products Section
-              if (activity != null && activity!.pendingProducts.isNotEmpty) ...[
-                _buildSectionHeader(
-                  'Pending Approvals',
-                  stats!.products.pending,
-                  icon: Icons.pending_actions,
-                  onSeeAll: () => Nav.push(const PendingProductsPage()),
-                ),
-                const SizedBox(height: 2),
-                _buildPendingProductsList(),
-              const SizedBox(height: 0),
-              ],
+              //  const SizedBox(height: 6),
 
               // Recent Companies
               if (activity != null && activity!.recentCompanies.isNotEmpty) ...[
@@ -494,7 +475,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                 color: ColorsApp.textColor,
               ),
             ),
-           // const SizedBox(height: 0),
+            // const SizedBox(height: 0),
             GridView.count(
               crossAxisCount: columns,
               shrinkWrap: true,
@@ -503,14 +484,6 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               mainAxisSpacing: 12,
               childAspectRatio: aspectRatio,
               children: [
-                _buildActionCard(
-                  'Review Products',
-                  Icons.approval,
-                  const Color(0xFFF59E0B),
-                  () => Nav.push(const PendingProductsPage()),
-                  badge:
-                      stats!.products.pending > 0 ? stats!.products.pending : null,
-                ),
                 _buildActionCard(
                   'All Products',
                   Icons.grid_view,
@@ -610,7 +583,10 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                 top: 0,
                 right: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(10),
@@ -691,148 +667,15 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   ),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.arrow_forward_ios, size: 12, color: ColorsApp.btnColor),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 12,
+                  color: ColorsApp.btnColor,
+                ),
               ],
             ),
           ),
       ],
-    );
-  }
-
-  Widget _buildPendingProductsList() {
-    final products = activity!.pendingProducts.take(3).toList();
-
-    return Column(
-      children: products
-          .asMap()
-          .entries
-          .map((entry) => _buildPendingProductCard(entry.value, entry.key))
-          .toList(),
-    );
-  }
-
-  Widget _buildPendingProductCard(PendingProduct product, int index) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 400 + (index * 100)),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
-        );
-      },
-      child: GestureDetector(
-        onTap: () => Nav.push(PendingProductsPage(initialProductId: product.id)),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.shade100, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Product Image
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: product.image != null
-                    ? Image.network(
-                        product.image!,
-                        width: 70,
-                        height: 70,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 70,
-                            height: 70,
-                            color: Colors.grey.shade200,
-                            child: Icon(Icons.image_not_supported,
-                                color: Colors.grey.shade400),
-                          );
-                        },
-                      )
-                    : Container(
-                        width: 70,
-                        height: 70,
-                        color: Colors.grey.shade200,
-                        child: Icon(Icons.image, color: Colors.grey.shade400),
-                      ),
-              ),
-              const SizedBox(width: 16),
-
-              // Product Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      style: GoogleFonts.openSans(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: ColorsApp.textColor,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(Icons.business,
-                            size: 14, color: Colors.grey.shade600),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            product.companyName,
-                            style: GoogleFonts.openSans(
-                              fontSize: 13,
-                              color: Colors.grey.shade600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        product.category,
-                        style: GoogleFonts.openSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right, color: Colors.grey.shade400),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -856,10 +699,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       builder: (context, value, child) {
         return Transform.translate(
           offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
+          child: Opacity(opacity: value, child: child),
         );
       },
       child: Container(
@@ -913,10 +753,14 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                     children: [
                       if (company.stats != null) ...[
                         _buildMiniStat(
-                            company.stats!.products, Icons.inventory_2),
+                          company.stats!.products,
+                          Icons.inventory_2,
+                        ),
                         const SizedBox(width: 8),
                         _buildMiniStat(
-                            company.stats!.orders, Icons.shopping_cart),
+                          company.stats!.orders,
+                          Icons.shopping_cart,
+                        ),
                         const SizedBox(width: 8),
                         _buildMiniStat(company.stats!.users, Icons.people),
                       ],

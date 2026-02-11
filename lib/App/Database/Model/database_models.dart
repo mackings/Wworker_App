@@ -56,9 +56,10 @@ class DatabaseQuotation {
     }
 
     final itemsList = (json['items'] as List<dynamic>? ?? [])
-        .map((item) => DatabaseQuotationItem.fromJson(
-              item as Map<String, dynamic>,
-            ))
+        .map(
+          (item) =>
+              DatabaseQuotationItem.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
 
     return DatabaseQuotation(
@@ -84,9 +85,12 @@ class DatabaseQuotation {
       discountAmount: (json['discountAmount'] ?? 0).toDouble(),
       finalTotal: (json['finalTotal'] ?? 0).toDouble(),
       status: json['status'] ?? 'draft',
-      dueDate: json['dueDate'] != null ? DateTime.tryParse(json['dueDate']) : null,
-      createdAt:
-          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      dueDate: json['dueDate'] != null
+          ? DateTime.tryParse(json['dueDate'])
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
       imageUrl: imageUrl,
     );
   }
@@ -126,14 +130,15 @@ class DatabaseBom {
   factory DatabaseBom.fromJson(Map<String, dynamic> json) {
     final product = json['product'] as Map<String, dynamic>?;
     final materials = (json['materials'] as List<dynamic>? ?? [])
-        .map((item) => DatabaseBomMaterial.fromJson(
-              item as Map<String, dynamic>,
-            ))
+        .map(
+          (item) => DatabaseBomMaterial.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
     final additionalCosts = (json['additionalCosts'] as List<dynamic>? ?? [])
-        .map((item) => DatabaseBomAdditionalCost.fromJson(
-              item as Map<String, dynamic>,
-            ))
+        .map(
+          (item) =>
+              DatabaseBomAdditionalCost.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
 
     return DatabaseBom(
@@ -148,9 +153,12 @@ class DatabaseBom {
       materialsCost: (json['materialsCost'] ?? 0).toDouble(),
       additionalCostsTotal: (json['additionalCostsTotal'] ?? 0).toDouble(),
       totalCost: (json['totalCost'] ?? 0).toDouble(),
-      dueDate: json['dueDate'] != null ? DateTime.tryParse(json['dueDate']) : null,
-      createdAt:
-          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      dueDate: json['dueDate'] != null
+          ? DateTime.tryParse(json['dueDate'])
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
     );
   }
 }
@@ -397,8 +405,9 @@ class DatabaseStaff {
       permissions: DatabaseStaffPermissions.fromJson(
         (json['permissions'] as Map<String, dynamic>? ?? {}),
       ),
-      joinedAt:
-          json['joinedAt'] != null ? DateTime.tryParse(json['joinedAt']) : null,
+      joinedAt: json['joinedAt'] != null
+          ? DateTime.tryParse(json['joinedAt'])
+          : null,
     );
   }
 }
@@ -440,10 +449,23 @@ class DatabaseProduct {
 
 class DatabaseMaterial {
   final String id;
+  final String? companyName;
   final String name;
   final String category;
-  final double pricePerSqm;
+  final String? subCategory;
+  final String? unit;
+  final String? size;
+  final String? color;
+  final double? thickness;
+  final String? thicknessUnit;
+  final String? catalogKey;
+  final double? catalogPrice;
+  final bool? isCatalogMaterial;
+  final bool? isCatalogPriced;
+  final double? pricePerSqm;
+  final double? pricePerUnit;
   final String pricingUnit;
+  final List<DatabaseMaterialType> types;
   final String status;
   final bool isGlobal;
   final double? standardWidth;
@@ -452,10 +474,23 @@ class DatabaseMaterial {
 
   DatabaseMaterial({
     required this.id,
+    this.companyName,
     required this.name,
     required this.category,
-    required this.pricePerSqm,
+    this.subCategory,
+    this.unit,
+    this.size,
+    this.color,
+    this.thickness,
+    this.thicknessUnit,
+    this.catalogKey,
+    this.catalogPrice,
+    this.isCatalogMaterial,
+    this.isCatalogPriced,
+    this.pricePerSqm,
+    this.pricePerUnit,
     required this.pricingUnit,
+    this.types = const [],
     required this.status,
     required this.isGlobal,
     this.standardWidth,
@@ -466,10 +501,28 @@ class DatabaseMaterial {
   factory DatabaseMaterial.fromJson(Map<String, dynamic> json) {
     return DatabaseMaterial(
       id: json['_id'] ?? '',
+      companyName: json['companyName'],
       name: json['name'] ?? '',
       category: json['category'] ?? '',
-      pricePerSqm: (json['pricePerSqm'] ?? 0).toDouble(),
+      subCategory: json['subCategory'],
+      unit: json['unit'],
+      size: json['size'],
+      color: json['color'],
+      thickness: (json['thickness'] as num?)?.toDouble(),
+      thicknessUnit: json['thicknessUnit'],
+      catalogKey: json['catalogKey'],
+      catalogPrice: (json['catalogPrice'] as num?)?.toDouble(),
+      isCatalogMaterial: json['isCatalogMaterial'],
+      isCatalogPriced: json['isCatalogPriced'],
+      pricePerSqm: (json['pricePerSqm'] as num?)?.toDouble(),
+      pricePerUnit: (json['pricePerUnit'] as num?)?.toDouble(),
       pricingUnit: json['pricingUnit'] ?? '',
+      types:
+          (json['types'] as List?)
+              ?.whereType<Map<String, dynamic>>()
+              .map(DatabaseMaterialType.fromJson)
+              .toList() ??
+          const [],
       status: json['status'] ?? '',
       isGlobal: json['isGlobal'] ?? false,
       standardWidth: json['standardWidth'] != null
@@ -480,6 +533,34 @@ class DatabaseMaterial {
           : null,
       standardUnit: json['standardUnit'],
     );
+  }
+}
+
+class DatabaseMaterialType {
+  final String name;
+  final double? pricePerUnit;
+  final double? pricePerSqm;
+
+  const DatabaseMaterialType({
+    required this.name,
+    this.pricePerUnit,
+    this.pricePerSqm,
+  });
+
+  factory DatabaseMaterialType.fromJson(Map<String, dynamic> json) {
+    return DatabaseMaterialType(
+      name: json['name'] ?? '',
+      pricePerUnit: (json['pricePerUnit'] as num?)?.toDouble(),
+      pricePerSqm: (json['pricePerSqm'] as num?)?.toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+      if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
+    };
   }
 }
 
@@ -518,9 +599,10 @@ class DatabaseInvoice {
 
   factory DatabaseInvoice.fromJson(Map<String, dynamic> json) {
     final items = (json['items'] as List<dynamic>? ?? [])
-        .map((item) => DatabaseQuotationItem.fromJson(
-              item as Map<String, dynamic>,
-            ))
+        .map(
+          (item) =>
+              DatabaseQuotationItem.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
 
     return DatabaseInvoice(
@@ -536,9 +618,12 @@ class DatabaseInvoice {
       balance: (json['balance'] ?? 0).toDouble(),
       paymentStatus: json['paymentStatus'] ?? '',
       status: json['status'] ?? '',
-      dueDate: json['dueDate'] != null ? DateTime.tryParse(json['dueDate']) : null,
-      createdAt:
-          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      dueDate: json['dueDate'] != null
+          ? DateTime.tryParse(json['dueDate'])
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
     );
   }
 }
@@ -581,16 +666,18 @@ class DatabaseReceipt {
       orderId: json['orderId'] ?? '',
       orderNumber: json['orderNumber'] ?? '',
       clientName: json['clientName'] ?? '',
-      receiptDate:
-          json['receiptDate'] != null ? DateTime.tryParse(json['receiptDate']) : null,
+      receiptDate: json['receiptDate'] != null
+          ? DateTime.tryParse(json['receiptDate'])
+          : null,
       totalAmount: (json['totalAmount'] ?? 0).toDouble(),
       amountPaid: (json['amountPaid'] ?? 0).toDouble(),
       balance: (json['balance'] ?? 0).toDouble(),
       paymentMethod: json['paymentMethod'] ?? '',
       notes: json['notes'],
       reference: json['reference'],
-      createdAt:
-          json['createdAt'] != null ? DateTime.tryParse(json['createdAt']) : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
     );
   }
 }
