@@ -1050,6 +1050,27 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     return NumberFormat.decimalPattern().format(value.round());
   }
 
+  String _stripMeasurementFromLabel(dynamic raw) {
+    final text = (raw ?? '').toString().trim();
+    if (text.isEmpty) return '-';
+
+    // Matches 1x10x144, 1"x10"x144", 0.25" x 48" x 96", 1/2x10x144, etc.
+    final dimensionPattern = RegExp(
+      r'(\d+(?:\.\d+)?|\d+\s*/\s*\d+)\s*(?:"|in|inch|inches|mm|cm|m|ft)?\s*[xX]\s*'
+      r'(\d+(?:\.\d+)?|\d+\s*/\s*\d+)(?:\s*(?:"|in|inch|inches|mm|cm|m|ft)?\s*[xX]\s*'
+      r'(\d+(?:\.\d+)?|\d+\s*/\s*\d+)\s*(?:"|in|inch|inches|mm|cm|m|ft)?)?',
+    );
+
+    final match = dimensionPattern.firstMatch(text);
+    if (match == null) {
+      return text;
+    }
+
+    var cleaned = text.substring(0, match.start).trim();
+    cleaned = cleaned.replaceFirst(RegExp(r'[\s_\-"]+$'), '').trim();
+    return cleaned.isEmpty ? text : cleaned;
+  }
+
   // Material and Additional Cost card widgets remain the same...
   Widget _buildMaterialCard(Map<String, dynamic> item) {
     return Consumer(
@@ -1088,9 +1109,15 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              buildRow('Product Type', item["Product"] ?? "-"),
+              buildRow(
+                'Product Type',
+                _stripMeasurementFromLabel(item["Product"]),
+              ),
               const SizedBox(height: 12),
-              buildRow('Material Name', item["Materialname"] ?? "-"),
+              buildRow(
+                'Material Name',
+                _stripMeasurementFromLabel(item["Materialname"]),
+              ),
               const SizedBox(height: 12),
               buildRow('Width', item["Width"]?.toString() ?? "-"),
               const SizedBox(height: 12),

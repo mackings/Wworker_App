@@ -113,6 +113,8 @@ class _SessionGateState extends State<SessionGate> {
     final text = message.toLowerCase();
     return text.contains("token") ||
         text.contains("unauthor") ||
+        text.contains("not authorized") ||
+        text.contains("authorized to access this route") ||
         text.contains("expired") ||
         text.contains("jwt") ||
         text.contains("forbidden") ||

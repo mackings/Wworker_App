@@ -36,13 +36,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   // API Data
   List<MaterialModel> _materials = [];
   List<Map<String, dynamic>> _groupedCategories = [];
+  final Map<String, Map<String, dynamic>> _dimensionRulesByCategory = {};
   int _selectedCategoryIndex = 0;
   int _selectedSubCategoryIndex = 0;
   String? _selectedVariantId;
   bool _isLoadingMaterials = true;
   MaterialModel? _selectedMaterial;
   String? _selectedMaterialType;
-  bool _isCustomType = false;
   String? _dimensionUnit; // Unit for requiredWidth/requiredLength sent to API
 
   // Foam-specific selections
@@ -81,12 +81,28 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   Future<void> _loadMaterials() async {
     setState(() => _isLoadingMaterials = true);
     final results = await Future.wait([
-      _materialService.getMaterials(),
+      _materialService.getAllMaterials(),
       _materialService.getGroupedMaterials(),
     ]);
 
-    final materials = results[0] as List<MaterialModel>;
-    final groupedResult = results[1] as Map<String, dynamic>;
+    final allMaterialsResult = results[0];
+    final materials =
+        allMaterialsResult['success'] == true && allMaterialsResult['data'] is List
+        ? (allMaterialsResult['data'] as List)
+              .whereType<Map>()
+              .map((e) => MaterialModel.fromJson(Map<String, dynamic>.from(e)))
+              .toList()
+        : <MaterialModel>[];
+
+    final rulesRaw = allMaterialsResult['dimensionRulesByCategory'];
+    final rulesList = rulesRaw is List
+        ? rulesRaw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+        : <Map<String, dynamic>>[];
+
+    final groupedResult = results[1];
     final groupedData =
         groupedResult['success'] == true && groupedResult['data'] is List
         ? (groupedResult['data'] as List)
@@ -98,6 +114,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     setState(() {
       _materials = materials;
       _groupedCategories = groupedData;
+      _dimensionRulesByCategory.clear();
+      for (final rule in rulesList) {
+        final category = (rule['category'] ?? '').toString().trim();
+        if (category.isNotEmpty) {
+          _dimensionRulesByCategory[category.toLowerCase()] = rule;
+        }
+      }
       _isLoadingMaterials = false;
 
       // Prefer auto-selecting the first grouped variant if available.
@@ -118,20 +141,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         }
       }
     });
-  }
-
-  List<String> _materialUnits() {
-    final units = <String>{};
-    for (final m in _materials) {
-      final u = (m.unit ?? '').toString().trim();
-      if (u.isNotEmpty) units.add(u);
-    }
-    if (units.isEmpty) {
-      units.add('Piece');
-    }
-    final list = units.toList();
-    list.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    return list;
   }
 
   double? _asDouble(dynamic value) {
@@ -167,7 +176,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     // Examples: 1"x10"x144", 1 x 10 x 144, 0.5" x 48" x 96"
     final s = raw.trim();
     if (s.isEmpty) return null;
-    final matches = RegExp(r'(\\d+(?:\\.\\d+)?|\\d+\\s*/\\s*\\d+)')
+    final matches = RegExp(r'(\d+(?:\.\d+)?|\d+\s*/\s*\d+)')
         .allMatches(s)
         .map((m) => m.group(0) ?? '')
         .where((v) => v.trim().isNotEmpty)
@@ -192,6 +201,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     return nums.take(2).toList();
   }
 
+  bool _isDimensionSizeLabel(String raw) {
+    final triplet = _parseSizeTriplet(raw);
+    return triplet != null && triplet.length >= 3;
+  }
+
   void _prefillFromVariantSizeString(String raw) {
     final triplet = _parseSizeTriplet(raw);
     if (triplet == null) return;
@@ -201,33 +215,41 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       final w = triplet[1];
       final l = triplet[2];
 
-      if (widthController.text.trim().isEmpty) {
-        widthController.text = w.toString();
-      }
-      if (lengthController.text.trim().isEmpty) {
-        lengthController.text = l.toString();
-      }
+      widthController.text = w.toString();
+      lengthController.text = l.toString();
 
       // Only use thickness from size as a fallback when API thickness is null.
       if (thicknessController.text.trim().isEmpty &&
           (_selectedMaterial?.thickness == null)) {
         thicknessController.text = t.toString();
+        thickness = t.toString();
       }
     } else if (triplet.length == 2) {
       final w = triplet[0];
       final l = triplet[1];
-      if (widthController.text.trim().isEmpty) {
-        widthController.text = w.toString();
-      }
-      if (lengthController.text.trim().isEmpty) {
-        lengthController.text = l.toString();
-      }
+      widthController.text = w.toString();
+      lengthController.text = l.toString();
     }
 
     // Infer dimension unit from the size string if possible.
     final inferred = _normalizeLinearUnit(raw.contains('"') ? 'inches' : null);
     if (_dimensionUnit == null && inferred != null) {
       _dimensionUnit = inferred;
+    }
+  }
+
+  void _setAutoMaterialName({
+    String? category,
+    String? subCategory,
+    String? size,
+  }) {
+    final sub = _cleanGroupLabel((subCategory ?? '').trim());
+    final cat = _cleanGroupLabel((category ?? '').trim());
+    final sz = _cleanVariantSizeLabel((size ?? '').trim());
+    final base = sub.isNotEmpty ? sub : (cat.isNotEmpty ? cat : _selectedMaterial?.name ?? '');
+    final value = sz.isNotEmpty ? '$base $sz' : base;
+    if (value.trim().isNotEmpty) {
+      materialTypeController.text = value.trim();
     }
   }
 
@@ -249,10 +271,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       }
     }
 
-    if (unit == null || !linearUnits.contains(unit)) {
-      if (su != null) {
-        _dimensionUnit = su;
-      }
+    if (su != null &&
+        ((unit == null || !linearUnits.contains(unit)) || _dimensionUnit == null)) {
+      _dimensionUnit = su;
+      unit = su;
     }
 
     // If we now have enough info, auto-calc once.
@@ -312,6 +334,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         _asDouble(variant['catalogPrice']);
     final pricePerSqm = _asDouble(variant['pricePerSqm']);
 
+    final dimensionRule = variant['dimensionRule'] is Map
+        ? Map<String, dynamic>.from(variant['dimensionRule'] as Map)
+        : <String, dynamic>{};
+    final stockDimensions = dimensionRule['stockDimensions'] is Map
+        ? Map<String, dynamic>.from(dimensionRule['stockDimensions'] as Map)
+        : <String, dynamic>{};
+
     return MaterialModel(
       id: id,
       name: (variant['name'] ?? '').toString(),
@@ -325,6 +354,112 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       pricePerSqm: pricePerSqm,
       catalogPrice: _asDouble(variant['catalogPrice']),
       isCatalogMaterial: variant['isCatalogMaterial'] == true,
+      thickness: _asDouble(variant['thickness']) ?? _asDouble(stockDimensions['thickness']),
+      thicknessUnit:
+          (variant['thicknessUnit'] ?? stockDimensions['unit'])?.toString(),
+      standardWidth: _asDouble(stockDimensions['width']),
+      standardLength: _asDouble(stockDimensions['length']),
+      standardUnit: stockDimensions['unit']?.toString(),
+    );
+  }
+
+  Map<String, dynamic>? _categoryRuleFor(String? category) {
+    final key = category?.trim().toLowerCase();
+    if (key == null || key.isEmpty) return null;
+    return _dimensionRulesByCategory[key];
+  }
+
+  void _prefillFromDimensionRule(Map<String, dynamic>? dimensionRule) {
+    if (dimensionRule == null) return;
+    final stockDimensions = dimensionRule['stockDimensions'] is Map
+        ? Map<String, dynamic>.from(dimensionRule['stockDimensions'] as Map)
+        : <String, dynamic>{};
+    final projectInput = dimensionRule['projectInput'] is Map
+        ? Map<String, dynamic>.from(dimensionRule['projectInput'] as Map)
+        : <String, dynamic>{};
+
+    final stockWidth = _asDouble(stockDimensions['width']);
+    final stockLength = _asDouble(stockDimensions['length']);
+    final stockThickness = _asDouble(stockDimensions['thickness']);
+
+    if (stockWidth != null &&
+        stockWidth > 0 &&
+        widthController.text.trim().isEmpty) {
+      widthController.text = stockWidth.toString();
+    }
+    if (stockLength != null &&
+        stockLength > 0 &&
+        lengthController.text.trim().isEmpty) {
+      lengthController.text = stockLength.toString();
+    }
+    if (stockThickness != null &&
+        stockThickness > 0 &&
+        thicknessController.text.trim().isEmpty) {
+      thicknessController.text = stockThickness.toString();
+      thickness = stockThickness.toString();
+    }
+
+    final normalized = _normalizeLinearUnit(
+      stockDimensions['unit']?.toString() ??
+          projectInput['defaultUnit']?.toString(),
+    );
+    if (normalized != null) {
+      _dimensionUnit = normalized;
+      unit = normalized;
+    }
+  }
+
+  void _resetProjectSizeInputs() {
+    widthController.clear();
+    lengthController.clear();
+    thicknessController.clear();
+    width = null;
+    length = null;
+    thickness = null;
+    _costCalculation = null;
+  }
+
+  void _selectFirstVariantForCurrentSelection() {
+    if (_selectedCategoryIndex < 0 ||
+        _selectedCategoryIndex >= _groupedCategories.length) {
+      return;
+    }
+
+    final categoryObj = _groupedCategories[_selectedCategoryIndex];
+    final categoryName = _cleanGroupLabel(
+      (categoryObj['category'] ?? '').toString(),
+    );
+    final subCatsRaw = categoryObj['subCategories'];
+    final subCats = subCatsRaw is List
+        ? subCatsRaw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+        : <Map<String, dynamic>>[];
+    if (subCats.isEmpty) return;
+
+    if (_selectedSubCategoryIndex >= subCats.length) {
+      _selectedSubCategoryIndex = 0;
+    }
+
+    final subObj = subCats[_selectedSubCategoryIndex];
+    final rawSubName = _cleanGroupLabel((subObj['subCategory'] ?? '').toString());
+    final subName = rawSubName.isEmpty ? categoryName : rawSubName;
+    final variantsRaw = subObj['variants'];
+    final variants = variantsRaw is List
+        ? variantsRaw
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .toList()
+        : <Map<String, dynamic>>[];
+
+    if (variants.isEmpty) return;
+    _selectGroupedVariant(
+      category: categoryName,
+      subCategory: subName,
+      variant: variants.first,
+      categoryIndex: _selectedCategoryIndex,
+      subCategoryIndex: _selectedSubCategoryIndex,
     );
   }
 
@@ -335,6 +470,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     required int categoryIndex,
     required int subCategoryIndex,
   }) {
+    _resetProjectSizeInputs();
+
     final resolved = _resolveMaterialFromVariant(
       category: category,
       subCategory: subCategory,
@@ -357,12 +494,27 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       materialTypeController.text = size.isNotEmpty
           ? '$typeName $size'
           : typeName;
+    } else {
+      _setAutoMaterialName(
+        category: category,
+        subCategory: subCategory,
+        size: (variant['size'] ?? '').toString(),
+      );
     }
 
     // Prefill length/width from size string when it represents dimensions (e.g. 1"x10"x144").
     final size = (variant['size'] ?? '').toString().trim();
     if (size.isNotEmpty) {
       _prefillFromVariantSizeString(size);
+    }
+
+    final variantDimensionRule = variant['dimensionRule'] is Map
+        ? Map<String, dynamic>.from(variant['dimensionRule'] as Map)
+        : null;
+    if (variantDimensionRule != null) {
+      _prefillFromDimensionRule(variantDimensionRule);
+    } else {
+      _prefillFromDimensionRule(_categoryRuleFor(category));
     }
   }
 
@@ -403,6 +555,32 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               .map((e) => Map<String, dynamic>.from(e))
               .toList()
         : <Map<String, dynamic>>[];
+    final shouldHideVariantSizes =
+        variants.isNotEmpty &&
+        variants.every((v) {
+          final sizeRaw = (v['size'] ?? '').toString().trim();
+          return _isDimensionSizeLabel(sizeRaw);
+        });
+
+    if (shouldHideVariantSizes && variants.isNotEmpty) {
+      final firstVariant = variants.first;
+      final firstId = (firstVariant['id'] ?? firstVariant['_id'] ?? '')
+          .toString();
+      if (firstId.isNotEmpty && firstId != _selectedVariantId) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          setState(() {
+            _selectGroupedVariant(
+              category: categoryName,
+              subCategory: subName,
+              variant: firstVariant,
+              categoryIndex: _selectedCategoryIndex,
+              subCategoryIndex: _selectedSubCategoryIndex,
+            );
+          });
+        });
+      }
+    }
 
     final bool allSubLabelsSameAsCategory =
         subCats.isNotEmpty &&
@@ -433,7 +611,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                       _selectedCategoryIndex = idx;
                       _selectedSubCategoryIndex = 0;
                       _selectedVariantId = null;
+                      _resetProjectSizeInputs();
                     });
+                    _selectFirstVariantForCurrentSelection();
                   },
                 ),
               );
@@ -461,7 +641,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                       setState(() {
                         _selectedSubCategoryIndex = idx;
                         _selectedVariantId = null;
+                        _resetProjectSizeInputs();
                       });
+                      _selectFirstVariantForCurrentSelection();
                     },
                   ),
                 );
@@ -474,6 +656,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             "No variants found for $categoryName / $subName",
             style: GoogleFonts.openSans(color: const Color(0xFF7B7B7B)),
           )
+        else if (shouldHideVariantSizes)
+          const SizedBox.shrink()
         else
           Wrap(
             spacing: 10,
@@ -540,15 +724,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   /// Set default units based on material type
   /// Set default units based on material type
   void _setDefaultUnitsForMaterial(MaterialModel material) {
-    // Unit dropdown is for the material's selling/pricing unit (e.g. Piece, Yard).
-    final matUnit = (material.unit ?? '').toString().trim();
-    if (matUnit.isNotEmpty) {
-      unit = matUnit;
-    }
-
-    // Dimension unit for calculation comes from standardUnit.
-    _dimensionUnit =
-        _normalizeLinearUnit(material.standardUnit) ?? _dimensionUnit;
+    // For project dimensions we need linear units (mm/cm/m/ft/inches).
+    final resolvedDimensionUnit =
+        _normalizeLinearUnit(material.standardUnit) ??
+        _normalizeLinearUnit(material.thicknessUnit) ??
+        _normalizeLinearUnit(
+          _categoryRuleFor(material.category)?['projectInput']?['defaultUnit']
+              ?.toString(),
+        ) ??
+        _dimensionUnit ??
+        'inches';
+    _dimensionUnit = resolvedDimensionUnit;
+    unit = resolvedDimensionUnit;
 
     // ✅ Update state AFTER build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -617,8 +804,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       _selectedMaterial = material;
       _selectedMaterialType = null;
       _selectedFoamVariant = null;
-      _isCustomType = false;
-      _costCalculation = null;
       materialTypeController.clear();
 
       // Auto-set units based on material type
@@ -629,26 +814,21 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
       // Thickness from API (if present); otherwise allow user input later.
       thicknessController.text = material.thickness?.toString() ?? '';
+      if (material.thickness != null) {
+        thickness = material.thickness!.toString();
+      }
+
+      _setAutoMaterialName(
+        category: material.category,
+        subCategory: material.subCategory,
+        size: material.size,
+      );
     });
 
     // Prefill project size + unit from API standard dims/unit (without overwriting user input).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _prefillProjectSizeAndUnit(material);
-    });
-  }
-
-  void _onMaterialTypeSelected(String? type) {
-    setState(() {
-      if (type == 'custom') {
-        _isCustomType = true;
-        _selectedMaterialType = null;
-        materialTypeController.clear();
-      } else {
-        _isCustomType = false;
-        _selectedMaterialType = type;
-        materialTypeController.text = type ?? '';
-      }
     });
   }
 
@@ -773,13 +953,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     setState(() {
       _selectedMaterialType = null;
       _selectedFoamVariant = null;
-      _isCustomType = false;
       widthController.clear();
       lengthController.clear();
       _costCalculation = null;
+      if (_selectedMaterial != null) {
+        _setAutoMaterialName(
+          category: _selectedMaterial!.category,
+          subCategory: _selectedMaterial!.subCategory,
+          size: _selectedMaterial!.size,
+        );
+      }
     });
-
-    materialTypeController.clear();
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -792,7 +976,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   @override
   Widget build(BuildContext context) {
     final isFoam = _selectedMaterial?.category?.toUpperCase() == 'FOAM';
-    final hasTypes = _selectedMaterial?.types.isNotEmpty ?? false;
     final hasFoamVariants = _selectedMaterial?.foamVariants.isNotEmpty ?? false;
 
     return Container(
@@ -907,11 +1090,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           // Foam Variants Selection (if foam material)
           if (isFoam && hasFoamVariants) _buildFoamVariantSelection(),
 
-          // Material Type/Name - Smart Dropdown with Custom Input (for non-foam or foam with types)
-          if (_selectedMaterial != null && (!isFoam || hasTypes))
-            _buildMaterialTypeField(),
+          // Material name is auto-generated from the selected material and hidden from UI.
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
           // Display standard material info (read-only from API)
           if (_selectedMaterial != null) ...[
@@ -1045,8 +1226,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: _buildDropdown("Unit", _materialUnits(), unit, (v) {
-                  setState(() => unit = v);
+                child: _buildDropdown("Unit", linearUnits, unit, (v) {
+                  setState(() {
+                    unit = v;
+                    _dimensionUnit = v;
+                  });
                   _calculateCosts();
                 }),
               ),
@@ -1187,124 +1371,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           onChanged: _onFoamVariantSelected,
         ),
         const SizedBox(height: 16),
-      ],
-    );
-  }
-
-  Widget _buildMaterialTypeField() {
-    final hasTypes = _selectedMaterial!.types.isNotEmpty;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Material Name",
-          style: GoogleFonts.openSans(
-            fontSize: 14,
-            color: const Color(0xFF7B7B7B),
-          ),
-        ),
-        const SizedBox(height: 6),
-
-        if (hasTypes && !_isCustomType)
-          DropdownButtonFormField<String>(
-            value: _selectedMaterialType,
-            isExpanded: true,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-              ),
-            ),
-            hint: const Text("Select type or enter custom"),
-            items: [
-              ..._selectedMaterial!.types.map((type) {
-                return DropdownMenuItem(
-                  value: type.name,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(type.name, overflow: TextOverflow.ellipsis),
-                      ),
-                      if (type.pricePerSqm != null && type.pricePerSqm! > 0)
-                        Text(
-                          '₦${type.pricePerSqm!.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Color(0xFFA16438),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }),
-              const DropdownMenuItem(
-                value: 'custom',
-                child: Text(
-                  "Enter custom name",
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: Color(0xFFA16438),
-                  ),
-                ),
-              ),
-            ],
-            onChanged: (value) {
-              _onMaterialTypeSelected(value);
-              _calculateCosts();
-            },
-          )
-        else
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: materialTypeController,
-                  decoration: InputDecoration(
-                    contentPadding: const EdgeInsets.all(12),
-                    hintText: hasTypes
-                        ? "Enter custom material name"
-                        : "Enter material name",
-                    hintStyle: const TextStyle(
-                      color: Color(0xFFBDBDBD),
-                      fontSize: 13,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                    ),
-                  ),
-                ),
-              ),
-              if (hasTypes && _isCustomType)
-                Padding(
-                  padding: const EdgeInsets.only(left: 8.0),
-                  child: TextButton(
-                    onPressed: () {
-                      setState(() {
-                        _isCustomType = false;
-                        _selectedMaterialType = null;
-                        materialTypeController.clear();
-                      });
-                    },
-                    style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFA16438),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 12,
-                      ),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      "Back",
-                      style: TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ),
-            ],
-          ),
       ],
     );
   }

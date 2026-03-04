@@ -13,6 +13,7 @@ import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
 import 'package:wworker/App/Quotation/Model/Materialmodel.dart';
 import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/Widget/QGlancecard.dart';
+import 'package:wworker/App/OverHead/View/AddOverhead.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/Constant/colors.dart';
@@ -488,11 +489,17 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                               count: additionalCosts.length,
                               icon: Icons.attach_money_outlined,
                               onAdd: () async {
-                                final newItem =
-                                    await _showAdditionalCostFormSheet();
+                                final source = await _showCostSourcePickerSheet();
+                                if (source == null) return;
+                                Map<String, dynamic>? newItem;
+                                if (source == 'custom') {
+                                  newItem = await _showAdditionalCostFormSheet();
+                                } else if (source == 'overhead') {
+                                  newItem = await _showOverheadCostPickerSheet();
+                                }
                                 if (newItem == null) return;
                                 setSheetState(() {
-                                  additionalCosts.add(newItem);
+                                  additionalCosts.add(newItem!);
                                 });
                               },
                             ),
@@ -524,6 +531,23 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                 );
                               }),
                             const SizedBox(height: 24),
+                            CustomButton(
+                              text: "Edit Overhead Cost",
+                              outlined: true,
+                              icon: Icons.account_balance_wallet_outlined,
+                              onPressed: () async {
+                                await Nav.push(const AddOverheadCostCard());
+                                if (!mounted) return;
+
+                                final selectedOverhead =
+                                    await _showOverheadCostPickerSheet();
+                                if (selectedOverhead == null) return;
+                                setSheetState(() {
+                                  additionalCosts.add(selectedOverhead);
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
                             CustomButton(
                               text: "Save Changes",
                               onPressed: () async {
@@ -756,10 +780,12 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       text: initial?["quantity"]?.toString() ?? "1",
     );
     bool disableIncrement = initial?["disableIncrement"] == true;
-    String? unitValue = unitController.text.trim().isEmpty
-        ? null
-        : unitController.text.trim();
-    const linearUnits = ["mm", "cm", "m", "ft", "in"];
+    const linearUnits = ["mm", "cm", "m", "ft", "inches"];
+    String? unitValue = _normalizeLinearUnitForEdit(unitController.text.trim());
+    if (unitValue != null && !linearUnits.contains(unitValue)) {
+      unitValue = null;
+    }
+    unitController.text = unitValue ?? '';
     double? latestPriceValue;
 
     Future<String?> _resolveMaterialId() async {
@@ -812,7 +838,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                       final length = double.tryParse(
                         lengthController.text.trim(),
                       );
-                      final unit = unitValue ?? unitController.text.trim();
+                      final unit = unitValue ??
+                          _normalizeLinearUnitForEdit(unitController.text.trim()) ??
+                          '';
                       final quantity =
                           int.tryParse(quantityController.text.trim()) ?? 1;
 
@@ -973,8 +1001,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                         value: unitValue,
                                         onChanged: (value) {
                                           setModalState(() {
-                                            unitValue = value;
-                                            unitController.text = value ?? "";
+                                            unitValue =
+                                                _normalizeLinearUnitForEdit(value ?? "");
+                                            unitController.text = unitValue ?? "";
                                           });
                                         },
                                       ),
@@ -1172,6 +1201,172 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     );
 
     return result;
+  }
+
+  String? _normalizeLinearUnitForEdit(String? raw) {
+    final v = raw?.toLowerCase().trim();
+    if (v == null || v.isEmpty) return null;
+    if (v == 'in' || v == 'inch' || v == 'inches' || v.contains('"')) {
+      return 'inches';
+    }
+    if (v == 'feet' || v == 'foot' || v == 'ft') return 'ft';
+    if (v == 'meter' || v == 'meters' || v == 'm') return 'm';
+    if (v == 'centimeter' || v == 'centimeters' || v == 'cm') return 'cm';
+    if (v == 'millimeter' || v == 'millimeters' || v == 'mm') return 'mm';
+    return null;
+  }
+
+  Future<String?> _showCostSourcePickerSheet() async {
+    return showModalBottomSheet<String>(
+      context: context,
+      useRootNavigator: true,
+      isDismissible: true,
+      enableDrag: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    "Choose Cost Source",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const Icon(Icons.edit_note),
+                  title: const Text("Add Custom Cost"),
+                  subtitle: const Text("Enter a one-off additional cost manually"),
+                  onTap: () => Navigator.pop(context, 'custom'),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.account_balance_wallet_outlined),
+                  title: const Text("Add Overhead Cost"),
+                  subtitle: const Text("Pick from saved overhead items"),
+                  onTap: () => Navigator.pop(context, 'overhead'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>?> _showOverheadCostPickerSheet() async {
+    final overheads = await OverheadCostManager.getOverheadCosts();
+    if (!mounted) return null;
+
+    if (overheads.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No saved overhead costs found. Add overhead first."),
+        ),
+      );
+      return null;
+    }
+
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.65,
+          minChildSize: 0.45,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  const SizedBox(height: 8),
+                  Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined),
+                        SizedBox(width: 8),
+                        Text(
+                          "Select Overhead Cost",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.separated(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount: overheads.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final item = overheads[index];
+                        final category = (item['category'] ?? 'Overhead').toString();
+                        final description = (item['description'] ?? '').toString();
+                        final period = (item['period'] ?? '').toString();
+                        final amount = double.tryParse(
+                              (item['cost'] ?? 0).toString(),
+                            ) ??
+                            0.0;
+                        return ListTile(
+                          tileColor: const Color(0xFFF5F8F2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          title: Text(category),
+                          subtitle: Text(
+                            description.isEmpty ? period : "$description • $period",
+                          ),
+                          trailing: Text(
+                            "₦${NumberFormat.decimalPattern().format(amount.round())}",
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          onTap: () {
+                            Navigator.pop(context, {
+                              "type": category,
+                              "description": description.isEmpty
+                                  ? "Overhead ($period)"
+                                  : "$description ($period)",
+                              "amount": amount.toStringAsFixed(0),
+                              "disableIncrement": true,
+                            });
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<Map<String, dynamic>?> _showAdditionalCostFormSheet({

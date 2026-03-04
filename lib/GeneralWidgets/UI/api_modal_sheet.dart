@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wworker/App/Auth/View/Signin.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 
@@ -50,6 +52,8 @@ class RetryTwiceInterceptor extends Interceptor {
 }
 
 class ApiFeedbackInterceptor extends Interceptor {
+  static bool _isHandlingUnauthorized = false;
+
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     final data = response.data;
@@ -75,7 +79,14 @@ class ApiFeedbackInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
+    final statusCode = err.response?.statusCode;
     final showErrorDialog = err.requestOptions.extra['showErrorDialog'] != false;
+    if (statusCode == 401) {
+      _handleUnauthorized();
+      handler.next(err);
+      return;
+    }
+
     if (!showErrorDialog) {
       handler.next(err);
       return;
@@ -87,6 +98,26 @@ class ApiFeedbackInterceptor extends Interceptor {
     }
     ApiModalSheet.showError(message);
     handler.next(err);
+  }
+
+  Future<void> _handleUnauthorized() async {
+    if (_isHandlingUnauthorized) return;
+    _isHandlingUnauthorized = true;
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      Nav.offAll(
+        const Signin(
+          sessionMessage:
+              "Your session expired or is invalid. Please log in again.",
+        ),
+      );
+    } finally {
+      await Future<void>.delayed(const Duration(milliseconds: 800));
+      _isHandlingUnauthorized = false;
+    }
   }
 }
 
