@@ -9,7 +9,6 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 
-
 class FirstOnboard extends ConsumerStatefulWidget {
   const FirstOnboard({super.key});
 
@@ -80,6 +79,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
       body: SafeArea(
         child: Stack(
           children: [
+            
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 24.0,

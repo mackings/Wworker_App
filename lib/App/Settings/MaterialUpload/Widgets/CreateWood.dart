@@ -485,35 +485,45 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const Text(
-                'Available Thicknesses',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF302E2E),
+              const Expanded(
+                child: Text(
+                  'Available Thicknesses',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF302E2E),
+                  ),
                 ),
               ),
-              Row(
-                children: [
-                  DropdownButton<String>(
-                    value: _thicknessUnit,
-                    underline: const SizedBox(),
-                    items: const [
-                      DropdownMenuItem(value: 'mm', child: Text('mm')),
-                      DropdownMenuItem(value: 'inches', child: Text('inches')),
-                    ],
-                    onChanged: (value) =>
-                        setState(() => _thicknessUnit = value!),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: _addThickness,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add'),
-                  ),
-                ],
+              const SizedBox(width: 8),
+              Flexible(
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    DropdownButton<String>(
+                      value: _thicknessUnit,
+                      underline: const SizedBox(),
+                      items: const [
+                        DropdownMenuItem(value: 'mm', child: Text('mm')),
+                        DropdownMenuItem(value: 'inches', child: Text('inches')),
+                      ],
+                      onChanged: (value) =>
+                          setState(() => _thicknessUnit = value!),
+                    ),
+                    TextButton.icon(
+                      onPressed: _addThickness,
+                      icon: const Icon(Icons.add, size: 18),
+                      label: const Text('Add'),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),

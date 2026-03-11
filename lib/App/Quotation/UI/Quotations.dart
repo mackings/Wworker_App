@@ -948,121 +948,168 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildFormSectionLabel(
-                                  icon: Icons.layers_outlined,
-                                  title: "Material Details",
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F8F2),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _buildFormSectionLabel(
+                                        icon: Icons.layers_outlined,
+                                        title: "Material Details",
+                                      ),
+                                      const SizedBox(height: 10),
+                                      CustomTextField(
+                                        label: "Material Name",
+                                        controller: nameController,
+                                      ),
+                                      const SizedBox(height: 18),
+                                      _buildFormSectionLabel(
+                                        icon: Icons.straighten_outlined,
+                                        title: "Project Size (what you need)",
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Length (longer)",
+                                              controller: lengthController,
+                                              keyboardType: TextInputType.number,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Width (shorter)",
+                                              controller: widthController,
+                                              keyboardType: TextInputType.number,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Thickness",
+                                              controller: thicknessController,
+                                              keyboardType: TextInputType.number,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Unit",
+                                              isDropdown: true,
+                                              dropdownItems: linearUnits,
+                                              value: unitValue,
+                                              onChanged: (value) {
+                                                setModalState(() {
+                                                  unitValue = _normalizeLinearUnitForEdit(
+                                                    value ?? "",
+                                                  );
+                                                  unitController.text = unitValue ?? "";
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Quantity",
+                                              controller: quantityController,
+                                              keyboardType: TextInputType.number,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: CustomTextField(
+                                              label: "Square Meter",
+                                              controller: sqmController,
+                                              enabled: false,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(
+                                            color: Colors.grey.shade200,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text(
+                                              "Price",
+                                              style: TextStyle(
+                                                color: Color(0xFF302E2E),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            Text(
+                                              priceController.text.isEmpty
+                                                  ? "₦0"
+                                                  : "₦${priceController.text}",
+                                              style: const TextStyle(
+                                                color: Color(0xFF302E2E),
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 4,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            const Text(
+                                              "Disable price increment",
+                                              style: TextStyle(
+                                                color: Color(0xFF302E2E),
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            Switch.adaptive(
+                                              value: disableIncrement,
+                                              onChanged: (value) {
+                                                setModalState(() {
+                                                  disableIncrement = value;
+                                                });
+                                              },
+                                              activeColor: const Color(0xFF8B4513),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(height: 10),
-                                CustomTextField(
-                                  label: "Material Name",
-                                  controller: nameController,
-                                ),
-                                const SizedBox(height: 16),
-                                _buildFormSectionLabel(
-                                  icon: Icons.straighten_outlined,
-                                  title: "Dimensions",
-                                ),
-                                const SizedBox(height: 10),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Width",
-                                        controller: widthController,
-                                        keyboardType: TextInputType.number,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Length",
-                                        controller: lengthController,
-                                        keyboardType: TextInputType.number,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Thickness",
-                                        controller: thicknessController,
-                                        keyboardType: TextInputType.number,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Unit",
-                                        isDropdown: true,
-                                        dropdownItems: linearUnits,
-                                        value: unitValue,
-                                        onChanged: (value) {
-                                          setModalState(() {
-                                            unitValue =
-                                                _normalizeLinearUnitForEdit(value ?? "");
-                                            unitController.text = unitValue ?? "";
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Sqm",
-                                        controller: sqmController,
-                                        enabled: false,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Quantity",
-                                        controller: quantityController,
-                                        keyboardType: TextInputType.number,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: CustomTextField(
-                                        label: "Price",
-                                        controller: priceController,
-                                        enabled: false,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      "Disable price increment",
-                                      style: TextStyle(
-                                        color: Color(0xFF302E2E),
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Switch.adaptive(
-                                      value: disableIncrement,
-                                      onChanged: (value) {
-                                        setModalState(() {
-                                          disableIncrement = value;
-                                        });
-                                      },
-                                      activeColor: const Color(0xFF8B4513),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
+                                const SizedBox(height: 14),
                                 if (isCalculating)
                                   Container(
                                     width: double.infinity,

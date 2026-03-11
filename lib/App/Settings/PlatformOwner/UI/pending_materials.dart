@@ -341,7 +341,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Review Materials',
+            'Materials',
             style: GoogleFonts.openSans(
               fontSize: 18,
               fontWeight: FontWeight.bold,

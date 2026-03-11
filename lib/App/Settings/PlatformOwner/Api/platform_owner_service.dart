@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wworker/App/Database/Model/database_models.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
@@ -23,6 +24,24 @@ class PlatformOwnerService {
     }
   }
 
+  static void _logResponseData(Response response) {
+    final path = response.requestOptions.path;
+    if (path == '/api/database/materials') {
+      final payload = response.data;
+      final data = payload is Map<String, dynamic> ? payload['data'] : null;
+      final rows = data is Map<String, dynamic> ? data['data'] : null;
+      final pagination =
+          data is Map<String, dynamic> ? data['pagination'] : null;
+      final count = rows is List ? rows.length : 0;
+      debugPrint(
+        "📄 DATA: {success: ${payload is Map<String, dynamic> ? payload['success'] : null}, message: ${payload is Map<String, dynamic> ? payload['message'] : null}, count: $count, pagination: $pagination}",
+      );
+      return;
+    }
+    debugPrint("📄 DATA:");
+    _prettyPrintJson(response.data);
+  }
+
   PlatformOwnerService() {
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -40,8 +59,7 @@ class PlatformOwnerService {
           debugPrint("━━━━━━━━━━━━━━ ✅ PLATFORM OWNER RESPONSE ━━━━━━━━━━━━━━");
           debugPrint("✅ STATUS CODE: ${response.statusCode}");
           debugPrint("🌍 URL: ${response.requestOptions.uri}");
-          debugPrint("📄 DATA:");
-          _prettyPrintJson(response.data);
+          _logResponseData(response);
           debugPrint("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
           return handler.next(response);
         },
@@ -860,6 +878,143 @@ class PlatformOwnerService {
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to create global material',
+      };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {
+        'success': false,
+        'message': 'An unexpected error occurred',
+      };
+    }
+  }
+
+  /// Get materials for material update workflows.
+  Future<Map<String, dynamic>> getDatabaseMaterials({
+    int page = 1,
+    int limit = 50,
+    String? companyName,
+    String? category,
+    String? status,
+    String? search,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Authentication required',
+        };
+      }
+
+      final queryParams = <String, dynamic>{
+        'page': page,
+        'limit': limit,
+        if (companyName != null && companyName.trim().isNotEmpty)
+          'companyName': companyName.trim(),
+        if (category != null && category.trim().isNotEmpty)
+          'category': category.trim(),
+        if (status != null && status.trim().isNotEmpty)
+          'status': status.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+      };
+
+      debugPrint("📤 [GET DATABASE MATERIALS] Query: $queryParams");
+
+      final response = await _dio.get(
+        '/api/database/materials',
+        queryParameters: queryParams,
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      final payload = response.data['data'] ?? {};
+      final rows = (payload['data'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(DatabaseMaterial.fromJson)
+          .toList();
+
+      return {
+        'success': true,
+        'message': response.data['message'] ?? 'Materials fetched successfully',
+        'data': rows,
+        'pagination': payload['pagination'] ?? {},
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [GET DATABASE MATERIALS ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Failed to fetch materials',
+      };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {
+        'success': false,
+        'message': 'An unexpected error occurred',
+      };
+    }
+  }
+
+  /// Update a material price for any company through the database endpoint.
+  Future<Map<String, dynamic>> updateCompanyMaterialPrice({
+    required String materialId,
+    double? pricePerSqm,
+    double? pricePerUnit,
+    String? pricingUnit,
+    bool showDialogs = false,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Authentication required',
+        };
+      }
+
+      final body = <String, dynamic>{
+        if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
+        if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
+        if (pricingUnit != null && pricingUnit.trim().isNotEmpty)
+          'pricingUnit': pricingUnit.trim(),
+      };
+
+      if (body.isEmpty) {
+        return {
+          'success': false,
+          'message': 'No material price changes provided',
+        };
+      }
+
+      debugPrint(
+        "📤 [UPDATE COMPANY MATERIAL PRICE] ID: $materialId BODY: $body",
+      );
+
+      final response = await _dio.put(
+        '/api/database/materials/$materialId',
+        data: body,
+        options: Options(
+          headers: {"Authorization": "Bearer $token"},
+          extra: {
+            'showSuccessDialog': showDialogs,
+            'showErrorDialog': showDialogs,
+          },
+        ),
+      );
+
+      return {
+        'success': response.data['success'] == true,
+        'message': response.data['message'] ?? 'Material updated successfully',
+        'data': response.data['data'],
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [UPDATE COMPANY MATERIAL PRICE ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message':
+            e.response?.data['message'] ?? 'Failed to update material price',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");

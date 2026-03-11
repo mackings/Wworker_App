@@ -471,6 +471,8 @@ class DatabaseMaterial {
   final double? standardWidth;
   final double? standardLength;
   final String? standardUnit;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   DatabaseMaterial({
     required this.id,
@@ -496,6 +498,8 @@ class DatabaseMaterial {
     this.standardWidth,
     this.standardLength,
     this.standardUnit,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory DatabaseMaterial.fromJson(Map<String, dynamic> json) {
@@ -532,6 +536,12 @@ class DatabaseMaterial {
           ? (json['standardLength'] ?? 0).toDouble()
           : null,
       standardUnit: json['standardUnit'],
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'].toString())
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'].toString())
+          : null,
     );
   }
 }

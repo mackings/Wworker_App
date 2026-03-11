@@ -9,6 +9,7 @@ import 'package:wworker/App/Settings/PlatformOwner/UI/pending_materials.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/platform_analytics.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/create_global_product.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/create_global_material.dart';
+import 'package:wworker/App/Settings/PlatformOwner/UI/material_updates.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:intl/intl.dart';
@@ -285,7 +286,9 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               // Quick Actions Grid
               _buildQuickActionsGrid(),
 
-              //  const SizedBox(height: 6),
+              const SizedBox(height: 16),
+
+              _buildMaterialUpdateSection(),
 
               // Recent Companies
               if (activity != null && activity!.recentCompanies.isNotEmpty) ...[
@@ -503,10 +506,16 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   () => Nav.push(const PlatformAnalytics()),
                 ),
                 _buildActionCard(
-                  'Review Materials',
+                  'Materials',
                   Icons.science,
                   const Color(0xFFEC4899),
                   () => Nav.push(const PendingMaterialsPage()),
+                ),
+                _buildActionCard(
+                  'Material Update',
+                  Icons.tune,
+                  const Color(0xFF0EA5E9),
+                  () => Nav.push(const MaterialUpdatesPage()),
                 ),
                 _buildActionCard(
                   'Create Material',
@@ -525,6 +534,75 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
           ],
         );
       },
+    );
+  }
+
+  Widget _buildMaterialUpdateSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [const Color(0xFF0F172A), const Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.tune, color: Colors.white),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Material Update',
+                  style: GoogleFonts.openSans(
+                    fontSize: 19,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Browse materials company by company and update any company\'s material price directly from the platform dashboard.',
+            style: GoogleFonts.openSans(
+              fontSize: 13,
+              height: 1.5,
+              color: Colors.white.withValues(alpha: 0.86),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => Nav.push(const MaterialUpdatesPage()),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Open Material Updates'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF0F172A),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
