@@ -3,16 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
 import 'package:wworker/App/Product/providers/provider.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
-import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/BomSummary.dart';
-import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
-
-
 
 class AddProduct extends ConsumerStatefulWidget {
   final ProductModel? existingProduct;
@@ -213,8 +209,8 @@ class _AddProductState extends ConsumerState<AddProduct> {
                   ),
                   const SizedBox(height: 20),
                   CustomTextField(
-                    label: "Category",
-                    hintText: "Select a category",
+                    label: "Product type",
+                    hintText: "Select a product type",
                     isDropdown: true,
                     dropdownItems: ["Wood", "Foam", "Plank", "Others"],
                     value: selectedCategory,

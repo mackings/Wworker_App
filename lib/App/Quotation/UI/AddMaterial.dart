@@ -226,116 +226,114 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
 
               SizedBox(height: 20),
 
-              CustomButton(
-                text: (materials.isEmpty && additionalCosts.isEmpty)
-                    ? "Create New BOM"
-                    : "Continue",
-                outlined: (materials.isEmpty && additionalCosts.isEmpty),
-                onPressed: () {
-                  if (materials.isEmpty && additionalCosts.isEmpty) {
-                    setState(() {
-                      isExpanded = true;
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Add at least one material or additional cost to continue",
-                        ),
-                      ),
-                    );
-                  } else {
-                    showModalBottomSheet(
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      isScrollControlled: true,
-                      builder: (context) => SelectOptionSheet(
-                        title: "Select Product",
-                        options: [
-                          OptionItem(
-                            label: "Create New Product",
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddProduct(),
-                                ),
-                              );
-                            },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: CustomButton(
+                  text: (materials.isEmpty && additionalCosts.isEmpty)
+                      ? "Create New BOM"
+                      : "Continue",
+                  outlined: (materials.isEmpty && additionalCosts.isEmpty),
+                  onPressed: () {
+                    if (materials.isEmpty && additionalCosts.isEmpty) {
+                      setState(() {
+                        isExpanded = true;
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Add at least one material or additional cost to continue",
                           ),
-                          OptionItem(
-                            label: "Select Existing Products",
-                            onTap: () async {
-                              Navigator.pop(context);
-                              final selectedProduct = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const SelectExistingProductScreen(),
-                                ),
-                              );
-
-                              if (selectedProduct != null) {
-                                final productData = selectedProduct.toJson();
-
-                                final quotationNotifier = ref.read(
-                                  quotationSummaryProvider.notifier,
+                        ),
+                      );
+                    } else {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => SelectOptionSheet(
+                          title: "Select Product",
+                          options: [
+                            OptionItem(
+                              label: "Create New Product",
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => const AddProduct(),
+                                  ),
                                 );
-                                final materialNotifier = ref.read(
-                                  materialProvider.notifier,
-                                );
-
-                                final materials =
-                                    List<Map<String, dynamic>>.from(
-                                      materialNotifier.state["materials"] ?? [],
-                                    );
-                                final additionalCosts =
-                                    List<Map<String, dynamic>>.from(
-                                      materialNotifier
-                                              .state["additionalCosts"] ??
-                                          [],
-                                    );
-
-                                final updatedMaterials = materials
-                                    .map(
-                                      (m) => {
-                                        ...m,
-                                        "Product": productData["name"],
-                                      },
-                                    )
-                                    .toList();
-
-                                final newQuotation = {
-                                  "product": productData,
-                                  "materials": updatedMaterials,
-                                  "additionalCosts": additionalCosts,
-                                };
-
-                                await quotationNotifier.addNewQuotation(
-                                  newQuotation,
+                              },
+                            ),
+                            OptionItem(
+                              label: "Select Existing Products",
+                              onTap: () async {
+                                Navigator.pop(context);
+                                final selectedProduct = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const SelectExistingProductScreen(),
+                                  ),
                                 );
 
-                                if (mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const QuotationSummary(),
-                                    ),
+                                if (selectedProduct != null) {
+                                  final productData = selectedProduct.toJson();
+
+                                  final quotationNotifier = ref.read(
+                                    quotationSummaryProvider.notifier,
+                                  );
+                                  final materialNotifier = ref.read(
+                                    materialProvider.notifier,
                                   );
 
-                                  //  Navigator.push(
-                                  //     context,
-                                  //     MaterialPageRoute(builder: (context) => const BOMSummary()),
-                                  //   );
+                                  final materials =
+                                      List<Map<String, dynamic>>.from(
+                                        materialNotifier.state["materials"] ?? [],
+                                      );
+                                  final additionalCosts =
+                                      List<Map<String, dynamic>>.from(
+                                        materialNotifier
+                                                .state["additionalCosts"] ??
+                                            [],
+                                      );
+
+                                  final updatedMaterials = materials
+                                      .map(
+                                        (m) => {
+                                          ...m,
+                                          "Product": productData["name"],
+                                        },
+                                      )
+                                      .toList();
+
+                                  final newQuotation = {
+                                    "product": productData,
+                                    "materials": updatedMaterials,
+                                    "additionalCosts": additionalCosts,
+                                  };
+
+                                  await quotationNotifier.addNewQuotation(
+                                    newQuotation,
+                                  );
+
+                                  if (mounted) {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const QuotationSummary(),
+                                      ),
+                                    );
+                                  }
                                 }
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                },
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  },
+                ),
               ),
 
               const SizedBox(height: 12),
@@ -349,13 +347,16 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
               //   },
               // ),
               // const SizedBox(height: 12),
-              CustomButton(
-                text: "Add item from Quotation",
-                outlined: true,
-                icon: Icons.add,
-                onPressed: () {
-                  Nav.push(AllClientQuotations());
-                },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: CustomButton(
+                  text: "Add item from Quotation",
+                  outlined: true,
+                  icon: Icons.add,
+                  onPressed: () {
+                    Nav.push(AllClientQuotations());
+                  },
+                ),
               ),
 
               const SizedBox(height: 100),

@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:screenshot/screenshot.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/DarkInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/elegantInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/invoice_bank_prefs.dart';
@@ -100,8 +101,224 @@ class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
     }
   }
 
-  List<_ReceiptTemplateItem> _receiptItems() {
-    return widget.order.items.map(_ReceiptTemplateItem.fromMap).toList();
+  Future<void> _showTemplatePickerSheet() async {
+    final initialIndex = (_templateIndex >= 0 && _templateIndex <= 2)
+        ? _templateIndex
+        : 0;
+    int selectedIndex = initialIndex;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return SafeArea(
+              top: false,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Choose Receipt Template',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF302E2E),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'This only changes the current receipt preview. Your default template stays in Settings.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ...List.generate(_templateNames.length, (index) {
+                      final isSelected = selectedIndex == index;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: InkWell(
+                          onTap: () => setModalState(() => selectedIndex = index),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFFA16438).withValues(alpha: 0.08)
+                                  : const Color(0xFFF7F5F2),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(
+                                color: isSelected
+                                    ? const Color(0xFFA16438)
+                                    : Colors.grey.shade300,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    _templateNames[index],
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected
+                                          ? const Color(0xFFA16438)
+                                          : const Color(0xFF302E2E),
+                                    ),
+                                  ),
+                                ),
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_off,
+                                  color: isSelected
+                                      ? const Color(0xFFA16438)
+                                      : Colors.grey.shade500,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() => _templateIndex = selectedIndex);
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFA16438),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          'Apply Template',
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  List<InvoiceDisplayItem> _receiptItems() {
+    if (widget.order.boms.isNotEmpty) {
+      if (widget.order.boms.length == 1) {
+        final bom = widget.order.boms.first;
+        final quantity = widget.order.service?.quantity ?? 1;
+        final totalPrice = widget.order.totalAmount > 0
+            ? widget.order.totalAmount
+            : (bom.pricing?.sellingPrice ?? widget.order.totalSellingPrice);
+        final description = [
+          bom.product.description.trim(),
+          bom.description.trim(),
+          widget.order.description.trim(),
+        ].firstWhere((value) => value.isNotEmpty, orElse: () => '');
+
+        return [
+          InvoiceDisplayItem(
+            name: _customerFacingName(
+              bom.product.name,
+              fallback: description.isNotEmpty ? description : 'Product',
+            ),
+            description: description,
+            quantity: quantity > 0 ? quantity : 1,
+            unitPrice: quantity > 0 ? totalPrice / quantity : totalPrice,
+            totalPrice: totalPrice,
+            image: bom.product.image,
+          ),
+        ];
+      }
+
+      return widget.order.boms.map((bom) {
+        final totalPrice = bom.pricing?.sellingPrice ?? bom.totalCost;
+        final description = [
+          bom.product.description.trim(),
+          bom.description.trim(),
+          widget.order.description.trim(),
+        ].firstWhere((value) => value.isNotEmpty, orElse: () => '');
+
+        return InvoiceDisplayItem(
+          name: _customerFacingName(
+            bom.product.name,
+            fallback: description.isNotEmpty ? description : 'Product',
+          ),
+          description: description,
+          quantity: 1,
+          unitPrice: totalPrice,
+          totalPrice: totalPrice,
+          image: bom.product.image,
+        );
+      }).toList();
+    }
+
+    final quantity = widget.order.service?.quantity ?? 1;
+    final totalPrice = widget.order.totalAmount > 0
+        ? widget.order.totalAmount
+        : (widget.order.totalSellingPrice > 0
+              ? widget.order.totalSellingPrice
+              : (widget.order.service?.totalPrice ?? 0));
+
+    return [
+      InvoiceDisplayItem(
+        name: _customerFacingName(
+          widget.order.service?.product,
+          fallback: widget.order.description.trim().isNotEmpty
+              ? widget.order.description.trim()
+              : 'Product',
+        ),
+        description: widget.order.description.trim(),
+        quantity: quantity > 0 ? quantity : 1,
+        unitPrice: quantity > 0 ? totalPrice / quantity : totalPrice,
+        totalPrice: totalPrice,
+      ),
+    ];
+  }
+
+  String _customerFacingName(String? candidate, {required String fallback}) {
+    final value = candidate?.trim() ?? '';
+    if (value.isEmpty) return fallback;
+
+    final normalized = value.toLowerCase();
+    if (normalized == 'materials service' ||
+        normalized == 'material service' ||
+        normalized == 'service') {
+      return fallback;
+    }
+
+    return value;
   }
 
   String _receiptPaymentStatus() {
@@ -598,24 +815,39 @@ class _PaymentReceiptPageState extends State<PaymentReceiptPage> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFA16438).withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: const Color(0xFFA16438).withValues(alpha: 0.35),
+                  InkWell(
+                    onTap: _isTemplateLoading ? null : _showTemplatePickerSheet,
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 10,
                       ),
-                    ),
-                    child: Text(
-                      selectedTemplateName,
-                      style: const TextStyle(
-                        color: Color(0xFFA16438),
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA16438).withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: const Color(0xFFA16438).withValues(alpha: 0.35),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            selectedTemplateName,
+                            style: const TextStyle(
+                              color: Color(0xFFA16438),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          const Icon(
+                            Icons.expand_more,
+                            size: 16,
+                            color: Color(0xFFA16438),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -718,7 +950,7 @@ class _TemplateArgs {
   final DateTime invoiceDate;
   final String paymentStatus;
   final String description;
-  final List<_ReceiptTemplateItem> items;
+  final List<InvoiceDisplayItem> items;
   final double grandTotal;
   final double amountPaid;
   final double balance;
@@ -747,47 +979,4 @@ class _TemplateArgs {
     required this.accountNumber,
     required this.bankCode,
   });
-}
-
-class _ReceiptTemplateItem {
-  final String? woodType;
-  final String? foamType;
-  final String? description;
-  final double sellingPrice;
-  final double quantity;
-  final double? width;
-  final double? length;
-  final double? thickness;
-  final String? unit;
-
-  const _ReceiptTemplateItem({
-    this.woodType,
-    this.foamType,
-    this.description,
-    required this.sellingPrice,
-    required this.quantity,
-    this.width,
-    this.length,
-    this.thickness,
-    this.unit,
-  });
-
-  factory _ReceiptTemplateItem.fromMap(Map<String, dynamic> item) {
-    double? parseNum(dynamic v) {
-      if (v is num) return v.toDouble();
-      return double.tryParse(v?.toString() ?? '');
-    }
-
-    return _ReceiptTemplateItem(
-      woodType: item['woodType']?.toString(),
-      foamType: item['foamType']?.toString(),
-      description: item['description']?.toString(),
-      sellingPrice: parseNum(item['sellingPrice']) ?? 0,
-      quantity: parseNum(item['quantity']) ?? 0,
-      width: parseNum(item['width']),
-      length: parseNum(item['length']),
-      thickness: parseNum(item['thickness']),
-      unit: item['unit']?.toString(),
-    );
-  }
 }

@@ -2302,7 +2302,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          'Update',
+                          'Request Update',
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
                             color: ColorsApp.textColor,
@@ -2378,7 +2378,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                         ),
                         const SizedBox(height: 8),
                         CustomButton(
-                          text: 'Apply Update',
+                          text: 'Request Update',
                           loading: isSaving,
                           onPressed: () async {
                             final pricePerUnit = _parseAmountInput(
@@ -3208,41 +3208,11 @@ class _MaterialAvatar extends StatelessWidget {
 }
 
 Widget _buildQuotationDetails(DatabaseQuotation quotation) {
-  final items = quotation.items;
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text(
-        "Items",
-        style: TextStyle(fontWeight: FontWeight.w600, color: Color(0xFF302E2E)),
-      ),
-      const SizedBox(height: 8),
-      if (items.isEmpty)
-        const Text(
-          "No items",
-          style: TextStyle(color: Colors.black54, fontSize: 12),
-        )
-      else
-        ...items.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _buildItemRow(
-              title: item.description.isNotEmpty
-                  ? item.description
-                  : item.woodType.isNotEmpty
-                  ? item.woodType
-                  : item.foamType.isNotEmpty
-                  ? item.foamType
-                  : "Material",
-              subtitle:
-                  "${item.quantity} ${item.unit} • ${item.width}×${item.length}×${item.thickness}",
-              trailing: "₦${_formatAmount(item.sellingPrice)}",
-            ),
-          ),
-        ),
       if (quotation.service != null &&
           quotation.service!.product.isNotEmpty) ...[
-        const SizedBox(height: 8),
         const Text(
           "Service",
           style: TextStyle(

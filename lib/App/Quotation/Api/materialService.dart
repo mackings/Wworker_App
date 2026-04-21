@@ -246,9 +246,9 @@ class MaterialService {
   // 🟢 CALCULATE MATERIAL COST
   Future<MaterialCostModel?> calculateMaterialCost({
     required String materialId,
-    required double requiredWidth,
-    required double requiredLength,
-    required String requiredUnit,
+    double? requiredWidth,
+    double? requiredLength,
+    String? requiredUnit,
     String? materialType,
     String? sizeVariant,
     double? foamThickness,
@@ -261,9 +261,10 @@ class MaterialService {
       if (token == null) throw Exception("No auth token found");
 
       final sheetRequestData = {
-        "requiredWidth": requiredWidth,
-        "requiredLength": requiredLength,
-        "requiredUnit": requiredUnit,
+        if (requiredWidth != null) "requiredWidth": requiredWidth,
+        if (requiredLength != null) "requiredLength": requiredLength,
+        if (requiredUnit != null && requiredUnit.trim().isNotEmpty)
+          "requiredUnit": requiredUnit,
         if (materialType != null) "materialType": materialType,
         if (sizeVariant != null) "sizeVariant": sizeVariant,
         if (foamThickness != null) "foamThickness": foamThickness,

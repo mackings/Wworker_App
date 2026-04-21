@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -20,6 +22,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
   final PlatformOwnerService _service = PlatformOwnerService();
   final TextEditingController _searchController = TextEditingController();
   static const int _pageSize = 20;
+  static const String _globalScopeName = 'GLOBAL';
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -59,6 +62,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
     });
 
     final result = await _service.getDatabaseMaterials(
+      companyName: _globalScopeName,
       page: _currentPage,
       limit: _pageSize,
       status: 'approved',
@@ -77,39 +81,36 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
 
     final materials =
         (result['data'] as List<DatabaseMaterial>? ?? const <DatabaseMaterial>[]);
-    final grouped = <String, List<DatabaseMaterial>>{};
-    for (final material in materials) {
-      final companyName = _cleanLabel(material.companyName);
-      if (companyName.isEmpty) continue;
-      grouped.putIfAbsent(companyName, () => []).add(material);
+    final globalMaterials = materials
+        .where((material) => material.isGlobal)
+        .toList();
+    final categories = globalMaterials
+        .map((item) => _cleanLabel(item.category))
+        .where((item) => item.isNotEmpty)
+        .toSet();
+    final pricedItems = globalMaterials.where(_hasPrice).length;
+
+    DateTime? latestUpdate;
+    for (final item in globalMaterials) {
+      final itemTimestamp = item.updatedAt ?? item.createdAt;
+      if (itemTimestamp != null &&
+          (latestUpdate == null || itemTimestamp.isAfter(latestUpdate))) {
+        latestUpdate = itemTimestamp;
+      }
     }
 
-    final newCompanies = grouped.entries.map((entry) {
-      final items = entry.value;
-      final categories = items
-          .map((item) => _cleanLabel(item.category))
-          .where((item) => item.isNotEmpty)
-          .toSet();
-      final pricedItems = items.where(_hasPrice).length;
-
-      DateTime? latestUpdate;
-      for (final item in items) {
-        final itemTimestamp = item.updatedAt ?? item.createdAt;
-        if (itemTimestamp != null &&
-            (latestUpdate == null || itemTimestamp.isAfter(latestUpdate))) {
-          latestUpdate = itemTimestamp;
-        }
-      }
-
-      return _CompanyMaterialSummary(
-        companyName: entry.key,
-        materialCount: items.length,
-        categoryCount: categories.length,
-        pricedCount: pricedItems,
-        latestMaterialName: items.isNotEmpty ? items.first.name : null,
-        latestUpdate: latestUpdate,
-      );
-    }).toList();
+    final newCompanies = globalMaterials.isEmpty
+        ? <_CompanyMaterialSummary>[]
+        : [
+            _CompanyMaterialSummary(
+              companyName: _globalScopeName,
+              materialCount: globalMaterials.length,
+              categoryCount: categories.length,
+              pricedCount: pricedItems,
+              latestMaterialName: globalMaterials.first.name,
+              latestUpdate: latestUpdate,
+            ),
+          ];
 
     final pagination = result['pagination'] as Map<String, dynamic>? ?? {};
     final merged = <String, _CompanyMaterialSummary>{
@@ -141,15 +142,8 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
   }
 
   void _applySearch() {
-    final query = _searchController.text.trim().toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        _filteredCompanies = _companies;
-      } else {
-        _filteredCompanies = _companies.where((company) {
-          return company.companyName.toLowerCase().contains(query);
-        }).toList();
-      }
+      _filteredCompanies = _companies;
     });
   }
 
@@ -236,7 +230,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  'Update company material prices from one place.',
+                  'Update global material prices from one place.',
                   style: GoogleFonts.openSans(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
@@ -248,7 +242,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Loaded ${_companies.length} companies from page $_currentPage of $_totalPages. Total materials on the endpoint: $_totalMaterials.',
+            'Loaded global materials page $_currentPage of $_totalPages. Total global materials on the endpoint: $_totalMaterials.',
             style: GoogleFonts.openSans(
               color: Colors.white.withValues(alpha: 0.92),
               fontSize: 13,
@@ -264,7 +258,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'Search company name',
+        hintText: 'Search global materials',
         prefixIcon: const Icon(Icons.search),
         filled: true,
         fillColor: Colors.white,
@@ -402,7 +396,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
-        'No companies with materials were found in the current result set.',
+        'No global materials were found in the current result set.',
         textAlign: TextAlign.center,
         style: GoogleFonts.openSans(color: Colors.grey.shade700),
       ),
@@ -430,8 +424,8 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
           const SizedBox(height: 8),
           Text(
             hasMore
-                ? 'Load the next batch of materials to discover more companies.'
-                : 'All available pages have been loaded.',
+                ? 'Load the next batch of global materials.'
+                : 'All available global material pages have been loaded.',
             textAlign: TextAlign.center,
             style: GoogleFonts.openSans(
               fontSize: 12,
@@ -440,7 +434,7 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
           ),
           const SizedBox(height: 14),
           CustomButton(
-            text: _isLoadingMore ? 'Loading...' : 'Load More Companies',
+            text: _isLoadingMore ? 'Loading...' : 'Load More Global Materials',
             onPressed: hasMore && !_isLoadingMore ? _loadNextPage : null,
             loading: _isLoadingMore,
             backgroundColor: ColorsApp.btnColor,
@@ -466,25 +460,40 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
   final TextEditingController _searchController = TextEditingController();
   final NumberFormat _moneyFmt = NumberFormat('#,##0.##');
   static const int _pageSize = 20;
+  static const String _allFilter = 'All';
+  static const List<String> _statusOptions = <String>[
+    _allFilter,
+    'approved',
+    'pending',
+    'rejected',
+  ];
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
   String? _error;
   List<DatabaseMaterial> _materials = [];
   List<DatabaseMaterial> _filteredMaterials = [];
+  List<String> _categories = <String>[_allFilter];
+  List<String> _subCategories = <String>[_allFilter];
+  String _selectedCategory = _allFilter;
+  String _selectedSubCategory = _allFilter;
+  String _selectedStatus = 'approved';
+  bool _pricedOnly = false;
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalItems = 0;
+  Timer? _searchDebounce;
 
   @override
   void initState() {
     super.initState();
     _loadMaterials();
-    _searchController.addListener(_applySearch);
+    _searchController.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
@@ -506,6 +515,11 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
 
     final result = await _service.getDatabaseMaterials(
       companyName: widget.companyName,
+      category: _selectedCategory == _allFilter ? null : _selectedCategory,
+      status: _selectedStatus == _allFilter ? null : _selectedStatus,
+      search: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
       page: _currentPage,
       limit: _pageSize,
     );
@@ -531,30 +545,131 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     };
     final nextMaterials = merged.values.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final categoryMap = <String, String>{_allFilter.toLowerCase(): _allFilter};
+    for (final material in nextMaterials) {
+      final category = material.category.trim();
+      if (category.isEmpty) continue;
+      categoryMap.putIfAbsent(category.toLowerCase(), () => category);
+    }
+    final categories = categoryMap.values.toList()
+      ..sort((a, b) {
+        if (a == _allFilter) return -1;
+        if (b == _allFilter) return 1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+    final selectedCategory = categories.any(
+      (item) => item.toLowerCase() == _selectedCategory.toLowerCase(),
+    )
+        ? categories.firstWhere(
+            (item) => item.toLowerCase() == _selectedCategory.toLowerCase(),
+          )
+        : _allFilter;
+    final subCategories = _collectSubCategories(
+      nextMaterials,
+      category: selectedCategory,
+    );
+    final selectedSubCategory = subCategories.any(
+      (item) => item.toLowerCase() == _selectedSubCategory.toLowerCase(),
+    )
+        ? subCategories.firstWhere(
+            (item) => item.toLowerCase() == _selectedSubCategory.toLowerCase(),
+          )
+        : _allFilter;
 
     setState(() {
       _materials = nextMaterials;
+      _categories = categories;
+      _subCategories = subCategories;
+      _selectedCategory = selectedCategory;
+      _selectedSubCategory = selectedSubCategory;
       _totalPages = (pagination['pages'] ?? 1) as int;
       _totalItems = (pagination['total'] ?? nextMaterials.length) as int;
       _isLoading = false;
       _isLoadingMore = false;
     });
-    _applySearch();
+    _applyFilters();
   }
 
-  void _applySearch() {
+  void _onSearchChanged() {
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      _loadMaterials();
+    });
+  }
+
+  void _applyFilters() {
     final query = _searchController.text.trim().toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        _filteredMaterials = _materials;
-      } else {
-        _filteredMaterials = _materials.where((material) {
-          return material.name.toLowerCase().contains(query) ||
-              (material.category).toLowerCase().contains(query) ||
-              (material.subCategory ?? '').toLowerCase().contains(query);
-        }).toList();
-      }
+      _filteredMaterials = _materials.where((material) {
+        final matchesSearch =
+            query.isEmpty ||
+            material.name.toLowerCase().contains(query) ||
+            material.category.toLowerCase().contains(query) ||
+            (material.subCategory ?? '').toLowerCase().contains(query);
+        final matchesSubCategory =
+            _selectedSubCategory == _allFilter ||
+            (material.subCategory ?? '').trim().toLowerCase() ==
+                _selectedSubCategory.toLowerCase();
+        final matchesPriced = !_pricedOnly || _hasAnyPrice(material);
+        return matchesSearch && matchesSubCategory && matchesPriced;
+      }).toList();
     });
+  }
+
+  Future<void> _onCategoryChanged(String? value) async {
+    if (value == null || value == _selectedCategory) return;
+    setState(() {
+      _selectedCategory = value;
+      _selectedSubCategory = _allFilter;
+    });
+    await _loadMaterials();
+  }
+
+  void _onSubCategoryChanged(String? value) {
+    if (value == null || value == _selectedSubCategory) return;
+    setState(() => _selectedSubCategory = value);
+    _applyFilters();
+  }
+
+  Future<void> _onStatusChanged(String? value) async {
+    if (value == null || value == _selectedStatus) return;
+    setState(() => _selectedStatus = value);
+    await _loadMaterials();
+  }
+
+  void _onPricedOnlyChanged(bool value) {
+    setState(() => _pricedOnly = value);
+    _applyFilters();
+  }
+
+  bool _hasAnyPrice(DatabaseMaterial material) {
+    return (material.pricePerSqm ?? 0) > 0 || (material.pricePerUnit ?? 0) > 0;
+  }
+
+  List<String> _collectSubCategories(
+    List<DatabaseMaterial> materials, {
+    required String category,
+  }) {
+    final map = <String, String>{_allFilter.toLowerCase(): _allFilter};
+    for (final material in materials) {
+      final materialCategory = material.category.trim();
+      if (category != _allFilter &&
+          materialCategory.toLowerCase() != category.toLowerCase()) {
+        continue;
+      }
+      final subCategory = (material.subCategory ?? '').trim();
+      if (subCategory.isEmpty) continue;
+      map.putIfAbsent(subCategory.toLowerCase(), () => subCategory);
+    }
+
+    final items = map.values.toList()
+      ..sort((a, b) {
+        if (a == _allFilter) return -1;
+        if (b == _allFilter) return 1;
+        return a.toLowerCase().compareTo(b.toLowerCase());
+      });
+    return items;
   }
 
   Future<void> _editMaterial(DatabaseMaterial material) async {
@@ -626,7 +741,9 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Company Materials',
+                    widget.companyName == 'GLOBAL'
+                        ? 'Global Materials'
+                        : 'Company Materials',
                     style: GoogleFonts.openSans(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
@@ -635,7 +752,9 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Review this company\'s material prices and update any item directly. Showing page $_currentPage of $_totalPages, total $_totalItems materials.',
+                    widget.companyName == 'GLOBAL'
+                        ? 'Review global material prices and update any item directly. Showing page $_currentPage of $_totalPages, total $_totalItems materials.'
+                        : 'Review this company\'s material prices and update any item directly. Showing page $_currentPage of $_totalPages, total $_totalItems materials.',
                     style: GoogleFonts.openSans(
                       fontSize: 13,
                       color: Colors.grey.shade600,
@@ -658,6 +777,8 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            _buildFilterBar(),
             const SizedBox(height: 16),
             if (_isLoading)
               const Padding(
@@ -756,6 +877,10 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                           text: 'Update Price',
                           onPressed: () => _editMaterial(material),
                           backgroundColor: ColorsApp.btnColor,
+                          height: 46,
+                          padding: 12,
+                          textSize: 14,
+                          borderRadius: 12,
                         ),
                       ),
                     ],
@@ -782,6 +907,120 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
       child: Text(
         label,
         style: GoogleFonts.openSans(fontSize: 11, color: Colors.grey.shade700),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: _buildDropdownFilter(
+                label: 'Category',
+                value: _selectedCategory,
+                items: _categories,
+                onChanged: _onCategoryChanged,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildDropdownFilter(
+                label: 'Sub Category',
+                value: _selectedSubCategory,
+                items: _subCategories,
+                onChanged: _onSubCategoryChanged,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildDropdownFilter(
+                label: 'Status',
+                value: _selectedStatus,
+                items: _statusOptions,
+                onChanged: _onStatusChanged,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(child: SizedBox.shrink()),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: FilterChip(
+            label: Text(
+              'Priced only',
+              style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+            ),
+            selected: _pricedOnly,
+            onSelected: _onPricedOnlyChanged,
+            selectedColor: ColorsApp.btnColor.withValues(alpha: 0.18),
+            checkmarkColor: ColorsApp.btnColor,
+            side: BorderSide(color: Colors.grey.shade300),
+            backgroundColor: Colors.white,
+            labelStyle: GoogleFonts.openSans(color: ColorsApp.textColor),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDropdownFilter({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    final uniqueItems = <String>[];
+    final seen = <String>{};
+    for (final item in items) {
+      final normalized = item.trim();
+      final key = normalized.toLowerCase();
+      if (normalized.isEmpty || seen.contains(key)) continue;
+      seen.add(key);
+      uniqueItems.add(normalized);
+    }
+    final selectedValue = uniqueItems.any(
+      (item) => item.toLowerCase() == value.toLowerCase(),
+    )
+        ? uniqueItems.firstWhere(
+            (item) => item.toLowerCase() == value.toLowerCase(),
+          )
+        : null;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: DropdownButtonFormField<String>(
+        initialValue: selectedValue,
+        decoration: InputDecoration(
+          labelText: label,
+          border: InputBorder.none,
+          labelStyle: GoogleFonts.openSans(
+            color: Colors.grey.shade600,
+            fontSize: 13,
+          ),
+        ),
+        items: uniqueItems.map((item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(
+              item,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.openSans(fontSize: 13),
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
       ),
     );
   }
@@ -886,7 +1125,8 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
   final NumberFormat _moneyFmt = NumberFormat('#,##0.##');
   late final TextEditingController _pricePerSqmController;
   late final TextEditingController _pricePerUnitController;
-  late final TextEditingController _pricingUnitController;
+  late String _selectedPricingUnit;
+  late final List<String> _pricingUnitOptions;
   bool _isSaving = false;
 
   @override
@@ -902,9 +1142,10 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
           ? _moneyFmt.format(widget.material.pricePerUnit)
           : '',
     );
-    _pricingUnitController = TextEditingController(
-      text: widget.material.pricingUnit,
-    );
+    _pricingUnitOptions = _resolvePricingUnitOptions(widget.material);
+    _selectedPricingUnit = _pricingUnitOptions.contains(widget.material.pricingUnit)
+        ? widget.material.pricingUnit
+        : _pricingUnitOptions.first;
     _pricePerSqmController.addListener(_formatPricePerSqmInput);
     _pricePerUnitController.addListener(_formatPricePerUnitInput);
   }
@@ -915,7 +1156,6 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     _pricePerUnitController.removeListener(_formatPricePerUnitInput);
     _pricePerSqmController.dispose();
     _pricePerUnitController.dispose();
-    _pricingUnitController.dispose();
     super.dispose();
   }
 
@@ -963,10 +1203,36 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     return double.tryParse(clean);
   }
 
+  List<String> _resolvePricingUnitOptions(DatabaseMaterial material) {
+    final options = <String>{};
+    final pricingUnit = material.pricingUnit.trim();
+    if (pricingUnit.isNotEmpty) {
+      options.add(pricingUnit);
+    }
+    final materialUnit = (material.unit ?? '').trim();
+    if (materialUnit.isNotEmpty) {
+      options.add(materialUnit);
+    }
+    final standardUnit = (material.standardUnit ?? '').trim();
+    if (standardUnit.isNotEmpty) {
+      options.add(standardUnit);
+    }
+    if ((material.pricePerSqm ?? 0) > 0) {
+      options.add('sqm');
+    }
+    if ((material.pricePerUnit ?? 0) > 0) {
+      options.add(materialUnit.isNotEmpty ? materialUnit : 'unit');
+    }
+    if (options.isEmpty) {
+      options.add('unit');
+    }
+    return options.toList();
+  }
+
   Future<void> _save() async {
     final pricePerSqm = _parseNumber(_pricePerSqmController.text);
     final pricePerUnit = _parseNumber(_pricePerUnitController.text);
-    final pricingUnit = _pricingUnitController.text.trim();
+    final pricingUnit = _selectedPricingUnit.trim();
 
     if (pricePerSqm == null && pricePerUnit == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1055,8 +1321,12 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
             const SizedBox(height: 14),
             _buildField(
               label: 'Pricing Unit',
-              controller: _pricingUnitController,
-              helperText: 'Examples: sqm, piece, sheet, roll',
+              initialValue: _selectedPricingUnit,
+              options: _pricingUnitOptions,
+              onChanged: (value) {
+                if (value == null) return;
+                setState(() => _selectedPricingUnit = value);
+              },
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -1075,10 +1345,14 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
 
   Widget _buildField({
     required String label,
-    required TextEditingController controller,
+    TextEditingController? controller,
+    String? initialValue,
+    List<String>? options,
+    ValueChanged<String?>? onChanged,
     String? helperText,
   }) {
     final isPriceField = label.toLowerCase().contains('price');
+    final isDropdown = options != null && options.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1092,26 +1366,46 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          keyboardType: isPriceField
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : TextInputType.text,
-          inputFormatters: isPriceField
-              ? [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ]
-              : null,
-          decoration: InputDecoration(
-            hintText: helperText,
-            filled: true,
-            fillColor: const Color(0xFFF8FAFC),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
+        if (isDropdown)
+          DropdownButtonFormField<String>(
+            initialValue: initialValue,
+            items: options.map((item) {
+              return DropdownMenuItem<String>(
+                value: item,
+                child: Text(item),
+              );
+            }).toList(),
+            onChanged: onChanged,
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          )
+        else
+          TextField(
+            controller: controller,
+            keyboardType: isPriceField
+                ? const TextInputType.numberWithOptions(decimal: true)
+                : TextInputType.text,
+            inputFormatters: isPriceField
+                ? [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ]
+                : null,
+            decoration: InputDecoration(
+              hintText: helperText,
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
             ),
           ),
-        ),
       ],
     );
   }

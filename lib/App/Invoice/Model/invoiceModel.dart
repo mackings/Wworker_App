@@ -1,3 +1,32 @@
+class InvoiceDisplayItem {
+  final String name;
+  final String description;
+  final int quantity;
+  final double unitPrice;
+  final double totalPrice;
+  final String image;
+
+  const InvoiceDisplayItem({
+    required this.name,
+    required this.description,
+    required this.quantity,
+    required this.unitPrice,
+    required this.totalPrice,
+    this.image = '',
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      "name": name,
+      "description": description,
+      "quantity": quantity,
+      "unitPrice": unitPrice,
+      "totalPrice": totalPrice,
+      "image": image,
+    };
+  }
+}
+
 class InvoiceModel {
   final String id;
   final String userId;

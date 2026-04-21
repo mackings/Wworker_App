@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/InvoiceSelector.dart';
@@ -55,19 +56,140 @@ class _InvoicePreviewState extends State<InvoicePreview> {
   String get description =>
       widget.quotation?.description ?? widget.invoice!.description;
 
-  // Get items based on whether it's a quotation or invoice
-  List<dynamic> get items {
+  final NumberFormat _money = NumberFormat.currency(
+    symbol: '₦',
+    decimalDigits: 2,
+  );
+
+  List<InvoiceDisplayItem> get items {
     if (widget.quotation != null) {
-      return widget.quotation!.items;
-    } else {
-      return widget.invoice!.items;
+      return _quotationDisplayItems(widget.quotation!);
     }
+    return _invoiceDisplayItems(widget.invoice!);
   }
 
   // Grand total from quotation/invoice
   double get grandTotal {
     return widget.quotation?.finalTotal.toDouble() ??
         widget.invoice!.finalTotal;
+  }
+
+  String _customerFacingProductName(
+    String? candidate, {
+    String fallback = 'Product',
+  }) {
+    final value = candidate?.trim() ?? '';
+    if (value.isEmpty) return fallback;
+
+    final normalized = value.toLowerCase();
+    if (normalized == 'materials service' ||
+        normalized == 'material service' ||
+        normalized == 'service') {
+      return fallback;
+    }
+
+    return value;
+  }
+
+  List<InvoiceDisplayItem> _quotationDisplayItems(Quotation quotation) {
+    if (quotation.boms.isNotEmpty) {
+      if (quotation.boms.length == 1) {
+        final bom = quotation.boms.first;
+        final quantity = quotation.service.quantity > 0
+            ? quotation.service.quantity
+            : 1;
+        final totalPrice = quotation.finalTotal > 0
+            ? quotation.finalTotal
+            : (bom.pricing?.sellingPrice ?? quotation.totalSellingPrice);
+        final descriptionText = [
+          bom.product.description.trim(),
+          bom.description.trim(),
+          quotation.description.trim(),
+        ].firstWhere((text) => text.isNotEmpty, orElse: () => '');
+
+        return [
+          InvoiceDisplayItem(
+            name: _customerFacingProductName(
+              bom.product.name,
+              fallback: descriptionText.isNotEmpty ? descriptionText : 'Product',
+            ),
+            description: descriptionText,
+            quantity: quantity,
+            unitPrice: quantity > 0 ? totalPrice / quantity : totalPrice,
+            totalPrice: totalPrice,
+            image: bom.product.image,
+          ),
+        ];
+      }
+
+      return quotation.boms.map((bom) {
+        final totalPrice = bom.pricing?.sellingPrice ?? bom.totalCost;
+        final descriptionText = [
+          bom.product.description.trim(),
+          bom.description.trim(),
+          quotation.description.trim(),
+        ].firstWhere((text) => text.isNotEmpty, orElse: () => '');
+
+        return InvoiceDisplayItem(
+          name: _customerFacingProductName(
+            bom.product.name,
+            fallback: descriptionText.isNotEmpty ? descriptionText : 'Product',
+          ),
+          description: descriptionText,
+          quantity: 1,
+          unitPrice: totalPrice,
+          totalPrice: totalPrice,
+          image: bom.product.image,
+        );
+      }).toList();
+    }
+
+    final quantity = quotation.service.quantity > 0
+        ? quotation.service.quantity
+        : 1;
+    final totalPrice = quotation.finalTotal > 0
+        ? quotation.finalTotal
+        : quotation.totalSellingPrice;
+    final descriptionText = quotation.description.trim();
+
+    return [
+      InvoiceDisplayItem(
+        name: _customerFacingProductName(
+          quotation.service.product,
+          fallback: descriptionText.isNotEmpty ? descriptionText : 'Product',
+        ),
+        description: descriptionText,
+        quantity: quantity,
+        unitPrice: quantity > 0 ? totalPrice / quantity : totalPrice,
+        totalPrice: totalPrice,
+        image: '',
+      ),
+    ];
+  }
+
+  List<InvoiceDisplayItem> _invoiceDisplayItems(InvoiceModel invoice) {
+    final quantity = invoice.service.quantity > 0 ? invoice.service.quantity : 1;
+    final totalPrice = invoice.finalTotal > 0
+        ? invoice.finalTotal
+        : (invoice.totalSellingPrice > 0
+              ? invoice.totalSellingPrice
+              : invoice.service.totalPrice);
+    final descriptionText = invoice.description.trim();
+    final fallbackName = descriptionText.isNotEmpty ? descriptionText : 'Product';
+
+    return [
+      InvoiceDisplayItem(
+        name: _customerFacingProductName(
+          invoice.service.product,
+          fallback: fallbackName,
+        ),
+        description: descriptionText,
+        quantity: quantity,
+        unitPrice: quantity > 0 ? totalPrice / quantity : totalPrice,
+        totalPrice: totalPrice,
+        image: invoice.items.isNotEmpty ? invoice.items.first.image : '',
+      ),
+    ];
   }
 
   @override
@@ -265,7 +387,7 @@ class _InvoicePreviewState extends State<InvoicePreview> {
                       _buildDetailRow(
                         Icons.attach_money,
                         'Amount',
-                        '₦${grandTotal.toStringAsFixed(2)}',
+                        _money.format(grandTotal),
                       ),
                     ],
                   ),
@@ -560,9 +682,5 @@ class _InvoicePreviewState extends State<InvoicePreview> {
         ),
       );
     }
-  }
-
-  String _formatDate(DateTime date) {
-    return "${date.day}/${date.month}/${date.year}";
   }
 }

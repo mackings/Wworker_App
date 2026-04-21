@@ -25,36 +25,49 @@ class OtherCostsCard extends StatefulWidget {
 class _OtherCostsCardState extends State<OtherCostsCard> {
   String? selectedType;
 
-  final TextEditingController nameController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
 
   @override
   void dispose() {
-    nameController.dispose();
     descriptionController.dispose();
     amountController.dispose();
     super.dispose();
   }
 
+  static const Map<String, String> _defaultDescriptions = {
+    "Logistics": "Logistics cost for handling and delivery of materials.",
+    "Workmanship": "Workmanship cost for labour related to this project.",
+    "Transport": "Transport cost for moving materials or personnel.",
+    "Miscellaneous": "Miscellaneous project cost related to the selected item.",
+  };
+
+  String _fallbackDescriptionFor(String type) {
+    return _defaultDescriptions[type] ??
+        "$type cost associated with this project.";
+  }
+
   void _handleAddItem() {
-    if (selectedType == null ||
-        nameController.text.trim().isEmpty ||
-        descriptionController.text.trim().isEmpty ||
-        amountController.text.trim().isEmpty) {
+    if (selectedType == null || amountController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Please fill in all fields before adding."),
+          content: Text(
+            "Select a cost detail and enter an amount before adding.",
+          ),
           backgroundColor: Colors.redAccent,
         ),
       );
       return;
     }
 
+    final selectedCostType = selectedType!;
+    final description = descriptionController.text.trim().isEmpty
+        ? _fallbackDescriptionFor(selectedCostType)
+        : descriptionController.text.trim();
+
     final costItem = {
-      "type": selectedType,
-      "name": nameController.text.trim(),
-      "description": descriptionController.text.trim(),
+      "type": selectedCostType,
+      "description": description,
       "amount": amountController.text.trim(),
     };
 
@@ -63,7 +76,6 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
     setState(() {
       selectedType = null;
     });
-    nameController.clear();
     descriptionController.clear();
     amountController.clear();
 
@@ -153,11 +165,19 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
 
           const SizedBox(height: 16),
 
-          _buildInput("Name", controller: nameController),
+          _buildInput(
+            "Description (Optional)",
+            controller: descriptionController,
+            hintText: selectedType == null
+                ? "Add extra details if needed"
+                : _fallbackDescriptionFor(selectedType!),
+          ),
           const SizedBox(height: 16),
-          _buildInput("Description", controller: descriptionController),
-          const SizedBox(height: 16),
-          _buildInput("Amount", controller: amountController),
+          _buildInput(
+            "Amount",
+            controller: amountController,
+            keyboardType: TextInputType.number,
+          ),
 
           const SizedBox(height: 20),
           CustomButton(text: "Add Item", onPressed: _handleAddItem),
@@ -166,28 +186,34 @@ class _OtherCostsCardState extends State<OtherCostsCard> {
     );
   }
 
-  Widget _buildInput(String label, {TextEditingController? controller}) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.openSans(
-              fontSize: 16,
-              color: const Color(0xFF7B7B7B),
-            ),
+  Widget _buildInput(
+    String label, {
+    TextEditingController? controller,
+    String? hintText,
+    TextInputType? keyboardType,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: GoogleFonts.openSans(
+          fontSize: 16,
+          color: const Color(0xFF7B7B7B),
+        ),
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          contentPadding: const EdgeInsets.all(14),
+          hintText: hintText,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              contentPadding: const EdgeInsets.all(14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-              ),
-            ),
-          ),
-        ],
-      );
+        ),
+      ),
+    ],
+  );
 }

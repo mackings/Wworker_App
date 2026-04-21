@@ -6,9 +6,13 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
+import 'package:wworker/App/Quotation/Model/ClientQmodel.dart' as client_q;
+import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
@@ -45,6 +49,10 @@ class SecQuote extends ConsumerStatefulWidget {
 class _SecQuoteState extends ConsumerState<SecQuote> {
   bool isLoading = false;
   bool isSharing = false;
+  final NumberFormat _currency = NumberFormat.currency(
+    symbol: '₦',
+    decimalDigits: 2,
+  );
 
   // ✅ Company data from SharedPreferences
   String companyName = 'Your Company';
@@ -133,6 +141,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
   }) async {
     final pdf = pw.Document();
     final dateFormat = DateFormat('d MMM yyyy');
+    final baseFont = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
 
     pw.Widget infoBlock(String title, Map<String, String> rows) {
       return pw.Container(
@@ -202,6 +212,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(24),
+        theme: pw.ThemeData.withFont(base: baseFont, bold: boldFont),
         build: (pw.Context context) {
           return [
             pw.Container(
@@ -327,7 +338,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                       ),
                     ),
                     pw.Text(
-                      '₦${totalSum.toStringAsFixed(2)}',
+                      _currency.format(totalSum),
                       style: pw.TextStyle(
                         fontSize: 12,
                         fontWeight: pw.FontWeight.bold,
@@ -465,8 +476,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
           product: product["name"] ?? "Unknown Product",
           description: product["description"] ?? "",
           quantity: quantity,
-          unitPrice: "₦${sellingPricePerUnit.toStringAsFixed(2)}",
-          total: "₦${totalSellingPrice.toStringAsFixed(2)}",
+          unitPrice: _currency.format(sellingPricePerUnit),
+          total: _currency.format(totalSellingPrice),
         ),
       );
     }
@@ -695,18 +706,146 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       },
     );
 
+    if (!mounted) return;
     setState(() => isLoading = false);
 
     if (response["success"] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Quotation created successfully")),
-      );
-
-      Nav.offAll(const DashboardScreen(initialIndex: 1));
+      final createdQuotation = _createdQuotationFromResponse(response);
+      await _showInvoiceSuggestion(createdQuotation);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("❌ Failed: ${response["message"] ?? "Error"}")),
       );
+    }
+  }
+
+  client_q.Quotation? _createdQuotationFromResponse(
+    Map<String, dynamic> response,
+  ) {
+    final payload = _extractQuotationPayload(response["data"]);
+    if (payload == null) return null;
+
+    try {
+      return client_q.Quotation.fromJson(payload);
+    } catch (e) {
+      debugPrint("Could not parse created quotation: $e");
+      return null;
+    }
+  }
+
+  Map<String, dynamic>? _extractQuotationPayload(dynamic value) {
+    if (value is! Map) return null;
+
+    final map = Map<String, dynamic>.from(value);
+    final hasQuotationShape =
+        map.containsKey("_id") ||
+        map.containsKey("quotationNumber") ||
+        map.containsKey("clientName");
+    if (hasQuotationShape) return map;
+
+    for (final key in const ["quotation", "quote", "data"]) {
+      final nested = _extractQuotationPayload(map[key]);
+      if (nested != null) return nested;
+    }
+
+    return null;
+  }
+
+  Future<void> _showInvoiceSuggestion(client_q.Quotation? quotation) async {
+    if (!mounted) return;
+
+    final goToInvoice = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.12),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFA16438).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.receipt_long_rounded,
+                        color: Color(0xFFA16438),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        "Create invoice now?",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF302E2E),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      icon: const Icon(Icons.close_rounded),
+                      tooltip: "Back to quotations",
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "The quotation has been saved. You can continue straight to the invoice flow for this client.",
+                  style: TextStyle(
+                    fontSize: 14,
+                    height: 1.4,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                CustomButton(
+                  text: "Continue to Invoice",
+                  icon: Icons.arrow_forward_rounded,
+                  onPressed: () => Navigator.pop(context, true),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (!mounted) return;
+
+    Nav.offAll(const DashboardScreen(initialIndex: 1));
+
+    if (goToInvoice == true) {
+      Future<void>.delayed(const Duration(milliseconds: 80), () {
+        if (quotation != null) {
+          Nav.push(InvoicePreview(quotation: quotation));
+        } else {
+          Nav.push(
+            AllClientQuotations(isForInvoice: true, clientName: widget.name),
+          );
+        }
+      });
     }
   }
 }

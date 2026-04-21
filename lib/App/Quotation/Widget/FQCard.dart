@@ -7,7 +7,6 @@ class FirstQuoteCard extends StatelessWidget {
   final TextEditingController phoneController;
   final TextEditingController addressController;
   final TextEditingController busStopController;
-  final TextEditingController descriptionController;
 
   const FirstQuoteCard({
     super.key,
@@ -15,7 +14,6 @@ class FirstQuoteCard extends StatelessWidget {
     required this.phoneController,
     required this.addressController,
     required this.busStopController,
-    required this.descriptionController,
     required this.nameController,
   });
 
@@ -107,21 +105,6 @@ class FirstQuoteCard extends StatelessWidget {
               final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
               if (!emailRegex.hasMatch(value.trim())) {
                 return "Enter a valid email";
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 12),
-
-          // ✅ Description
-          CustomTextField(
-            controller: descriptionController,
-            label: "Description",
-            hintText: "Enter a description",
-            maxLines: 4,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return "Please enter a description";
               }
               return null;
             },

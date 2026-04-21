@@ -13,9 +13,6 @@ import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
-
-
-
 // ==============================
 // UPDATED BOM SUMMARY - WITH PROPER OVERHEAD CALCULATION
 // ==============================
@@ -53,7 +50,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
     _loadPricingSettings();
   }
 
-
   // Load pricing settings from SharedPreferences
   Future<void> _loadPricingSettings() async {
     final markup = await PricingSettingsManager.getMarkup();
@@ -73,10 +69,12 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   }
 
   Future<void> _showPricingSettingsDialog() async {
-    final markupController =
-        TextEditingController(text: markupPercentage.toString());
-    final workingDaysController =
-        TextEditingController(text: workingDaysPerMonth.toString());
+    final markupController = TextEditingController(
+      text: markupPercentage.toString(),
+    );
+    final workingDaysController = TextEditingController(
+      text: workingDaysPerMonth.toString(),
+    );
     String tempMethod = pricingMethod;
 
     await showModalBottomSheet(
@@ -222,8 +220,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                                 side: const BorderSide(
                                   color: Color(0xFFA16438),
                                 ),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -235,13 +234,11 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () async {
-                                final markup = double.tryParse(
-                                      markupController.text,
-                                    ) ??
+                                final markup =
+                                    double.tryParse(markupController.text) ??
                                     30.0;
-                                final workingDays = int.tryParse(
-                                      workingDaysController.text,
-                                    ) ??
+                                final workingDays =
+                                    int.tryParse(workingDaysController.text) ??
                                     26;
 
                                 if (markup <= 0 || markup > 1000) {
@@ -286,8 +283,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFA16438),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -326,8 +324,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           color: selected ? const Color(0xFFFFF3E0) : const Color(0xFFF7F7F7),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color:
-                selected ? const Color(0xFFA16438) : Colors.grey.shade300,
+            color: selected ? const Color(0xFFA16438) : Colors.grey.shade300,
           ),
         ),
         child: Row(
@@ -354,10 +351,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                   ),
                 ],
               ),
@@ -424,7 +418,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       debugPrint("💰 RAW OVERHEAD COSTS DATA:");
       debugPrint("💰 Number of costs: ${overheadCosts.length}");
       for (var cost in overheadCosts) {
-        debugPrint("💰   ${cost['description']}: ₦${cost['cost']}/${cost['period']}");
+        debugPrint(
+          "💰   ${cost['description']}: ₦${cost['cost']}/${cost['period']}",
+        );
       }
       debugPrint("💰 ============================================");
 
@@ -436,24 +432,26 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           category: cost['category'] as String,
           description: cost['description'] as String,
         );
-        debugPrint("💰 Created adapter: ${adapter.description} - ₦${adapter.cost}/${adapter.period}");
+        debugPrint(
+          "💰 Created adapter: ${adapter.description} - ₦${adapter.cost}/${adapter.period}",
+        );
         return adapter;
       }).toList();
 
       // STEP 1: Convert all overhead costs to the selected period
       String targetPeriod = selectedPeriod; // 'Hour', 'Day', 'Week', or 'Month'
-      
+
       debugPrint("💰 ");
       debugPrint("💰 TARGET PERIOD: $targetPeriod");
       debugPrint("💰 DURATION: $duration $targetPeriod(s)");
       debugPrint("💰 ");
 
-      double overheadPerPeriod = OverheadCostCalculator.calculateTotalForDuration(
-        items,
-        targetPeriod,
-      );
+      double overheadPerPeriod =
+          OverheadCostCalculator.calculateTotalForDuration(items, targetPeriod);
 
-      debugPrint("💰 Calculated overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}");
+      debugPrint(
+        "💰 Calculated overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}",
+      );
 
       // STEP 2: Multiply by the number of periods selected
       final totalOverhead = overheadPerPeriod * duration;
@@ -467,13 +465,19 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           item.period,
           targetPeriod,
         );
-        debugPrint("💰   ${item.description}: ₦${item.cost}/${item.period} → ₦${convertedCost.toStringAsFixed(2)}/$targetPeriod");
+        debugPrint(
+          "💰   ${item.description}: ₦${item.cost}/${item.period} → ₦${convertedCost.toStringAsFixed(2)}/$targetPeriod",
+        );
       }
       debugPrint("💰 ");
       debugPrint("💰 CALCULATION:");
-      debugPrint("💰   Total Overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}");
+      debugPrint(
+        "💰   Total Overhead per $targetPeriod: ₦${overheadPerPeriod.toStringAsFixed(2)}",
+      );
       debugPrint("💰   × Duration: $duration $selectedPeriod(s)");
-      debugPrint("💰   = TOTAL MANUFACTURING OVERHEAD: ₦${totalOverhead.toStringAsFixed(2)}");
+      debugPrint(
+        "💰   = TOTAL MANUFACTURING OVERHEAD: ₦${totalOverhead.toStringAsFixed(2)}",
+      );
       debugPrint("💰 ============================================");
 
       return totalOverhead;
@@ -512,7 +516,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       // METHOD 1: Direct Markup (No MOC in cost price)
       costPrice = materialTotal + additionalTotal;
       overheadCost = 0; // MOC not included in Method 1
-      
+
       // Add markup to get selling price
       sellingPrice = costPrice * (1 + (markupPercentage / 100));
 
@@ -526,14 +530,16 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
       // METHOD 2: Include Manufacturing Overhead in Cost Price
       overheadCost = calculateManufacturingOverhead();
       costPrice = materialTotal + additionalTotal + overheadCost;
-      
+
       // Add markup to get selling price
       sellingPrice = costPrice * (1 + (markupPercentage / 100));
 
       debugPrint("💵 METHOD 2 (With MOC):");
       debugPrint("   Materials: ₦${materialTotal.toStringAsFixed(2)}");
       debugPrint("   Additional Costs: ₦${additionalTotal.toStringAsFixed(2)}");
-      debugPrint("   Manufacturing Overhead: ₦${overheadCost.toStringAsFixed(2)}");
+      debugPrint(
+        "   Manufacturing Overhead: ₦${overheadCost.toStringAsFixed(2)}",
+      );
       debugPrint("   Cost Price: ₦${costPrice.toStringAsFixed(2)}");
       debugPrint("   Markup: $markupPercentage%");
       debugPrint("   Selling Price: ₦${sellingPrice.toStringAsFixed(2)}");
@@ -678,7 +684,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
     final mappedCosts = additionalCosts.map((cost) {
       return {
-        "name": cost["name"] ?? "",
+        "name": cost["name"] ?? cost["type"] ?? "",
         "amount": _toDouble(cost["amount"]) ?? 0,
         "description": cost["description"] ?? "",
       };
@@ -855,7 +861,6 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               // ),
 
               // const SizedBox(height: 12),
-
               CustomButton(
                 text: "Continue",
                 onPressed: () =>
@@ -978,7 +983,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         const SizedBox(height: 12),
         _buildCostRow("Additional Costs", pricing['additionalTotal']!),
         const SizedBox(height: 12),
-        
+
         if (pricingMethod == 'Method 2') ...[
           _buildCostRow(
             "Manufacturing Overhead",
@@ -987,7 +992,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           ),
           const SizedBox(height: 12),
         ],
-        
+
         const Divider(),
         const SizedBox(height: 12),
         _buildCostRow("Cost Price", pricing['costPrice']!, isBold: true),
@@ -1024,7 +1029,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           style: TextStyle(
             fontSize: 18,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
-            color: isHighlight ? const Color(0xFFA16438) : const Color(0xFF302E2E),
+            color: isHighlight
+                ? const Color(0xFFA16438)
+                : const Color(0xFF302E2E),
           ),
         ),
         if (isLoading)
@@ -1039,7 +1046,9 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
-              color: isHighlight ? const Color(0xFFA16438) : const Color(0xFF302E2E),
+              color: isHighlight
+                  ? const Color(0xFFA16438)
+                  : const Color(0xFF302E2E),
             ),
           ),
       ],
@@ -1090,10 +1099,34 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
 
         Widget buildRow(String label, String value) {
           return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
-              Text(value, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Color(0xFF302E2E),
+                  fontSize: 16,
+                  fontFamily: 'Open Sans',
+                  fontWeight: FontWeight.w400,
+                  height: 1.50,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
+                  ),
+                ),
+              ),
             ],
           );
         }
@@ -1131,12 +1164,34 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: ShapeDecoration(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))),
+                decoration: ShapeDecoration(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Price', style: TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
-                    Text("₦${price.toStringAsFixed(2)}", style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w600)),
+                    const Text(
+                      'Price',
+                      style: TextStyle(
+                        color: Color(0xFF302E2E),
+                        fontSize: 16,
+                        fontFamily: 'Open Sans',
+                        fontWeight: FontWeight.w400,
+                        height: 1.50,
+                      ),
+                    ),
+                    Text(
+                      "₦${price.toStringAsFixed(2)}",
+                      style: const TextStyle(
+                        color: Color(0xFF302E2E),
+                        fontSize: 16,
+                        fontFamily: 'Open Sans',
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1148,14 +1203,41 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
   }
 
   Widget _buildAdditionalCostCard(Map<String, dynamic> item) {
-    final double amount = double.tryParse((item["amount"] ?? "0").toString()) ?? 0;
+    final double amount =
+        double.tryParse((item["amount"] ?? "0").toString()) ?? 0;
 
     Widget buildRow(String label, String value) {
       return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
-          Text(value, style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF302E2E),
+                fontSize: 16,
+                fontFamily: 'Open Sans',
+                fontWeight: FontWeight.w400,
+                height: 1.50,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              softWrap: true,
+              style: const TextStyle(
+                color: Color(0xFF302E2E),
+                fontSize: 16,
+                fontFamily: 'Open Sans',
+                fontWeight: FontWeight.w400,
+                height: 1.50,
+              ),
+            ),
+          ),
         ],
       );
     }
@@ -1177,12 +1259,34 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
           const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: ShapeDecoration(color: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4))),
+            decoration: ShapeDecoration(
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Amount', style: TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w400, height: 1.50)),
-                Text("₦${amount.toStringAsFixed(2)}", style: const TextStyle(color: Color(0xFF302E2E), fontSize: 16, fontFamily: 'Open Sans', fontWeight: FontWeight.w600)),
+                const Text(
+                  'Amount',
+                  style: TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w400,
+                    height: 1.50,
+                  ),
+                ),
+                Text(
+                  "₦${amount.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    color: Color(0xFF302E2E),
+                    fontSize: 16,
+                    fontFamily: 'Open Sans',
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ],
             ),
           ),

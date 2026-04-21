@@ -9,6 +9,7 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 
 
+
 class FirstOnboard extends ConsumerStatefulWidget {
   const FirstOnboard({super.key});
 
@@ -16,7 +17,9 @@ class FirstOnboard extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _FirstOnboardState();
 }
 
+
 class _FirstOnboardState extends ConsumerState<FirstOnboard> {
+
   int currentIndex = 0;
 
   static const List<Map<String, String>> onboardingData = [
@@ -38,6 +41,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     },
   ];
 
+
   final PageController _pageController = PageController();
 
   @override
@@ -51,11 +55,13 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     });
   }
 
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
+
 
   void _nextPage() {
     if (currentIndex < onboardingData.length - 1) {
@@ -71,6 +77,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
   void _skip() {
     Nav.push(Signup());
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +95,8 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+
+
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -114,7 +123,9 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                                 ),
                               ),
                             ),
+
                             const SizedBox(height: 40),
+
                             CustomText(
                               title: item["title"],
                               subtitle: item["subtitle"],
@@ -126,6 +137,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                       },
                     ),
                   ),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(onboardingData.length, (index) {
@@ -143,7 +155,9 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                       );
                     }),
                   ),
+
                   const SizedBox(height: 30),
+
                   CustomButton(
                     text: currentIndex == onboardingData.length - 1
                         ? "Get Started"
@@ -167,6 +181,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                 ),
               ),
             ),
+         
           ],
         ),
       ),

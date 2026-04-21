@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/DarkInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/elegantInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/invoice_template_prefs.dart';
 import 'package:wworker/App/Invoice/Widget/minimalInvoice.dart';
-import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 class InvoiceTemplateSettings extends StatefulWidget {
@@ -18,7 +18,7 @@ class _InvoiceTemplateSettingsState extends State<InvoiceTemplateSettings> {
   int _selected = 0;
   bool _isLoading = true;
   late final PageController _pageController;
-  late final List<QuotationItem> _items;
+  late final List<InvoiceDisplayItem> _items;
   late final List<Widget> _templateWidgets;
 
   final List<Map<String, String>> _templateInfo = const [
@@ -41,37 +41,19 @@ class _InvoiceTemplateSettingsState extends State<InvoiceTemplateSettings> {
     super.initState();
     _pageController = PageController();
     _items = [
-      QuotationItem(
-        id: 'sample-1',
-        woodType: 'Walnut',
-        foamType: null,
-        width: 200,
-        height: 0,
-        length: 120,
-        thickness: 18,
-        unit: 'cm',
-        squareMeter: 2.4,
+      InvoiceDisplayItem(
+        name: 'Wall Cabinet',
+        description: 'Premium wall cabinet with soft-close fittings',
         quantity: 2,
-        costPrice: 12000,
-        sellingPrice: 15000,
-        description: 'Cabinet panel',
-        image: '',
+        unitPrice: 15000,
+        totalPrice: 30000,
       ),
-      QuotationItem(
-        id: 'sample-2',
-        woodType: 'Oak',
-        foamType: null,
-        width: 150,
-        height: 0,
-        length: 80,
-        thickness: 12,
-        unit: 'cm',
-        squareMeter: 1.2,
+      InvoiceDisplayItem(
+        name: 'Floating Shelf',
+        description: 'Oak finish floating shelf',
         quantity: 1,
-        costPrice: 7000,
-        sellingPrice: 9000,
-        description: 'Shelf insert',
-        image: '',
+        unitPrice: 9000,
+        totalPrice: 9000,
       ),
     ];
     _templateWidgets = _buildTemplates();

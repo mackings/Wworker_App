@@ -30,7 +30,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
 
   final _formKey = GlobalKey<FormState>();
 
@@ -57,8 +56,40 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
     _addressController.dispose();
     _nameController.dispose();
     _searchController.dispose();
-    _descriptionController.dispose();
     super.dispose();
+  }
+
+  String _buildAutoDescription() {
+    final quotations = widget.selectedQuotations ?? const <Map<String, dynamic>>[];
+    if (quotations.isEmpty) {
+      return 'Quotation';
+    }
+
+    final productDescriptions = quotations
+        .map((quotation) => quotation["product"])
+        .whereType<Map>()
+        .map((product) => product["description"]?.toString().trim() ?? '')
+        .where((description) => description.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (productDescriptions.isNotEmpty) {
+      return productDescriptions.join(', ');
+    }
+
+    final productNames = quotations
+        .map((quotation) => quotation["product"])
+        .whereType<Map>()
+        .map((product) => product["name"]?.toString().trim() ?? '')
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (productNames.isNotEmpty) {
+      return 'Quotation for ${productNames.join(', ')}';
+    }
+
+    return 'Quotation';
   }
 
   Future<void> _loadClients() async {
@@ -196,7 +227,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                     phoneController: _phoneController,
                     addressController: _addressController,
                     busStopController: _busStopController,
-                    descriptionController: _descriptionController,
                   ),
 
                   const SizedBox(height: 30),
@@ -212,7 +242,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                             nearestBusStop: _busStopController.text,
                             phone: _phoneController.text,
                             email: _emailController.text,
-                            description: _descriptionController.text,
+                            description: _buildAutoDescription(),
                             selectedQuotations: widget.selectedQuotations ?? [],
                             quotationQuantities:
                                 widget.quotationQuantities ?? {},

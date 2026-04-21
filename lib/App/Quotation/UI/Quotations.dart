@@ -489,13 +489,16 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                               count: additionalCosts.length,
                               icon: Icons.attach_money_outlined,
                               onAdd: () async {
-                                final source = await _showCostSourcePickerSheet();
+                                final source =
+                                    await _showCostSourcePickerSheet();
                                 if (source == null) return;
                                 Map<String, dynamic>? newItem;
                                 if (source == 'custom') {
-                                  newItem = await _showAdditionalCostFormSheet();
+                                  newItem =
+                                      await _showAdditionalCostFormSheet();
                                 } else if (source == 'overhead') {
-                                  newItem = await _showOverheadCostPickerSheet();
+                                  newItem =
+                                      await _showOverheadCostPickerSheet();
                                 }
                                 if (newItem == null) return;
                                 setSheetState(() {
@@ -838,8 +841,11 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                       final length = double.tryParse(
                         lengthController.text.trim(),
                       );
-                      final unit = unitValue ??
-                          _normalizeLinearUnitForEdit(unitController.text.trim()) ??
+                      final unit =
+                          unitValue ??
+                          _normalizeLinearUnitForEdit(
+                            unitController.text.trim(),
+                          ) ??
                           '';
                       final quantity =
                           int.tryParse(quantityController.text.trim()) ?? 1;
@@ -953,10 +959,13 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF5F8F2),
                                     borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(color: Colors.grey.shade300),
+                                    border: Border.all(
+                                      color: Colors.grey.shade300,
+                                    ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       _buildFormSectionLabel(
                                         icon: Icons.layers_outlined,
@@ -979,7 +988,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                             child: CustomTextField(
                                               label: "Length (longer)",
                                               controller: lengthController,
-                                              keyboardType: TextInputType.number,
+                                              keyboardType:
+                                                  TextInputType.number,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -987,7 +997,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                             child: CustomTextField(
                                               label: "Width (shorter)",
                                               controller: widthController,
-                                              keyboardType: TextInputType.number,
+                                              keyboardType:
+                                                  TextInputType.number,
                                             ),
                                           ),
                                         ],
@@ -999,7 +1010,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                             child: CustomTextField(
                                               label: "Thickness",
                                               controller: thicknessController,
-                                              keyboardType: TextInputType.number,
+                                              keyboardType:
+                                                  TextInputType.number,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -1011,10 +1023,12 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                               value: unitValue,
                                               onChanged: (value) {
                                                 setModalState(() {
-                                                  unitValue = _normalizeLinearUnitForEdit(
-                                                    value ?? "",
-                                                  );
-                                                  unitController.text = unitValue ?? "";
+                                                  unitValue =
+                                                      _normalizeLinearUnitForEdit(
+                                                        value ?? "",
+                                                      );
+                                                  unitController.text =
+                                                      unitValue ?? "";
                                                 });
                                               },
                                             ),
@@ -1028,7 +1042,8 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                             child: CustomTextField(
                                               label: "Quantity",
                                               controller: quantityController,
-                                              keyboardType: TextInputType.number,
+                                              keyboardType:
+                                                  TextInputType.number,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -1047,7 +1062,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: Colors.white,
-                                          borderRadius: BorderRadius.circular(8),
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
                                           border: Border.all(
                                             color: Colors.grey.shade200,
                                           ),
@@ -1101,7 +1118,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                                   disableIncrement = value;
                                                 });
                                               },
-                                              activeColor: const Color(0xFF8B4513),
+                                              activeColor: const Color(
+                                                0xFF8B4513,
+                                              ),
                                             ),
                                           ],
                                         ),
@@ -1291,7 +1310,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                 ListTile(
                   leading: const Icon(Icons.edit_note),
                   title: const Text("Add Custom Cost"),
-                  subtitle: const Text("Enter a one-off additional cost manually"),
+                  subtitle: const Text(
+                    "Enter a one-off additional cost manually",
+                  ),
                   onTap: () => Navigator.pop(context, 'custom'),
                 ),
                 ListTile(
@@ -1373,12 +1394,13 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final item = overheads[index];
-                        final category = (item['category'] ?? 'Overhead').toString();
-                        final description = (item['description'] ?? '').toString();
+                        final category = (item['category'] ?? 'Overhead')
+                            .toString();
+                        final description = (item['description'] ?? '')
+                            .toString();
                         final period = (item['period'] ?? '').toString();
-                        final amount = double.tryParse(
-                              (item['cost'] ?? 0).toString(),
-                            ) ??
+                        final amount =
+                            double.tryParse((item['cost'] ?? 0).toString()) ??
                             0.0;
                         return ListTile(
                           tileColor: const Color(0xFFF5F8F2),
@@ -1387,7 +1409,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                           ),
                           title: Text(category),
                           subtitle: Text(
-                            description.isEmpty ? period : "$description • $period",
+                            description.isEmpty
+                                ? period
+                                : "$description • $period",
                           ),
                           trailing: Text(
                             "₦${NumberFormat.decimalPattern().format(amount.round())}",
@@ -1781,7 +1805,7 @@ class _BomImportItem {
 
   static Map<String, dynamic> _mapCost(Map<String, dynamic> item) {
     return {
-      "type": item["name"] ?? "",
+      "type": item["type"] ?? item["name"] ?? "",
       "description": item["description"] ?? "",
       "amount": item["amount"]?.toString() ?? "0",
     };

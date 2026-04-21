@@ -1,16 +1,15 @@
 // invoice_template_selector.dart
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:screenshot/screenshot.dart';
+import 'package:wworker/App/Invoice/Model/invoiceModel.dart';
 import 'package:wworker/App/Invoice/Widget/DarkInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/elegantInvoice.dart';
 import 'package:wworker/App/Invoice/Widget/minimalInvoice.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 import 'dart:io';
-
 
 class InvoiceTemplateSelector extends StatefulWidget {
   final String clientName;
@@ -24,7 +23,7 @@ class InvoiceTemplateSelector extends StatefulWidget {
   final DateTime? dueDate;
   final String? paymentStatus;
   final String description;
-  final List<dynamic> items;
+  final List<InvoiceDisplayItem> items;
   final double grandTotal;
   final double amountPaid;
   final double balance;
@@ -169,83 +168,80 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
 
   final List<Map<String, String>> templateInfo = [
     {
-      'name': 'Modern Dark',
-      'description': 'Bold dark theme with curved design',
+      'name': 'Standard Blue',
+      'description': 'Classic invoice with blue accents',
     },
+    {'name': 'Standard Gray', 'description': 'Neutral business invoice layout'},
     {
-      'name': 'Minimal Clean',
-      'description': 'Simple and professional layout',
-    },
-    {
-      'name': 'Elegant Botanical',
-      'description': 'Soft colors with natural elements',
+      'name': 'Standard Teal',
+      'description': 'Clean standard invoice with teal accents',
     },
   ];
 
   Future<File> _generatePdfFromTemplate() async {
     try {
       debugPrint("📸 Capturing screenshot of template...");
-      
+
       // Get the template and wrap it properly for PDF capture
       final templateWidget = templates[selectedTemplate];
-      
-      // Capture the selected template as an image with high resolution
+
+      const renderSize = Size(794, 1123);
+
+      // Capture the selected template on a stable A4 render surface. Keeping
+      // the logical width fixed prevents the template from using a phone-width
+      // layout while the PDF image is generated.
       final imageBytes = await _screenshotController.captureFromWidget(
         MediaQuery(
-          data: const MediaQueryData(
-            size: Size(1600, 2262), // Double the size for better quality
-            devicePixelRatio: 3.0, // High DPI for crisp output
-          ),
+          data: const MediaQueryData(size: renderSize, devicePixelRatio: 3.0),
           child: Directionality(
             textDirection: TextDirection.ltr,
             child: Material(
-              child: Container(
-                width: 1600, // A4 width * 2
-                height: 2262, // A4 height * 2
-                color: Colors.white,
-                child: templateWidget,
+              color: Colors.white,
+              child: SizedBox(
+                width: renderSize.width,
+                height: renderSize.height,
+                child: Container(color: Colors.white, child: templateWidget),
               ),
             ),
           ),
         ),
         delay: const Duration(milliseconds: 500),
         context: context,
-        pixelRatio: 3.0, // High pixel ratio for sharp text
+        pixelRatio: 3.0,
       );
-      
+
       debugPrint("✅ Screenshot captured: ${imageBytes.length} bytes");
-      
+
       // Create PDF document
       final pdf = pw.Document();
-      
+
       // Convert screenshot to PDF image
       final image = pw.MemoryImage(imageBytes);
-      
+
       // Add page with the image
       pdf.addPage(
         pw.Page(
           pageFormat: PdfPageFormat.a4,
           build: (pw.Context context) {
-            return pw.Center(
-              child: pw.Image(image, fit: pw.BoxFit.contain),
-            );
+            return pw.Center(child: pw.Image(image, fit: pw.BoxFit.contain));
           },
         ),
       );
-      
+
       debugPrint("📄 PDF document created");
-      
+
       // Get temporary directory
       final directory = await path_provider.getTemporaryDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final filePath = '${directory.path}/invoice_${widget.invoiceNumber}_$timestamp.pdf';
-      
+      final filePath =
+          '${directory.path}/invoice_${widget.invoiceNumber}_$timestamp.pdf';
+
       // Save PDF to file
       final file = File(filePath);
       await file.writeAsBytes(await pdf.save());
-      
+
       debugPrint("💾 PDF saved to: $filePath");
-      
+
       return file;
     } catch (e) {
       debugPrint("❌ Error in PDF generation: $e");
@@ -260,29 +256,26 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
 
     try {
       debugPrint("📄 Starting PDF generation for template $selectedTemplate");
-      
+
       // Generate PDF from selected template
       final pdfFile = await _generatePdfFromTemplate();
-      
+
       debugPrint("✅ PDF generated successfully: ${pdfFile.path}");
-      
+
       // Call the callback with both template index and PDF file
       await widget.onTemplateSend!(selectedTemplate, pdfFile);
-      
     } catch (e) {
       debugPrint('❌ Error generating or sending PDF: $e');
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
               const Icon(Icons.error_outline, color: Colors.white),
               const SizedBox(width: 12),
-              Expanded(
-                child: Text('Failed to generate PDF: ${e.toString()}'),
-              ),
+              Expanded(child: Text('Failed to generate PDF: ${e.toString()}')),
             ],
           ),
           backgroundColor: Colors.red,
@@ -330,8 +323,10 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
               color: Colors.white,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 itemCount: templateInfo.length,
                 itemBuilder: (context, index) {
                   final isSelected = selectedTemplate == index;
@@ -371,8 +366,7 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color:
-                                  isSelected ? Colors.white : Colors.black87,
+                              color: isSelected ? Colors.white : Colors.black87,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -462,7 +456,9 @@ class _InvoiceTemplateSelectorState extends State<InvoiceTemplateSelector> {
                   children: [
                     Expanded(
                       child: OutlinedButton.icon(
-                        onPressed: isGeneratingPdf ? null : () => Navigator.pop(context),
+                        onPressed: isGeneratingPdf
+                            ? null
+                            : () => Navigator.pop(context),
                         icon: const Icon(Icons.arrow_back),
                         label: const Text('Back'),
                         style: OutlinedButton.styleFrom(
