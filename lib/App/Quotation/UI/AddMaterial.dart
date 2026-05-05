@@ -10,16 +10,12 @@ import 'package:wworker/App/Product/UI/addProduct.dart';
 import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
-import 'package:wworker/App/Quotation/UI/BomList.dart';
-import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/UI/QuoteSummary.dart';
 import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
-
-
 
 class AddMaterial extends ConsumerStatefulWidget {
   final bool autoPopAfterAdd;
@@ -54,15 +50,19 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
   Map<String, dynamic> _buildDisplayItem(Map<String, dynamic> item) {
     final displayItem = Map<String, dynamic>.from(item);
     displayItem.remove("disableIncrement");
-    final price =
-        double.tryParse((item["Price"] ?? "0").toString()) ?? 0.0;
-    final quantity =
-        int.tryParse((item["quantity"] ?? "1").toString()) ?? 1;
+    final calculation = item["calculation"];
+    final calculatedTotal = calculation is Map
+        ? double.tryParse((calculation["totalMaterialCost"] ?? "").toString())
+        : null;
+    final lineTotal = double.tryParse(
+      (item["LineTotal"] ?? item["subtotal"] ?? "").toString(),
+    );
+    final price = double.tryParse((item["Price"] ?? "0").toString()) ?? 0.0;
+    final quantity = int.tryParse((item["quantity"] ?? "1").toString()) ?? 1;
     // Always respect material quantity on the materials page.
-    final total = price * quantity;
+    final total = calculatedTotal ?? lineTotal ?? price * quantity;
     final totalRounded = total.round();
-    displayItem["Total"] =
-        NumberFormat.decimalPattern().format(totalRounded);
+    displayItem["Total"] = NumberFormat.decimalPattern().format(totalRounded);
     return displayItem;
   }
 
@@ -96,9 +96,9 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F7F7),
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Materials"),
+        title: const Text("Build BOM"),
         backgroundColor: Colors.white,
         elevation: 0,
         actions: const [
@@ -114,7 +114,7 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 8.0),
+          padding: const EdgeInsets.fromLTRB(0, 0, 0, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -137,7 +137,7 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 8),
 
               /// --- ADDITIONAL COST SECTION ---
               _buildSectionCard(
@@ -155,207 +155,236 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 18),
 
               /// --- MATERIAL LIST ---
-              _buildSectionHeader("Materials", materials.length),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildSectionHeader("Materials", materials.length),
+              ),
               const SizedBox(height: 12),
-              ...materials.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                final isDisabled = item["disableIncrement"] == true;
-                final displayItem = _buildDisplayItem(item);
-                return ItemsCard(
-                  item: displayItem,
-                  showQuantityControls: true,
-                  quantity:
-                      int.tryParse((item["quantity"] ?? "1").toString()) ?? 1,
-                  onIncreaseQuantity: () {
-                    final currentQty =
-                        int.tryParse((item["quantity"] ?? "1").toString()) ??
-                        1;
-                    final updated = {
-                      ...item,
-                      "quantity": (currentQty + 1).toString(),
-                    };
-                    notifier.updateMaterial(index, updated);
-                  },
-                  onDecreaseQuantity: () {
-                    final currentQty =
-                        int.tryParse((item["quantity"] ?? "1").toString()) ??
-                        1;
-                    if (currentQty <= 1) return;
-                    final updated = {
-                      ...item,
-                      "quantity": (currentQty - 1).toString(),
-                    };
-                    notifier.updateMaterial(index, updated);
-                  },
-                  showPriceIncrementToggle: true,
-                  useBomStyle: true,
-                  isPriceIncrementDisabled: isDisabled,
-                  onPriceIncrementToggle: (value) {
-                    final updated = {...item, "disableIncrement": value};
-                    notifier.updateMaterial(index, updated);
-                  },
-                  onDelete: () {
-                    notifier.deleteMaterial(index);
-                  },
-                );
-              }),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    ...materials.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      final isDisabled = item["disableIncrement"] == true;
+                      final displayItem = _buildDisplayItem(item);
+                      return ItemsCard(
+                        item: displayItem,
+                        showQuantityControls: true,
+                        quantity:
+                            int.tryParse(
+                              (item["quantity"] ?? "1").toString(),
+                            ) ??
+                            1,
+                        onIncreaseQuantity: () {
+                          final currentQty =
+                              int.tryParse(
+                                (item["quantity"] ?? "1").toString(),
+                              ) ??
+                              1;
+                          final updated = {
+                            ...item,
+                            "quantity": (currentQty + 1).toString(),
+                          };
+                          notifier.updateMaterial(index, updated);
+                        },
+                        onDecreaseQuantity: () {
+                          final currentQty =
+                              int.tryParse(
+                                (item["quantity"] ?? "1").toString(),
+                              ) ??
+                              1;
+                          if (currentQty <= 1) return;
+                          final updated = {
+                            ...item,
+                            "quantity": (currentQty - 1).toString(),
+                          };
+                          notifier.updateMaterial(index, updated);
+                        },
+                        showPriceIncrementToggle: true,
+                        useBomStyle: true,
+                        isPriceIncrementDisabled: isDisabled,
+                        onPriceIncrementToggle: (value) {
+                          final updated = {...item, "disableIncrement": value};
+                          notifier.updateMaterial(index, updated);
+                        },
+                        onDelete: () {
+                          notifier.deleteMaterial(index);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
 
               const SizedBox(height: 25),
 
               /// --- ADDITIONAL COST LIST ---
-              _buildSectionHeader("Additional Costs", additionalCosts.length),
-              const SizedBox(height: 12),
-              ...additionalCosts.asMap().entries.map((entry) {
-                final index = entry.key;
-                final item = entry.value;
-                return ItemsCard(
-                  item: item,
-                  showPriceIncrementToggle: true,
-                  isPriceIncrementDisabled: item["disableIncrement"] == true,
-                  onPriceIncrementToggle: (value) {
-                    final updated = {...item, "disableIncrement": value};
-                    notifier.updateAdditionalCost(index, updated);
-                  },
-                  onDelete: () => notifier.deleteAdditionalCost(index),
-                );
-              }),
-
-              SizedBox(height: 20),
-
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: CustomButton(
-                  text: (materials.isEmpty && additionalCosts.isEmpty)
-                      ? "Create New BOM"
-                      : "Continue",
-                  outlined: (materials.isEmpty && additionalCosts.isEmpty),
-                  onPressed: () {
-                    if (materials.isEmpty && additionalCosts.isEmpty) {
-                      setState(() {
-                        isExpanded = true;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Add at least one material or additional cost to continue",
-                          ),
-                        ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: _buildSectionHeader(
+                  "Additional Costs",
+                  additionalCosts.length,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    ...additionalCosts.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final item = entry.value;
+                      return ItemsCard(
+                        item: item,
+                        useBomStyle: true,
+                        showPriceIncrementToggle: true,
+                        isPriceIncrementDisabled:
+                            item["disableIncrement"] == true,
+                        onPriceIncrementToggle: (value) {
+                          final updated = {...item, "disableIncrement": value};
+                          notifier.updateAdditionalCost(index, updated);
+                        },
+                        onDelete: () => notifier.deleteAdditionalCost(index),
                       );
-                    } else {
-                      showModalBottomSheet(
-                        context: context,
-                        backgroundColor: Colors.transparent,
-                        isScrollControlled: true,
-                        builder: (context) => SelectOptionSheet(
-                          title: "Select Product",
-                          options: [
-                            OptionItem(
-                              label: "Create New Product",
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const AddProduct(),
-                                  ),
-                                );
-                              },
+                    }),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE8DED6)),
+                ),
+                child: Column(
+                  children: [
+                    CustomButton(
+                      text: (materials.isEmpty && additionalCosts.isEmpty)
+                          ? "Create New BOM"
+                          : "Continue",
+                      outlined: (materials.isEmpty && additionalCosts.isEmpty),
+                      onPressed: () {
+                        if (materials.isEmpty && additionalCosts.isEmpty) {
+                          setState(() {
+                            isExpanded = true;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                "Add at least one material or additional cost to continue",
+                              ),
                             ),
-                            OptionItem(
-                              label: "Select Existing Products",
-                              onTap: () async {
-                                Navigator.pop(context);
-                                final selectedProduct = await Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        const SelectExistingProductScreen(),
-                                  ),
-                                );
-
-                                if (selectedProduct != null) {
-                                  final productData = selectedProduct.toJson();
-
-                                  final quotationNotifier = ref.read(
-                                    quotationSummaryProvider.notifier,
-                                  );
-                                  final materialNotifier = ref.read(
-                                    materialProvider.notifier,
-                                  );
-
-                                  final materials =
-                                      List<Map<String, dynamic>>.from(
-                                        materialNotifier.state["materials"] ?? [],
-                                      );
-                                  final additionalCosts =
-                                      List<Map<String, dynamic>>.from(
-                                        materialNotifier
-                                                .state["additionalCosts"] ??
-                                            [],
-                                      );
-
-                                  final updatedMaterials = materials
-                                      .map(
-                                        (m) => {
-                                          ...m,
-                                          "Product": productData["name"],
-                                        },
-                                      )
-                                      .toList();
-
-                                  final newQuotation = {
-                                    "product": productData,
-                                    "materials": updatedMaterials,
-                                    "additionalCosts": additionalCosts,
-                                  };
-
-                                  await quotationNotifier.addNewQuotation(
-                                    newQuotation,
-                                  );
-
-                                  if (mounted) {
+                          );
+                        } else {
+                          showModalBottomSheet(
+                            context: context,
+                            backgroundColor: Colors.transparent,
+                            isScrollControlled: true,
+                            builder: (context) => SelectOptionSheet(
+                              title: "Select Product",
+                              options: [
+                                OptionItem(
+                                  label: "Create New Product",
+                                  onTap: () {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) =>
-                                            const QuotationSummary(),
+                                            const AddProduct(),
                                       ),
                                     );
-                                  }
-                                }
-                              },
+                                  },
+                                ),
+                                OptionItem(
+                                  label: "Select Existing Products",
+                                  onTap: () async {
+                                    Navigator.pop(context);
+                                    final selectedProduct = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const SelectExistingProductScreen(),
+                                      ),
+                                    );
+
+                                    if (selectedProduct != null) {
+                                      final productData = selectedProduct
+                                          .toJson();
+
+                                      final quotationNotifier = ref.read(
+                                        quotationSummaryProvider.notifier,
+                                      );
+                                      final materialData = ref.read(
+                                        materialProvider,
+                                      );
+
+                                      final materials =
+                                          List<Map<String, dynamic>>.from(
+                                            materialData["materials"] ?? [],
+                                          );
+                                      final additionalCosts =
+                                          List<Map<String, dynamic>>.from(
+                                            materialData["additionalCosts"] ??
+                                                [],
+                                          );
+
+                                      final updatedMaterials = materials
+                                          .map(
+                                            (m) => {
+                                              ...m,
+                                              "Product": productData["name"],
+                                            },
+                                          )
+                                          .toList();
+
+                                      final newQuotation = {
+                                        "product": productData,
+                                        "materials": updatedMaterials,
+                                        "additionalCosts": additionalCosts,
+                                      };
+
+                                      await quotationNotifier.addNewQuotation(
+                                        newQuotation,
+                                      );
+
+                                      if (mounted) {
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const QuotationSummary(),
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              // CustomButton(
-              //   text: "Add item from BOM List",
-              //   outlined: true,
-              //   icon: Icons.add,
-              //   onPressed: () {
-              //     Nav.push(BOMList());
-              //   },
-              // ),
-              // const SizedBox(height: 12),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: CustomButton(
-                  text: "Add item from Quotation",
-                  outlined: true,
-                  icon: Icons.add,
-                  onPressed: () {
-                    Nav.push(AllClientQuotations());
-                  },
+                          );
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    CustomButton(
+                      text: "Add item from Quotation",
+                      outlined: true,
+                      icon: Icons.add,
+                      onPressed: () {
+                        Nav.push(AllClientQuotations());
+                      },
+                    ),
+                  ],
                 ),
               ),
 
@@ -406,33 +435,32 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     required ValueChanged<bool> onChanged,
     required Widget child,
   }) {
-    return Card(
-      elevation: 0,
+    return Container(
       color: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey.shade300),
-      ),
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          splashColor: Colors.transparent,
+          highlightColor: Colors.transparent,
+        ),
         child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+          childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
           initiallyExpanded: isExpanded,
           onExpansionChanged: onChanged,
+          shape: const Border(),
+          collapsedShape: const Border(),
           leading: Icon(icon, color: const Color(0xFF8B4513)),
           title: Text(
             title,
             style: GoogleFonts.openSans(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
               color: const Color(0xFF302E2E),
+              letterSpacing: 0,
             ),
           ),
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(10, 0, 10, 16),
-              child: child,
-            ),
-          ],
+          children: [child],
         ),
       ),
     );

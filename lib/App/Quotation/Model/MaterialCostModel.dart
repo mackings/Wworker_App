@@ -123,6 +123,7 @@ class StandardInfo {
 class CalculationInfo {
   final String mode;
   final int minimumUnits;
+  final int billableUnits;
   final double quantity;
   final bool needsPricing;
   final double wasteThreshold;
@@ -133,6 +134,7 @@ class CalculationInfo {
   CalculationInfo({
     required this.mode,
     required this.minimumUnits,
+    required this.billableUnits,
     required this.quantity,
     required this.needsPricing,
     required this.wasteThreshold,
@@ -145,6 +147,10 @@ class CalculationInfo {
     return CalculationInfo(
       mode: json['mode']?.toString() ?? 'sheet_based',
       minimumUnits: _toInt(json['minimumUnits']),
+      billableUnits: _toInt(
+        json['billableUnits'],
+        fallback: _toInt(json['minimumUnits']),
+      ),
       quantity: _toDouble(json['quantity'], fallback: 1),
       needsPricing: json['needsPricing'] == true,
       wasteThreshold: _toDouble(json['wasteThreshold'], fallback: 0.75),

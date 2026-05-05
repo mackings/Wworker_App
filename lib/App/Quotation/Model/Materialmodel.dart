@@ -12,6 +12,8 @@ class MaterialModel {
   final double? pricePerSqm;
   final double? pricePerUnit;
   final String? pricingUnit;
+  final String? catalogKey;
+  final Map<String, dynamic>? dimensionRule;
   final List<MaterialType> types;
   final List<SizeVariant> sizeVariants;
   final List<FoamVariant> foamVariants;
@@ -24,6 +26,7 @@ class MaterialModel {
   final String? thicknessUnit;
   final bool? isCatalogMaterial;
   final bool? isCatalogPriced;
+  final bool? isPriced;
   final double? catalogPrice;
   final List<Size> sizes;
   final List<FoamDensity> foamDensities;
@@ -45,6 +48,8 @@ class MaterialModel {
     this.pricePerSqm,
     this.pricePerUnit,
     this.pricingUnit,
+    this.catalogKey,
+    this.dimensionRule,
     this.types = const [],
     this.sizeVariants = const [],
     this.foamVariants = const [],
@@ -57,6 +62,7 @@ class MaterialModel {
     this.thicknessUnit,
     this.isCatalogMaterial,
     this.isCatalogPriced,
+    this.isPriced,
     this.catalogPrice,
     this.sizes = const [],
     this.foamDensities = const [],
@@ -80,6 +86,10 @@ class MaterialModel {
       pricePerSqm: _asDouble(json['pricePerSqm']),
       pricePerUnit: _asDouble(json['pricePerUnit']),
       pricingUnit: json['pricingUnit'],
+      catalogKey: json['catalogKey']?.toString(),
+      dimensionRule: json['dimensionRule'] is Map
+          ? Map<String, dynamic>.from(json['dimensionRule'] as Map)
+          : null,
       types:
           (json['types'] as List?)
               ?.map((t) => MaterialType.fromJson(t))
@@ -108,6 +118,7 @@ class MaterialModel {
       thicknessUnit: json['thicknessUnit'],
       isCatalogMaterial: json['isCatalogMaterial'],
       isCatalogPriced: json['isCatalogPriced'],
+      isPriced: json['isPriced'],
       catalogPrice: _asDouble(json['catalogPrice']),
       sizes:
           (json['sizes'] as List?)?.map((s) => Size.fromJson(s)).toList() ?? [],
@@ -141,6 +152,8 @@ class MaterialModel {
       if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
       if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
       if (pricingUnit != null) 'pricingUnit': pricingUnit,
+      if (catalogKey != null) 'catalogKey': catalogKey,
+      if (dimensionRule != null) 'dimensionRule': dimensionRule,
       'types': types.map((t) => t.toJson()).toList(),
       'sizeVariants': sizeVariants.map((s) => s.toJson()).toList(),
       'foamVariants': foamVariants.map((f) => f.toJson()).toList(),
@@ -155,6 +168,7 @@ class MaterialModel {
       if (thicknessUnit != null) 'thicknessUnit': thicknessUnit,
       if (isCatalogMaterial != null) 'isCatalogMaterial': isCatalogMaterial,
       if (isCatalogPriced != null) 'isCatalogPriced': isCatalogPriced,
+      if (isPriced != null) 'isPriced': isPriced,
       if (catalogPrice != null) 'catalogPrice': catalogPrice,
       'sizes': sizes.map((s) => s.toJson()).toList(),
       'foamDensities': foamDensities.map((f) => f.toJson()).toList(),

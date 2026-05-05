@@ -6,7 +6,6 @@ import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/AddMaterial.dart';
 import 'package:wworker/App/Quotation/UI/FirstQuote.dart';
-import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Api/materialService.dart';
 import 'package:wworker/App/Quotation/Model/MaterialCostModel.dart';
@@ -36,6 +35,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
   List<Map<String, dynamic>> allQuotations = [];
   Map<int, int> quantities = {};
   bool isLoading = true;
+  final NumberFormat _moneyFormat = NumberFormat.decimalPattern();
 
   @override
   void initState() {
@@ -362,6 +362,27 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     final ratio = baseSelling / baseCost;
     return totalCost * ratio;
   }
+
+  double _cartCostTotal() {
+    var total = 0.0;
+    for (var i = 0; i < allQuotations.length; i++) {
+      total += _calculateTotalCost(allQuotations[i], quantities[i] ?? 1);
+    }
+    return total;
+  }
+
+  double _cartSellingTotal() {
+    var total = 0.0;
+    for (var i = 0; i < allQuotations.length; i++) {
+      total += _calculateTotalSellingPrice(
+        allQuotations[i],
+        quantities[i] ?? 1,
+      );
+    }
+    return total;
+  }
+
+  String _formatMoney(double value) => "₦${_moneyFormat.format(value.round())}";
 
   Future<void> _showBomBreakdownSheet(
     Map<String, dynamic> quotation,
@@ -1217,6 +1238,22 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                           );
                                         }
                                       : () {
+                                          final quantityText =
+                                              quantityController.text
+                                                  .trim()
+                                                  .isEmpty
+                                              ? "1"
+                                              : quantityController.text.trim();
+                                          final quantity =
+                                              int.tryParse(quantityText) ?? 1;
+                                          final lineTotal =
+                                              latestPriceValue ??
+                                              costCalculation!
+                                                  .pricing
+                                                  .totalMaterialCost;
+                                          final unitPrice = quantity > 0
+                                              ? lineTotal / quantity
+                                              : lineTotal;
                                           Navigator.pop(context, {
                                             "Product":
                                                 initial?["Product"] ?? "",
@@ -1239,13 +1276,42 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                                 : priceController.text
                                                       .trim()
                                                       .replaceAll(",", ""),
-                                            "quantity":
-                                                quantityController.text
-                                                    .trim()
-                                                    .isEmpty
-                                                ? "1"
-                                                : quantityController.text
-                                                      .trim(),
+                                            "LineTotal": lineTotal
+                                                .toStringAsFixed(2),
+                                            "unitPrice": unitPrice
+                                                .toStringAsFixed(2),
+                                            "quantity": quantityText,
+                                            "billableUnits": costCalculation!
+                                                .calculation
+                                                .billableUnits,
+                                            "calculation": {
+                                              "mode": costCalculation!
+                                                  .calculation
+                                                  .mode,
+                                              "minimumUnits": costCalculation!
+                                                  .calculation
+                                                  .minimumUnits,
+                                              "billableUnits": costCalculation!
+                                                  .calculation
+                                                  .billableUnits,
+                                              "quantity": costCalculation!
+                                                  .calculation
+                                                  .quantity,
+                                              "needsPricing": costCalculation!
+                                                  .calculation
+                                                  .needsPricing,
+                                              "pricePerSqm": costCalculation!
+                                                  .pricing
+                                                  .pricePerSqm,
+                                              "pricePerUnit": costCalculation!
+                                                  .pricing
+                                                  .pricePerUnit,
+                                              "pricePerFullUnit":
+                                                  costCalculation!
+                                                      .pricing
+                                                      .pricePerFullUnit,
+                                              "totalMaterialCost": lineTotal,
+                                            },
                                             "disableIncrement":
                                                 disableIncrement,
                                           });
@@ -1532,6 +1598,124 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     return result;
   }
 
+  Widget _buildQuotationOverview({
+    required int count,
+    required double costTotal,
+    required double sellingTotal,
+    required double margin,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF2D241E),
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.request_quote_outlined,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Quote Workspace',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 1),
+                      Text(
+                        '$count BOM${count == 1 ? '' : 's'} ready for pricing',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.72),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _OverviewMetric(
+                    label: 'Cost',
+                    value: _formatMoney(costTotal),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _OverviewMetric(
+                    label: 'Selling',
+                    value: _formatMoney(sellingTotal),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _OverviewMetric(
+                    label: 'Margin',
+                    value: _formatMoney(margin),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _continueToFirstQuote() {
+    if (allQuotations.isEmpty) return;
+
+    final quotationQuantitiesMap = <String, int>{};
+    for (int i = 0; i < allQuotations.length; i++) {
+      final quotationId = allQuotations[i]["id"] as String;
+      quotationQuantitiesMap[quotationId] = quantities[i] ?? 1;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FirstQuote(
+          selectedQuotations: allQuotations,
+          quotationQuantities: quotationQuantitiesMap,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen for provider updates
@@ -1539,10 +1723,15 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       _loadAllQuotations();
     });
 
+    final cartCostTotal = _cartCostTotal();
+    final cartSellingTotal = _cartSellingTotal();
+    final cartMargin = cartSellingTotal - cartCostTotal;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFAF7F3),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAF7F3),
+        elevation: 0,
         title: CustomText(title: "Quotations"),
         actions: const [
           GuideHelpIcon(
@@ -1557,56 +1746,65 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
       body: SafeArea(
         child: Column(
           children: [
+            _buildQuotationOverview(
+              count: allQuotations.length,
+              costTotal: cartCostTotal,
+              sellingTotal: cartSellingTotal,
+              margin: cartMargin,
+            ),
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : allQuotations.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.only(left: 20, right: 20),
-                        child: CustomEmptyQuotes(
-                          title: "",
-                          buttonText: "",
-                          emptyMessage: "No Quotations Found",
+                        padding: const EdgeInsets.all(24),
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE8DED6)),
+                          ),
+                          child: const CustomEmptyQuotes(
+                            title: "",
+                            buttonText: "",
+                            emptyMessage: "No Quotations Found",
+                          ),
                         ),
                       ),
                     )
                   : RefreshIndicator(
                       onRefresh: _loadAllQuotations,
                       child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 25,
-                          vertical: 20,
-                        ),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
                         itemCount: allQuotations.length,
                         itemBuilder: (context, index) {
                           final quotation = allQuotations[index];
                           final product = quotation["product"] ?? {};
                           final currentQuantity = quantities[index] ?? 1;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 20),
-                            child: QuoteGlanceCard(
-                              imageUrl: product["image"] ?? "",
-                              productName: product["name"] ?? "Unknown Product",
-                              bomNo: product["productId"] ?? "N/A",
-                              description: product["description"] ?? "",
-                              costPrice: _calculateTotalCost(
-                                quotation,
-                                currentQuantity,
-                              ),
-                              sellingPrice: _calculateTotalSellingPrice(
-                                quotation,
-                                currentQuantity,
-                              ),
-                              quantity: currentQuantity,
-                              onEdit: () =>
-                                  _showBomBreakdownSheet(quotation, index),
-                              onIncrease: () => _increaseQuantity(index),
-                              onDecrease: () => _decreaseQuantity(index),
-                              onDelete: () =>
-                                  _deleteQuotation(quotation["id"], index),
+                          return QuoteGlanceCard(
+                            imageUrl: product["image"] ?? "",
+                            productName: product["name"] ?? "Unknown Product",
+                            bomNo: product["productId"] ?? "N/A",
+                            description: product["description"] ?? "",
+                            costPrice: _calculateTotalCost(
+                              quotation,
+                              currentQuantity,
                             ),
+                            sellingPrice: _calculateTotalSellingPrice(
+                              quotation,
+                              currentQuantity,
+                            ),
+                            quantity: currentQuantity,
+                            onEdit: () =>
+                                _showBomBreakdownSheet(quotation, index),
+                            onIncrease: () => _increaseQuantity(index),
+                            onDecrease: () => _decreaseQuantity(index),
+                            onDelete: () =>
+                                _deleteQuotation(quotation["id"], index),
                           );
                         },
                       ),
@@ -1614,105 +1812,148 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
             ),
 
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 20),
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black26,
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 18,
                     offset: const Offset(0, -2),
                   ),
                 ],
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Full width continue button
-                    if (allQuotations.isNotEmpty) ...[
-                      CustomButton(
+              child: Row(
+                children: [
+                  if (allQuotations.isNotEmpty) ...[
+                    Expanded(
+                      child: CustomButton(
                         text: "Continue",
                         icon: Icons.arrow_forward,
-                        onPressed: () {
-                          final quotationQuantitiesMap = <String, int>{};
-                          for (int i = 0; i < allQuotations.length; i++) {
-                            final quotationId =
-                                allQuotations[i]["id"] as String;
-                            quotationQuantitiesMap[quotationId] =
-                                quantities[i] ?? 1;
-                          }
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => FirstQuote(
-                                selectedQuotations: allQuotations,
-                                quotationQuantities: quotationQuantitiesMap,
-                              ),
-                            ),
-                          );
-                        },
+                        height: 52,
+                        padding: 12,
+                        onPressed: _continueToFirstQuote,
                       ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    /// Buttons row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CustomButton(
-                            textSize: 15,
-                            text: "Create",
-                            outlined: allQuotations.isNotEmpty,
-                            icon: Icons.add,
-                            onPressed: () {
-                              Nav.push(AddMaterial());
-                            },
-                          ),
-                        ),
-                        // const SizedBox(width: 12),
-                        // Expanded(
-                        //   child: CustomButton(
-                        //     textSize: 15,
-                        //     text: "BOM",
-                        //     outlined: true,
-                        //     onPressed: () {
-                        //       // Nav.push(ImportQuotationsPage());
-                        //     },
-                        //   ),
-                        // ),
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: CustomButton(
-                            text: "Import BOM",
-                            outlined: true,
-                            onPressed: _showImportBomsSheet,
-                          ),
-                        ),
-
-                        // Expanded(
-                        //   child: CustomButton(
-                        //     textSize: 15,
-                        //     text: "Import",
-                        //     outlined: true,
-                        //     onPressed: () {
-                        //       // Nav.push(const AllClientQuotations(
-                        //       //   isImportMode: true,
-                        //       // ));
-                        //     },
-                        //   ),
-                        // ),
-                      ],
                     ),
-
-                    //const SizedBox(height: 12),
-                  ],
-                ),
+                    const SizedBox(width: 10),
+                  ] else
+                    const Spacer(),
+                  _BottomIconAction(
+                    icon: Icons.add,
+                    label: "Create",
+                    onTap: () => Nav.push(AddMaterial()),
+                  ),
+                  const SizedBox(width: 10),
+                  _BottomIconAction(
+                    icon: Icons.file_download_outlined,
+                    label: "Import",
+                    onTap: _showImportBomsSheet,
+                  ),
+                  if (allQuotations.isEmpty) const Spacer(),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BottomIconAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _BottomIconAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Material(
+        color: const Color(0xFFFFF3E8),
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Container(
+            width: 54,
+            height: 52,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFE8DED6)),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icon, color: const Color(0xFF8B4513), size: 22),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF8B4513),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OverviewMetric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _OverviewMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 50),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.68),
+              fontSize: 10.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 3),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              maxLines: 1,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

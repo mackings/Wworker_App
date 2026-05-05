@@ -89,13 +89,14 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   Future<void> _loadMaterials() async {
     setState(() => _isLoadingMaterials = true);
     final results = await Future.wait([
-      _materialService.getAllMaterials(),
-      _materialService.getGroupedMaterials(),
+      _materialService.getAllMaterials(limit: 500),
+      _materialService.getGroupedMaterials(limit: 500),
     ]);
 
     final allMaterialsResult = results[0];
     final materials =
-        allMaterialsResult['success'] == true && allMaterialsResult['data'] is List
+        allMaterialsResult['success'] == true &&
+            allMaterialsResult['data'] is List
         ? (allMaterialsResult['data'] as List)
               .whereType<Map>()
               .map((e) => MaterialModel.fromJson(Map<String, dynamic>.from(e)))
@@ -239,38 +240,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     return triplet != null && triplet.length >= 3;
   }
 
-  void _prefillFromVariantSizeString(String raw) {
-    final triplet = _parseSizeTriplet(raw);
-    if (triplet == null) return;
-    // If we have 3 values: treat as thickness, width, length.
-    if (triplet.length >= 3) {
-      final t = triplet[0];
-      final w = triplet[1];
-      final l = triplet[2];
-
-      widthController.text = w.toString();
-      lengthController.text = l.toString();
-
-      // Only use thickness from size as a fallback when API thickness is null.
-      if (thicknessController.text.trim().isEmpty &&
-          (_selectedMaterial?.thickness == null)) {
-        thicknessController.text = t.toString();
-        thickness = t.toString();
-      }
-    } else if (triplet.length == 2) {
-      final w = triplet[0];
-      final l = triplet[1];
-      widthController.text = w.toString();
-      lengthController.text = l.toString();
-    }
-
-    // Infer dimension unit from the size string if possible.
-    final inferred = _normalizeLinearUnit(raw.contains('"') ? 'inches' : null);
-    if (_dimensionUnit == null && inferred != null) {
-      _dimensionUnit = inferred;
-    }
-  }
-
   void _setAutoMaterialName({
     String? category,
     String? subCategory,
@@ -279,7 +248,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final sub = _cleanGroupLabel((subCategory ?? '').trim());
     final cat = _cleanGroupLabel((category ?? '').trim());
     final sz = _cleanVariantSizeLabel((size ?? '').trim());
-    final base = sub.isNotEmpty ? sub : (cat.isNotEmpty ? cat : _selectedMaterial?.name ?? '');
+    final base = sub.isNotEmpty
+        ? sub
+        : (cat.isNotEmpty ? cat : _selectedMaterial?.name ?? '');
     final value = sz.isNotEmpty ? '$base $sz' : base;
     if (value.trim().isNotEmpty) {
       materialTypeController.text = value.trim();
@@ -287,36 +258,16 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   void _prefillProjectSizeAndUnit(MaterialModel material) {
-    final sw = material.standardWidth;
-    final sl = material.standardLength;
     final su = _normalizeLinearUnit(material.standardUnit);
 
-    final canPrefillSize = sw != null && sl != null && sw > 0 && sl > 0;
-    if (canPrefillSize) {
-      final longer = sw >= sl ? sw : sl;
-      final shorter = sw >= sl ? sl : sw;
-
-      if (lengthController.text.trim().isEmpty) {
-        lengthController.text = longer.toString();
-      }
-      if (widthController.text.trim().isEmpty) {
-        widthController.text = shorter.toString();
-      }
-    }
-
     if (su != null &&
-        ((unit == null || !linearUnits.contains(unit)) || _dimensionUnit == null)) {
+        ((unit == null || !linearUnits.contains(unit)) ||
+            _dimensionUnit == null)) {
       _dimensionUnit = su;
       unit = su;
     }
 
-    // If we now have enough info, auto-calc once.
-    if (_selectedMaterial != null &&
-        widthController.text.trim().isNotEmpty &&
-        lengthController.text.trim().isNotEmpty &&
-        _dimensionUnit != null) {
-      Future.microtask(() => _calculateCosts());
-    }
+    // Project width/length are intentionally not prefilled from stock dimensions.
   }
 
   (String, String, Map<String, dynamic>, int, int)? _firstGroupedVariant() {
@@ -385,19 +336,29 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       unit: (variant['unit'] ?? '').toString(),
       color: (variant['color'] ?? '').toString(),
       pricingUnit: (variant['pricingUnit'] ?? '').toString(),
+      catalogKey: variant['catalogKey']?.toString(),
+      dimensionRule: dimensionRule.isEmpty ? null : dimensionRule,
       pricePerUnit: pricePerUnit,
       pricePerSqm: pricePerSqm,
       catalogPrice: _asDouble(variant['catalogPrice']),
       isCatalogMaterial: variant['isCatalogMaterial'] == true,
+      isCatalogPriced: variant['isCatalogPriced'] == true,
+      isPriced: variant['isPriced'] == true,
       thickness:
           _asDouble(variant['thickness']) ??
           _asDouble(stockDimensions['thickness']) ??
           _parseSingleSizeValue(sizeLabel),
-      thicknessUnit:
-          (variant['thicknessUnit'] ?? stockDimensions['unit'])?.toString(),
-      standardWidth: _asDouble(stockDimensions['width']),
-      standardLength: _asDouble(stockDimensions['length']),
-      standardUnit: stockDimensions['unit']?.toString(),
+      thicknessUnit: (variant['thicknessUnit'] ?? stockDimensions['unit'])
+          ?.toString(),
+      standardWidth:
+          _asDouble(variant['standardWidth']) ??
+          _asDouble(stockDimensions['width']),
+      standardLength:
+          _asDouble(variant['standardLength']) ??
+          _asDouble(stockDimensions['length']),
+      standardUnit:
+          variant['standardUnit']?.toString() ??
+          stockDimensions['unit']?.toString(),
     );
   }
 
@@ -416,16 +377,12 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   Map<String, dynamic>? _effectiveDimensionRule() {
     return _activeDimensionRule ??
+        _selectedMaterial?.dimensionRule ??
         _categoryRuleFor(_selectedMaterial?.category);
   }
 
   bool _requiresProjectSize(MaterialModel? material) {
     if (material == null) return true;
-
-    final category = (material.category ?? '').trim().toUpperCase();
-    if (category == 'BOARD' || category == 'WOOD') {
-      return true;
-    }
 
     final rule = _effectiveDimensionRule();
     final projectInput = rule?['projectInput'] is Map
@@ -434,6 +391,31 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final stockDimensions = rule?['stockDimensions'] is Map
         ? Map<String, dynamic>.from(rule!['stockDimensions'] as Map)
         : <String, dynamic>{};
+
+    final showWidth = projectInput.containsKey('showWidth')
+        ? _isTruthy(projectInput['showWidth'])
+        : null;
+    final showLength = projectInput.containsKey('showLength')
+        ? _isTruthy(projectInput['showLength'])
+        : null;
+    final requireWidth = projectInput.containsKey('requireWidth')
+        ? _isTruthy(projectInput['requireWidth'])
+        : null;
+    final requireLength = projectInput.containsKey('requireLength')
+        ? _isTruthy(projectInput['requireLength'])
+        : null;
+
+    if (showWidth == false && showLength == false) return false;
+    if (showWidth == true ||
+        showLength == true ||
+        requireWidth == true ||
+        requireLength == true) {
+      return true;
+    }
+
+    final schema = rule?['schema']?.toString().toLowerCase();
+    if (schema == 'unit_based' || schema == 'quantity_based') return false;
+    if (schema == 'area_based' || schema == 'sheet_based') return true;
 
     if (_isTruthy(projectInput['requiresDimensions']) ||
         _isTruthy(projectInput['requiresProjectSize']) ||
@@ -458,6 +440,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     if (mode.contains('quantity')) return false;
     if (mode.contains('sheet') || mode.contains('dimension')) return true;
+
+    final category = (material.category ?? '').trim().toUpperCase();
+    if (category == 'BOARD' || category == 'WOOD') {
+      return true;
+    }
 
     final hasSqmPricing = (material.pricePerSqm ?? 0) > 0;
     final hasDimensionCharacteristics =
@@ -515,8 +502,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   String _quantityInputLabel(MaterialModel? material) {
-    final raw =
-        (material?.pricingUnit ?? material?.unit ?? 'unit').trim().toLowerCase();
+    final raw = (material?.pricingUnit ?? material?.unit ?? 'unit')
+        .trim()
+        .toLowerCase();
     if (raw.isEmpty) return 'Quantity needed';
     if (raw == 'piece') return 'Pieces needed';
     if (raw == 'sheet') return 'Sheets needed';
@@ -526,8 +514,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   String _unitPriceLabel(MaterialModel? material) {
-    final raw =
-        (material?.pricingUnit ?? material?.unit ?? 'unit').trim().toLowerCase();
+    final raw = (material?.pricingUnit ?? material?.unit ?? 'unit')
+        .trim()
+        .toLowerCase();
     if (raw.isEmpty) return 'Price per unit';
     return 'Price per $raw';
   }
@@ -560,13 +549,29 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   bool _effectiveNeedsPricing() {
+    if (_costCalculation?.calculation.needsPricing == true) {
+      return _parseAmountInput(manualUnitPriceController.text) == null;
+    }
     if (_usesQuantityBasedInput(_selectedMaterial)) {
       return _effectiveUnitPriceForQuantityMaterial() == null;
     }
-    return _costCalculation?.calculation.needsPricing == true;
+    return false;
   }
 
   double _effectiveProjectCost() {
+    final calculatedTotal = _costCalculation?.pricing.totalMaterialCost;
+    if (calculatedTotal != null && calculatedTotal > 0) {
+      return calculatedTotal;
+    }
+
+    if (_costCalculation?.calculation.needsPricing == true) {
+      final manualUnitPrice = _parseAmountInput(manualUnitPriceController.text);
+      if (manualUnitPrice != null && manualUnitPrice > 0) {
+        final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
+        return manualUnitPrice * (quantity < 1 ? 1 : quantity);
+      }
+    }
+
     if (_usesQuantityBasedInput(_selectedMaterial)) {
       final unitPrice = _effectiveUnitPriceForQuantityMaterial() ?? 0;
       final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
@@ -623,20 +628,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         ? Map<String, dynamic>.from(dimensionRule['projectInput'] as Map)
         : <String, dynamic>{};
 
-    final stockWidth = _asDouble(stockDimensions['width']);
-    final stockLength = _asDouble(stockDimensions['length']);
     final stockThickness = _asDouble(stockDimensions['thickness']);
 
-    if (stockWidth != null &&
-        stockWidth > 0 &&
-        widthController.text.trim().isEmpty) {
-      widthController.text = stockWidth.toString();
-    }
-    if (stockLength != null &&
-        stockLength > 0 &&
-        lengthController.text.trim().isEmpty) {
-      lengthController.text = stockLength.toString();
-    }
+    // Stock width/length describe the purchasable material, not the project size.
     if (stockThickness != null &&
         stockThickness > 0 &&
         thicknessController.text.trim().isEmpty) {
@@ -690,7 +684,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final subObj = subCats[_selectedSubCategoryIndex];
-    final rawSubName = _cleanGroupLabel((subObj['subCategory'] ?? '').toString());
+    final rawSubName = _cleanGroupLabel(
+      (subObj['subCategory'] ?? '').toString(),
+    );
     final subName = rawSubName.isEmpty ? categoryName : rawSubName;
     final variantsRaw = subObj['variants'];
     final variants = variantsRaw is List
@@ -747,12 +743,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         subCategory: subCategory,
         size: (variant['size'] ?? '').toString(),
       );
-    }
-
-    // Prefill length/width from size string when it represents dimensions (e.g. 1"x10"x144").
-    final size = (variant['size'] ?? '').toString().trim();
-    if (size.isNotEmpty) {
-      _prefillFromVariantSizeString(size);
     }
 
     final variantDimensionRule = variant['dimensionRule'] is Map
@@ -854,6 +844,22 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 child: ChoiceChip(
                   label: Text(name),
                   selected: selected,
+                  selectedColor: const Color(0xFFFFF3E8),
+                  backgroundColor: Colors.white,
+                  side: BorderSide(
+                    color: selected
+                        ? const Color(0xFF8B4513)
+                        : const Color(0xFFE8DED6),
+                  ),
+                  labelStyle: GoogleFonts.openSans(
+                    color: selected
+                        ? const Color(0xFF8B4513)
+                        : const Color(0xFF756A61),
+                    fontWeight: FontWeight.w700,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                   onSelected: (_) {
                     setState(() {
                       _selectedCategoryIndex = idx;
@@ -885,6 +891,22 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                   child: ChoiceChip(
                     label: Text(name),
                     selected: selected,
+                    selectedColor: const Color(0xFFFFF3E8),
+                    backgroundColor: Colors.white,
+                    side: BorderSide(
+                      color: selected
+                          ? const Color(0xFF8B4513)
+                          : const Color(0xFFE8DED6),
+                    ),
+                    labelStyle: GoogleFonts.openSans(
+                      color: selected
+                          ? const Color(0xFF8B4513)
+                          : const Color(0xFF756A61),
+                      fontWeight: FontWeight.w700,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     onSelected: (_) {
                       setState(() {
                         _selectedSubCategoryIndex = idx;
@@ -939,14 +961,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(8),
                     border: Border.all(
                       color: selected
-                          ? const Color(0xFFA16438)
-                          : Colors.grey.shade300,
-                      width: selected ? 2 : 1,
+                          ? const Color(0xFF8B4513)
+                          : const Color(0xFFE8DED6),
                     ),
-                    color: selected ? const Color(0xFFFFF3E0) : Colors.white,
+                    color: selected ? const Color(0xFFFFF3E8) : Colors.white,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
@@ -977,8 +998,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         _normalizeLinearUnit(material.standardUnit) ??
         _normalizeLinearUnit(material.thicknessUnit) ??
         _normalizeLinearUnit(
-          _categoryRuleFor(material.category)?['projectInput']?['defaultUnit']
-              ?.toString(),
+          _categoryRuleFor(
+            material.category,
+          )?['projectInput']?['defaultUnit']?.toString(),
         ) ??
         _dimensionUnit ??
         'inches';
@@ -1052,7 +1074,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       _selectedMaterial = material;
       _selectedMaterialType = null;
       _selectedFoamVariant = null;
-      _activeDimensionRule = _categoryRuleFor(material.category);
+      _activeDimensionRule =
+          material.dimensionRule ?? _categoryRuleFor(material.category);
       materialTypeController.clear();
 
       // Auto-set units based on material type
@@ -1177,6 +1200,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final manualUnitPrice = _parseAmountInput(manualUnitPriceController.text);
     final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
     final thicknessValue = _resolvedThicknessValue();
+    final needsManualPrice = _costCalculation?.calculation.needsPricing == true;
 
     // Validate all required fields
     if (material == null ||
@@ -1199,31 +1223,62 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       return;
     }
 
-    final resolvedUnitPrice = usesQuantityBasedInput
-        ? (manualUnitPrice ??
-            material.pricePerUnit ??
-            material.catalogPrice ??
-            0)
-        : null;
-    final priceValue = usesQuantityBasedInput
-        ? resolvedUnitPrice!.toStringAsFixed(2)
-        : _costCalculation!.pricing.projectCost.toStringAsFixed(2);
+    if (needsManualPrice && (manualUnitPrice == null || manualUnitPrice <= 0)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Enter a manual price before adding this unpriced material.",
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final normalizedQuantity = quantity < 1 ? 1 : quantity;
+    final lineTotal = needsManualPrice
+        ? (manualUnitPrice! * normalizedQuantity)
+        : _costCalculation!.pricing.totalMaterialCost;
+    final unitPrice = normalizedQuantity > 0
+        ? lineTotal / normalizedQuantity
+        : lineTotal;
+    final calculationPayload = {
+      "mode": _costCalculation!.calculation.mode,
+      "minimumUnits": _costCalculation!.calculation.minimumUnits,
+      "billableUnits": _costCalculation!.calculation.billableUnits,
+      "quantity": _costCalculation!.calculation.quantity,
+      "needsPricing": needsManualPrice,
+      "pricePerSqm": _costCalculation!.pricing.pricePerSqm,
+      "pricePerUnit": needsManualPrice
+          ? manualUnitPrice
+          : _costCalculation!.pricing.pricePerUnit,
+      "pricePerFullUnit": _costCalculation!.pricing.pricePerFullUnit,
+      "totalMaterialCost": lineTotal,
+    };
 
     // Create item with API calculation results
     final item = {
+      "materialId": material.id,
+      "name": material.name,
+      "category": material.category,
+      "subCategory": material.subCategory,
       "Product": material.name,
       "Materialname": materialTypeController.text.trim(),
       "Width": requiresProjectSize ? widthController.text : "",
       "Length": requiresProjectSize ? lengthController.text : "",
       "Thickness": requiresThickness ? thicknessValue : "",
       "Unit": requiresProjectSize ? unit : "",
+      "materialUnit": material.unit,
       "Sqm": usesQuantityBasedInput
           ? ""
           : _costCalculation!.dimensions.projectAreaSqm.toStringAsFixed(2),
-      "Price": priceValue,
-      "needsPricing": _costCalculation!.calculation.needsPricing &&
-          manualUnitPrice == null,
-      "quantity": (quantity < 1 ? 1 : quantity).toString(),
+      "Price": lineTotal.toStringAsFixed(2),
+      "unitPrice": unitPrice.toStringAsFixed(2),
+      "LineTotal": lineTotal.toStringAsFixed(2),
+      "needsPricing": false,
+      "quantity": normalizedQuantity.toString(),
+      "billableUnits": _costCalculation!.calculation.billableUnits,
+      "calculation": calculationPayload,
     };
 
     widget.onAddItem?.call(item);
@@ -1270,38 +1325,19 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F8F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
+      padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (widget.showHeader) ...[
+            _buildMaterialCardHeader(),
+            const SizedBox(height: 14),
+          ],
           // Header row
-          if (widget.showHeader || _isLoadingMaterials)
+          if (_isLoadingMaterials)
             Row(
-              mainAxisAlignment: widget.showHeader
-                  ? MainAxisAlignment.spaceBetween
-                  : MainAxisAlignment.end,
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (widget.showHeader)
-                  Row(
-                    children: [
-                      if (widget.icon != null)
-                        Icon(widget.icon, color: widget.color),
-                      if (widget.icon != null) const SizedBox(width: 8),
-                      Text(
-                        widget.title,
-                        style: GoogleFonts.openSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF302E2E),
-                        ),
-                      ),
-                    ],
-                  ),
                 if (_isLoadingMaterials)
                   const SizedBox(
                     width: 20,
@@ -1315,8 +1351,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           else
             const SizedBox.shrink(),
 
-          if (widget.showHeader || _isLoadingMaterials)
-            const SizedBox(height: 16),
+          if (_isLoadingMaterials) const SizedBox(height: 16),
 
           // Material selection
           if (_isLoadingMaterials)
@@ -1381,17 +1416,12 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           if (isFoam && hasFoamVariants) _buildFoamVariantSelection(),
 
           // Material name is auto-generated from the selected material and hidden from UI.
-
           const SizedBox(height: 10),
 
           // Display standard material info (read-only from API)
           if (_selectedMaterial != null) ...[
             Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8),
-              ),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1442,7 +1472,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             const SizedBox(height: 20),
           ],
 
-          if (requiresProjectSize || requiresThickness || usesQuantityBasedInput) ...[
+          if (requiresProjectSize ||
+              requiresThickness ||
+              usesQuantityBasedInput) ...[
             if (requiresProjectSize) ...[
               _buildSectionHeader("Project Size (what you need)"),
               const SizedBox(height: 12),
@@ -1472,7 +1504,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 () => _calculateCosts(),
               ),
               const SizedBox(height: 12),
-              if (isUnpricedQuantityMaterial)
+              if (isUnpricedQuantityMaterial || _effectiveNeedsPricing())
                 _buildCurrencyInputField(
                   _unitPriceLabel(_selectedMaterial),
                   manualUnitPriceController,
@@ -1491,59 +1523,58 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                     child: isFixedVariantThickness
                         ? _buildReadOnlyField(
                             "Thickness",
-                            '${resolvedThicknessValue ?? ''} ${_selectedMaterial?.thicknessUnit ?? ''}'.trim(),
+                            '${resolvedThicknessValue ?? ''} ${_selectedMaterial?.thicknessUnit ?? ''}'
+                                .trim(),
                           )
                         : _availableThicknesses.isNotEmpty
-                            ? _buildDropdown(
+                        ? _buildDropdown(
+                            "Thickness",
+                            _availableThicknesses,
+                            thickness,
+                            (v) {
+                              setState(() {
+                                thickness = v;
+                                thicknessController.text = v ?? '';
+                              });
+                              _calculateCosts();
+                            },
+                          )
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
                                 "Thickness",
-                                _availableThicknesses,
-                                thickness,
-                                (v) {
-                                  setState(() {
-                                    thickness = v;
-                                    thicknessController.text = v ?? '';
-                                  });
-                                  _calculateCosts();
-                                },
-                              )
-                            : Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "Thickness",
-                                    style: GoogleFonts.openSans(
-                                      fontSize: 14,
-                                      color: const Color(0xFF7B7B7B),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-
-                                  TextField(
-                                    controller: thicknessController,
-                                    keyboardType:
-                                        const TextInputType.numberWithOptions(
-                                          decimal: true,
-                                        ),
-                                    decoration: InputDecoration(
-                                      contentPadding: const EdgeInsets.all(12),
-                                      hintText: "Enter thickness",
-                                      hintStyle: const TextStyle(
-                                        color: Color(0xFFBDBDBD),
-                                        fontSize: 13,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                        borderSide: const BorderSide(
-                                          color: Color(0xFFE0E0E0),
-                                        ),
-                                      ),
-                                    ),
-                                    onChanged: (_) => _calculateCosts(),
-                                  ),
-                 
-                                  
-                                ],
+                                style: GoogleFonts.openSans(
+                                  fontSize: 14,
+                                  color: const Color(0xFF7B7B7B),
+                                ),
                               ),
+                              const SizedBox(height: 6),
+
+                              TextField(
+                                controller: thicknessController,
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                decoration: InputDecoration(
+                                  contentPadding: const EdgeInsets.all(12),
+                                  hintText: "Enter thickness",
+                                  hintStyle: const TextStyle(
+                                    color: Color(0xFFBDBDBD),
+                                    fontSize: 13,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFE0E0E0),
+                                    ),
+                                  ),
+                                ),
+                                onChanged: (_) => _calculateCosts(),
+                              ),
+                            ],
+                          ),
                   ),
                 if (requiresThickness &&
                     requiresProjectSize &&
@@ -1599,8 +1630,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: const Color(0xFFFAF7F3),
                 borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE8DED6)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -1662,6 +1694,57 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMaterialCardHeader() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D241E),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.layers_outlined, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: GoogleFonts.openSans(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  _selectedMaterial?.name ?? "Choose catalog material",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1733,10 +1816,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.all(12),
             hintText: "Enter value",
-            hintStyle: const TextStyle(
-              color: Color(0xFFBDBDBD),
-              fontSize: 13,
-            ),
+            hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -1776,11 +1856,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
           decoration: InputDecoration(
             contentPadding: const EdgeInsets.all(12),
-            hintText: 'Optional price',
-            hintStyle: const TextStyle(
-              color: Color(0xFFBDBDBD),
-              fontSize: 13,
-            ),
+            hintText: 'Enter manual price',
+            hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 13),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
@@ -1813,7 +1890,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       ],
     );
   }
-
 
   Widget _buildFoamVariantSelection() {
     return Column(
@@ -1861,29 +1937,47 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final effectiveUnitPrice = _effectiveUnitPriceForQuantityMaterial() ?? 0;
     final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
     return Container(
+      margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF3E0),
+        color: const Color(0xFFFFFCF8),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFA16438)),
+        border: Border.all(color: const Color(0xFFE8DED6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
-          Text(
-            "Calculated Costs",
-            style: GoogleFonts.openSans(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFFA16438),
-            ),
+          Row(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF3E8),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.functions_rounded,
+                  color: Color(0xFF8B4513),
+                  size: 18,
+                ),
+              ),
+              const SizedBox(width: 9),
+              Text(
+                "Calculated Costs",
+                style: GoogleFonts.openSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF211D1A),
+                ),
+              ),
+            ],
           ),
 
           if (needsPricing) ...[
             const SizedBox(height: 6),
             Text(
-              "This material is unpriced. It will be added with 0 cost.",
+              "This material is unpriced. Enter a manual price before adding it.",
               style: GoogleFonts.openSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -1927,8 +2021,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               "₦${effectiveProjectCost.toStringAsFixed(2)}",
             ),
             _buildResultRow(
-              "Minimum Boards:",
-              "${_costCalculation!.quantity.minimumUnits} board(s)",
+              "Billable Units:",
+              "${_costCalculation!.calculation.billableUnits} unit(s)",
             ),
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(

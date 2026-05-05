@@ -48,6 +48,7 @@ class MaterialService {
     String? search,
     bool? priced,
     bool? isActive,
+    int? limit,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -64,6 +65,7 @@ class MaterialService {
       }
       if (priced != null) queryParams['priced'] = priced;
       if (isActive != null) queryParams['isActive'] = isActive;
+      if (limit != null) queryParams['limit'] = limit;
 
       final data = await dioGetWithEtagCache(
         dio: _dio,
@@ -98,6 +100,7 @@ class MaterialService {
     String? search,
     bool? priced,
     bool? isActive,
+    int? limit,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -114,6 +117,7 @@ class MaterialService {
       }
       if (priced != null) queryParams['priced'] = priced;
       if (isActive != null) queryParams['isActive'] = isActive;
+      if (limit != null) queryParams['limit'] = limit;
 
       final data = await dioGetWithEtagCache(
         dio: _dio,
