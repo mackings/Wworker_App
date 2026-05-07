@@ -6,7 +6,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
-
 class AuthService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -36,7 +35,7 @@ class AuthService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -105,143 +104,148 @@ class AuthService {
   }
 
   // 🟢 SAVE USER DATA TO SHARED PREFERENCES
-// services/auth_api.dart
+  // services/auth_api.dart
 
-// 🟢 SAVE USER DATA TO SHARED PREFERENCES
-Future<void> _saveUserData(Map<String, dynamic> data) async {
-  final prefs = await SharedPreferences.getInstance();
+  // 🟢 SAVE USER DATA TO SHARED PREFERENCES
+  Future<void> _saveUserData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
 
-  // Save token
-  if (data["token"] != null) {
-    await prefs.setString("token", data["token"]);
-    await prefs.setBool("isLoggedIn", true);
-    debugPrint("✅ Token saved");
-  }
+    // Save token
+    if (data["token"] != null) {
+      await prefs.setString("token", data["token"]);
+      await prefs.setBool("isLoggedIn", true);
+      debugPrint("✅ Token saved");
+    }
 
-  // Save user data
-  if (data["user"] != null) {
-    final dynamic rawUser = data["user"];
-    Map<String, dynamic>? user;
+    // Save user data
+    if (data["user"] != null) {
+      final dynamic rawUser = data["user"];
+      Map<String, dynamic>? user;
 
-    if (rawUser is Map<String, dynamic>) {
-      if (rawUser["user"] is Map<String, dynamic>) {
-        user = rawUser["user"] as Map<String, dynamic>;
-      } else {
-        user = rawUser;
+      if (rawUser is Map<String, dynamic>) {
+        if (rawUser["user"] is Map<String, dynamic>) {
+          user = rawUser["user"] as Map<String, dynamic>;
+        } else {
+          user = rawUser;
+        }
+      } else if (rawUser is Map) {
+        user = Map<String, dynamic>.from(rawUser);
+        if (user["user"] is Map) {
+          user = Map<String, dynamic>.from(user["user"] as Map);
+        }
       }
-    } else if (rawUser is Map) {
-      user = Map<String, dynamic>.from(rawUser);
-      if (user["user"] is Map) {
-        user = Map<String, dynamic>.from(user["user"] as Map);
+
+      if (user == null) {
+        debugPrint("⚠️ Could not parse user payload while saving auth data");
+        return;
       }
-    }
 
-    if (user == null) {
-      debugPrint("⚠️ Could not parse user payload while saving auth data");
-      return;
-    }
-
-    if (user["id"] != null) {
-      await prefs.setString("userId", user["id"]);
-      debugPrint("✅ User ID saved: ${user["id"]}");
-    }
-
-    if (user["fullname"] != null) {
-      await prefs.setString("fullname", user["fullname"]);
-      debugPrint("✅ Fullname saved: ${user["fullname"]}");
-    }
-
-    if (user["email"] != null) {
-      await prefs.setString("email", user["email"]);
-      debugPrint("✅ Email saved: ${user["email"]}");
-    }
-
-    if (user["phoneNumber"] != null) {
-      await prefs.setString("phoneNumber", user["phoneNumber"]);
-      debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
-    }
-
-    // ✅ Save platform owner status only when backend provides this key.
-    if (user.containsKey("isPlatformOwner") && user["isPlatformOwner"] != null) {
-      await prefs.setBool("isPlatformOwner", user["isPlatformOwner"]);
-      debugPrint("✅ Platform Owner status saved: ${user["isPlatformOwner"]}");
-    }
-
-    // ✅ Save/clear companies only when backend provides the key.
-    if (user.containsKey("companies")) {
-      if (user["companies"] != null) {
-        await prefs.setString("companies", jsonEncode(user["companies"]));
-        debugPrint("✅ Companies saved: ${user["companies"].length} companies");
-      } else {
-        await prefs.remove("companies");
-        debugPrint("🗑️ Companies cleared (user has no companies)");
+      if (user["id"] != null) {
+        await prefs.setString("userId", user["id"]);
+        debugPrint("✅ User ID saved: ${user["id"]}");
       }
-    }
 
-    // ✅ Save/clear active company index only when backend provides the key.
-    if (user.containsKey("activeCompanyIndex")) {
-      if (user["activeCompanyIndex"] != null) {
-        await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
+      if (user["fullname"] != null) {
+        await prefs.setString("fullname", user["fullname"]);
+        debugPrint("✅ Fullname saved: ${user["fullname"]}");
+      }
+
+      if (user["email"] != null) {
+        await prefs.setString("email", user["email"]);
+        debugPrint("✅ Email saved: ${user["email"]}");
+      }
+
+      if (user["phoneNumber"] != null) {
+        await prefs.setString("phoneNumber", user["phoneNumber"]);
+        debugPrint("✅ Phone number saved: ${user["phoneNumber"]}");
+      }
+
+      // ✅ Save platform owner status only when backend provides this key.
+      if (user.containsKey("isPlatformOwner") &&
+          user["isPlatformOwner"] != null) {
+        await prefs.setBool("isPlatformOwner", user["isPlatformOwner"]);
+        debugPrint("✅ Platform Owner status saved: ${user["isPlatformOwner"]}");
+      }
+
+      // ✅ Save/clear companies only when backend provides the key.
+      if (user.containsKey("companies")) {
+        if (user["companies"] != null) {
+          await prefs.setString("companies", jsonEncode(user["companies"]));
+          debugPrint(
+            "✅ Companies saved: ${user["companies"].length} companies",
+          );
+        } else {
+          await prefs.remove("companies");
+          debugPrint("🗑️ Companies cleared (user has no companies)");
+        }
+      }
+
+      // ✅ Save/clear active company index only when backend provides the key.
+      if (user.containsKey("activeCompanyIndex")) {
+        if (user["activeCompanyIndex"] != null) {
+          await prefs.setInt("activeCompanyIndex", user["activeCompanyIndex"]);
+          debugPrint(
+            "✅ Active company index saved: ${user["activeCompanyIndex"]}",
+          );
+        } else {
+          await prefs.remove("activeCompanyIndex");
+        }
+      }
+
+      // ✅ Save/clear active company only when backend provides the key.
+      if (user.containsKey("activeCompany") && user["activeCompany"] != null) {
+        final activeCompany = user["activeCompany"];
+        await prefs.setString("activeCompany", jsonEncode(activeCompany));
+
+        // ✅ Save individual company fields for easy access
+        if (activeCompany["name"] != null) {
+          await prefs.setString("companyName", activeCompany["name"]);
+          debugPrint("🏢 Active Company Name saved: ${activeCompany["name"]}");
+        }
+
+        if (activeCompany["email"] != null) {
+          await prefs.setString("companyEmail", activeCompany["email"]);
+        }
+
+        if (activeCompany["phoneNumber"] != null) {
+          await prefs.setString(
+            "companyPhoneNumber",
+            activeCompany["phoneNumber"],
+          );
+        }
+
+        if (activeCompany["address"] != null) {
+          await prefs.setString("companyAddress", activeCompany["address"]);
+        }
+
+        if (activeCompany["role"] != null) {
+          await prefs.setString("userRole", activeCompany["role"]);
+          debugPrint("👤 User role saved: ${activeCompany["role"]}");
+        }
+
+        if (activeCompany["position"] != null) {
+          await prefs.setString("userPosition", activeCompany["position"]);
+          debugPrint("💼 User position saved: ${activeCompany["position"]}");
+        }
+
+        debugPrint("✅ Full Active Company saved: ${jsonEncode(activeCompany)}");
+      } else if (user.containsKey("activeCompany")) {
+        // ✅ Clear all company-related data only when backend explicitly returns no active company.
+        await prefs.remove("activeCompany");
+        await prefs.remove("companyName");
+        await prefs.remove("companyEmail");
+        await prefs.remove("companyPhoneNumber");
+        await prefs.remove("companyAddress");
+        await prefs.remove("userRole");
+        await prefs.remove("userPosition");
         debugPrint(
-          "✅ Active company index saved: ${user["activeCompanyIndex"]}",
+          "🗑️ Active company data cleared (user has no active company)",
         );
-      } else {
-        await prefs.remove("activeCompanyIndex");
       }
     }
 
-    // ✅ Save/clear active company only when backend provides the key.
-    if (user.containsKey("activeCompany") && user["activeCompany"] != null) {
-      final activeCompany = user["activeCompany"];
-      await prefs.setString("activeCompany", jsonEncode(activeCompany));
-      
-      // ✅ Save individual company fields for easy access
-      if (activeCompany["name"] != null) {
-        await prefs.setString("companyName", activeCompany["name"]);
-        debugPrint("🏢 Active Company Name saved: ${activeCompany["name"]}");
-      }
-      
-      if (activeCompany["email"] != null) {
-        await prefs.setString("companyEmail", activeCompany["email"]);
-      }
-      
-      if (activeCompany["phoneNumber"] != null) {
-        await prefs.setString("companyPhoneNumber", activeCompany["phoneNumber"]);
-      }
-      
-      if (activeCompany["address"] != null) {
-        await prefs.setString("companyAddress", activeCompany["address"]);
-      }
-      
-      if (activeCompany["role"] != null) {
-        await prefs.setString("userRole", activeCompany["role"]);
-        debugPrint("👤 User role saved: ${activeCompany["role"]}");
-      }
-      
-      if (activeCompany["position"] != null) {
-        await prefs.setString("userPosition", activeCompany["position"]);
-        debugPrint("💼 User position saved: ${activeCompany["position"]}");
-      }
-
-      debugPrint("✅ Full Active Company saved: ${jsonEncode(activeCompany)}");
-    } else if (user.containsKey("activeCompany")) {
-      // ✅ Clear all company-related data only when backend explicitly returns no active company.
-      await prefs.remove("activeCompany");
-      await prefs.remove("companyName");
-      await prefs.remove("companyEmail");
-      await prefs.remove("companyPhoneNumber");
-      await prefs.remove("companyAddress");
-      await prefs.remove("userRole");
-      await prefs.remove("userPosition");
-      debugPrint("🗑️ Active company data cleared (user has no active company)");
-    }
+    debugPrint("🎉 All user data saved successfully!");
   }
-
-  debugPrint("🎉 All user data saved successfully!");
-}
-
-
-
 
   // 🟢 GET ACTIVE COMPANY NAME (Helper method)
   Future<String?> getActiveCompanyName() async {
@@ -253,11 +257,11 @@ Future<void> _saveUserData(Map<String, dynamic> data) async {
   Future<Map<String, dynamic>?> getActiveCompany() async {
     final prefs = await SharedPreferences.getInstance();
     final companyString = prefs.getString("activeCompany");
-    
+
     if (companyString != null) {
       return jsonDecode(companyString);
     }
-    
+
     return null;
   }
 
@@ -288,13 +292,8 @@ Future<void> _saveUserData(Map<String, dynamic> data) async {
 
       final response = await _dio.patch(
         "/api/auth/change-password",
-        data: {
-          "currentPassword": currentPassword,
-          "newPassword": newPassword,
-        },
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        data: {"currentPassword": currentPassword, "newPassword": newPassword},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       return response.data;
@@ -393,14 +392,48 @@ Future<void> _saveUserData(Map<String, dynamic> data) async {
 
       final response = await _dio.get(
         "/api/auth/me",
-        options: Options(
-          headers: {"Authorization": "Bearer $token"},
-        ),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       // ✅ Update stored data with fresh data from server
       if (response.data["success"] == true && response.data["data"] != null) {
         await _saveUserData({"user": response.data["data"]});
+      }
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
+  // 🟢 SWITCH ACTIVE COMPANY
+  Future<Map<String, dynamic>> switchCompany({
+    required int companyIndex,
+  }) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.post(
+        "/api/auth/switch-company",
+        data: {"companyIndex": companyIndex},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.data["success"] == true && response.data["data"] != null) {
+        final currentUser = <String, dynamic>{};
+        final companiesRaw = prefs.getString("companies");
+        if (companiesRaw != null) {
+          currentUser["companies"] = jsonDecode(companiesRaw);
+        }
+        currentUser["activeCompanyIndex"] =
+            response.data["data"]["activeCompanyIndex"];
+        currentUser["activeCompany"] = response.data["data"]["activeCompany"];
+        await _saveUserData({"user": currentUser});
       }
 
       return response.data;

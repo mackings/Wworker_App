@@ -3,13 +3,14 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 import 'package:wworker/GeneralWidgets/UI/etag_cache.dart';
 
 class MaterialService {
   final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: 'https://ww-backend.vercel.app',
+      baseUrl: Urls.baseUrl,
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -342,7 +343,8 @@ class MaterialService {
       debugPrint("📤 [GET MATERIAL BY ID] => $materialId");
 
       final response = await _dio.get(
-        '/api/product/material/$materialId',
+        '/api/database/materials',
+        queryParameters: {'id': materialId, 'limit': 1},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -383,7 +385,7 @@ class MaterialService {
       debugPrint("📦 [UPDATE DATA] => $updateData");
 
       final response = await _dio.put(
-        '/api/product/material/$materialId',
+        '/api/database/materials/$materialId',
         data: updateData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -423,7 +425,7 @@ class MaterialService {
       debugPrint("📦 [TYPES] => $request");
 
       final response = await _dio.post(
-        '/api/product/material/$materialId/add-types',
+        '/api/product/$materialId/add-types',
         data: request,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -460,7 +462,7 @@ class MaterialService {
       debugPrint("📤 [DELETE MATERIAL] => $materialId");
 
       final response = await _dio.delete(
-        '/api/product/material/$materialId',
+        '/api/database/materials/$materialId',
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 

@@ -45,7 +45,7 @@ class OrderService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -67,9 +67,7 @@ class OrderService {
         throw Exception("No auth token found");
       }
 
-      debugPrint(
-        "📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/orders/create",
-      );
+      debugPrint("📤 [CREATE ORDER] => POST ${Urls.baseUrl}/api/orders/create");
 
       final response = await _dio.post(
         "/api/orders/create",
@@ -123,7 +121,9 @@ class OrderService {
         if (showMyAssignments) 'showMyAssignments': showMyAssignments,
       };
 
-      debugPrint("📤 [GET ORDERS] => GET ${Urls.baseUrl}/api/orders/get-orders");
+      debugPrint(
+        "📤 [GET ORDERS] => GET ${Urls.baseUrl}/api/orders/get-orders",
+      );
 
       final response = await _dio.get(
         "/api/orders/get-orders",
@@ -234,11 +234,11 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [UPDATE STATUS] => PATCH ${Urls.baseUrl}/api/sales/orders/$orderId/status",
+        "📤 [UPDATE STATUS] => PATCH ${Urls.baseUrl}/api/orders/update-orders/$orderId/status",
       );
 
       final response = await _dio.patch(
-        "/api/sales/orders/$orderId/status",
+        "/api/orders/update-orders/$orderId/status",
         data: {"status": status},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -268,11 +268,11 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [GET RECEIPT] => GET ${Urls.baseUrl}/api/sales/orders/$orderId/receipt",
+        "📤 [GET RECEIPT] => GET ${Urls.baseUrl}/api/orders/get-orders/$orderId/receipt",
       );
 
       final response = await _dio.get(
-        "/api/sales/orders/$orderId/receipt",
+        "/api/orders/get-orders/$orderId/receipt",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -298,11 +298,11 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [DELETE ORDER] => DELETE ${Urls.baseUrl}/api/sales/orders/$orderId",
+        "📤 [DELETE ORDER] => DELETE ${Urls.baseUrl}/api/orders/delete-orders/$orderId",
       );
 
       final response = await _dio.delete(
-        "/api/sales/orders/$orderId",
+        "/api/orders/delete-orders/$orderId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -327,12 +327,10 @@ class OrderService {
         throw Exception("No auth token found");
       }
 
-      debugPrint(
-        "📤 [GET STATS] => GET ${Urls.baseUrl}/api/sales/orders/stats",
-      );
+      debugPrint("📤 [GET STATS] => GET ${Urls.baseUrl}/api/orders/stats");
 
       final response = await _dio.get(
-        "/api/sales/orders/stats",
+        "/api/orders/stats",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -358,7 +356,7 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [GET AVAILABLE STAFF] => GET ${Urls.baseUrl}/api/staff/available",
+        "📤 [GET AVAILABLE STAFF] => GET ${Urls.baseUrl}/api/orders/staff/available",
       );
 
       final response = await _dio.get(
@@ -395,15 +393,12 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [ASSIGN ORDER] => POST ${Urls.baseUrl}/api/sales/orders/$orderId/assign",
+        "📤 [ASSIGN ORDER] => POST ${Urls.baseUrl}/api/orders/$orderId/assign",
       );
 
       final response = await _dio.post(
         "/api/orders/$orderId/assign",
-        data: {
-          "staffId": staffId,
-          if (notes != null) "notes": notes,
-        },
+        data: {"staffId": staffId, if (notes != null) "notes": notes},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -431,7 +426,7 @@ class OrderService {
       }
 
       debugPrint(
-        "📤 [UNASSIGN ORDER] => POST ${Urls.baseUrl}/api/sales/orders/$orderId/unassign",
+        "📤 [UNASSIGN ORDER] => POST ${Urls.baseUrl}/api/orders/$orderId/unassign",
       );
 
       final response = await _dio.post(

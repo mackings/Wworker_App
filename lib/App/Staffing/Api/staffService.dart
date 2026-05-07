@@ -7,8 +7,6 @@ import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
-
-
 class CompanyService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
@@ -16,7 +14,9 @@ class CompanyService {
     _dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) {
-          debugPrint("📤 [COMPANY REQUEST] => ${options.method} ${options.uri}");
+          debugPrint(
+            "📤 [COMPANY REQUEST] => ${options.method} ${options.uri}",
+          );
           if (options.data != null) {
             debugPrint("📦 [DATA] => ${options.data}");
           }
@@ -37,7 +37,7 @@ class CompanyService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -76,14 +76,20 @@ class CompanyService {
         final user = await authService.getMe();
         if (user["success"] == true && user["data"]["companies"] != null) {
           await prefs.setString(
-              "companies", jsonEncode(user["data"]["companies"]));
+            "companies",
+            jsonEncode(user["data"]["companies"]),
+          );
           if (user["data"]["activeCompany"] != null) {
             await prefs.setString(
-                "activeCompany", jsonEncode(user["data"]["activeCompany"]));
+              "activeCompany",
+              jsonEncode(user["data"]["activeCompany"]),
+            );
           }
           if (user["data"]["activeCompanyIndex"] != null) {
             await prefs.setInt(
-                "activeCompanyIndex", user["data"]["activeCompanyIndex"]);
+              "activeCompanyIndex",
+              user["data"]["activeCompanyIndex"],
+            );
           }
         }
       }
@@ -132,10 +138,14 @@ class CompanyService {
         final user = await authService.getMe();
         if (user["success"] == true && user["data"]["companies"] != null) {
           await prefs.setString(
-              "companies", jsonEncode(user["data"]["companies"]));
+            "companies",
+            jsonEncode(user["data"]["companies"]),
+          );
           if (user["data"]["activeCompany"] != null) {
             await prefs.setString(
-                "activeCompany", jsonEncode(user["data"]["activeCompany"]));
+              "activeCompany",
+              jsonEncode(user["data"]["activeCompany"]),
+            );
           }
         }
       }
@@ -150,34 +160,7 @@ class CompanyService {
   Future<Map<String, dynamic>> switchCompany({
     required int companyIndex,
   }) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString("token");
-
-      if (token == null) {
-        return {"success": false, "message": "No auth token found"};
-      }
-
-      final response = await _dio.post(
-        "/api/auth/switch-company",
-        data: {"companyIndex": companyIndex},
-        options: Options(headers: {"Authorization": "Bearer $token"}),
-      );
-
-      final data = response.data;
-
-      if (data["success"] == true) {
-        await prefs.setInt("activeCompanyIndex", companyIndex);
-        if (data["data"]["activeCompany"] != null) {
-          await prefs.setString(
-              "activeCompany", jsonEncode(data["data"]["activeCompany"]));
-        }
-      }
-
-      return data;
-    } on DioException catch (e) {
-      return _handleError(e);
-    }
+    return AuthService().switchCompany(companyIndex: companyIndex);
   }
 
   // 🟢 INVITE STAFF
@@ -282,9 +265,7 @@ class CompanyService {
   }
 
   // 🟢 REMOVE STAFF
-  Future<Map<String, dynamic>> removeStaff({
-    required String userId,
-  }) async {
+  Future<Map<String, dynamic>> removeStaff({required String userId}) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString("token");

@@ -71,7 +71,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.put(
-      "/api/database/quotations/$id",
+      "/api/quotation/$id",
       data: body,
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
@@ -84,7 +84,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.delete(
-      "/api/database/quotations/$id",
+      "/api/quotation/$id",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 
@@ -121,7 +121,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.put(
-      "/api/database/boms/$id",
+      "/api/bom/$id",
       data: body,
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
@@ -134,7 +134,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.delete(
-      "/api/database/boms/$id",
+      "/api/bom/$id",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 
@@ -294,13 +294,35 @@ class DatabaseService {
     final token = await _getToken();
     if (token == null) return false;
 
-    final response = await _dio.put(
-      "/api/database/invoices/$id",
-      data: body,
-      options: Options(headers: {"Authorization": "Bearer $token"}),
-    );
+    var didCall = false;
+    var ok = true;
 
-    return response.data?["success"] == true;
+    final status = body['status']?.toString();
+    if (status != null && status.trim().isNotEmpty) {
+      didCall = true;
+      final response = await _dio.patch(
+        "/api/invoices/invoices/$id/status",
+        data: {'status': status.trim()},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      ok = ok && response.data?["success"] == true;
+    }
+
+    final amountPaid = body['amountPaid'];
+    if (amountPaid != null) {
+      didCall = true;
+      final response = await _dio.patch(
+        "/api/invoices/$id/payment",
+        data: {
+          'amountPaid': amountPaid,
+          if (body['notes'] != null) 'notes': body['notes'],
+        },
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+      ok = ok && response.data?["success"] == true;
+    }
+
+    return didCall && ok;
   }
 
   Future<bool> deleteInvoice(String id) async {
@@ -308,7 +330,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.delete(
-      "/api/database/invoices/$id",
+      "/api/invoices/invoices/$id",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 
@@ -370,7 +392,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.delete(
-      "/api/database/staff/$userId",
+      "/api/auth/staff/$userId",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 
@@ -413,7 +435,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.put(
-      "/api/database/products/$id",
+      "/api/product/$id",
       data: body,
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
@@ -426,7 +448,7 @@ class DatabaseService {
     if (token == null) return false;
 
     final response = await _dio.delete(
-      "/api/database/products/$id",
+      "/api/product/$id",
       options: Options(headers: {"Authorization": "Bearer $token"}),
     );
 

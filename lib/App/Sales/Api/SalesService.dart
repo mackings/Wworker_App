@@ -2,10 +2,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Sales/Model/SalesModel.dart';
+import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class SalesService {
-  final Dio _dio = Dio(BaseOptions(baseUrl: 'https://ww-backend.vercel.app'));
+  final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
   SalesService() {
     _dio.interceptors.add(
@@ -30,7 +31,7 @@ class SalesService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }

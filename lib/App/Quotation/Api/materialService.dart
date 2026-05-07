@@ -231,7 +231,7 @@ class MaterialService {
       }
 
       final response = await _dio.post(
-        "/api/product/material/$materialId/add-types",
+        "/api/product/$materialId/add-types",
         data: typesData,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -346,7 +346,7 @@ class MaterialService {
       }
 
       final response = await _dio.put(
-        "/api/product/material/$materialId",
+        "/api/database/materials/$materialId",
         data: updates,
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
@@ -376,7 +376,7 @@ class MaterialService {
       }
 
       final response = await _dio.delete(
-        "/api/product/material/$materialId",
+        "/api/database/materials/$materialId",
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
