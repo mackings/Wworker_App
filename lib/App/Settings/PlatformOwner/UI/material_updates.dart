@@ -80,7 +80,8 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
     }
 
     final materials =
-        (result['data'] as List<DatabaseMaterial>? ?? const <DatabaseMaterial>[]);
+        (result['data'] as List<DatabaseMaterial>? ??
+        const <DatabaseMaterial>[]);
     final globalMaterials = materials
         .where((material) => material.isGlobal)
         .toList();
@@ -126,9 +127,8 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
     }
     final companies = merged.values.toList()
       ..sort(
-        (a, b) => a.companyName.toLowerCase().compareTo(
-          b.companyName.toLowerCase(),
-        ),
+        (a, b) =>
+            a.companyName.toLowerCase().compareTo(b.companyName.toLowerCase()),
       );
 
     setState(() {
@@ -208,7 +208,10 @@ class _MaterialUpdatesPageState extends State<MaterialUpdatesPage> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [ColorsApp.btnColor, ColorsApp.btnColor.withValues(alpha: 0.82)],
+          colors: [
+            ColorsApp.btnColor,
+            ColorsApp.btnColor.withValues(alpha: 0.82),
+          ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -460,6 +463,7 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
   final TextEditingController _searchController = TextEditingController();
   final NumberFormat _moneyFmt = NumberFormat('#,##0.##');
   static const int _pageSize = 20;
+  static const String _globalScopeName = 'GLOBAL';
   static const String _allFilter = 'All';
   static const List<String> _statusOptions = <String>[
     _allFilter,
@@ -536,8 +540,11 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     }
 
     final materials =
-        (result['data'] as List<DatabaseMaterial>? ?? const <DatabaseMaterial>[])
-          ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        (result['data'] as List<DatabaseMaterial>? ??
+              const <DatabaseMaterial>[])
+          ..sort(
+            (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+          );
     final pagination = result['pagination'] as Map<String, dynamic>? ?? {};
     final merged = <String, DatabaseMaterial>{
       for (final material in _materials) material.id: material,
@@ -557,9 +564,10 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
         if (b == _allFilter) return 1;
         return a.toLowerCase().compareTo(b.toLowerCase());
       });
-    final selectedCategory = categories.any(
-      (item) => item.toLowerCase() == _selectedCategory.toLowerCase(),
-    )
+    final selectedCategory =
+        categories.any(
+          (item) => item.toLowerCase() == _selectedCategory.toLowerCase(),
+        )
         ? categories.firstWhere(
             (item) => item.toLowerCase() == _selectedCategory.toLowerCase(),
           )
@@ -568,9 +576,10 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
       nextMaterials,
       category: selectedCategory,
     );
-    final selectedSubCategory = subCategories.any(
-      (item) => item.toLowerCase() == _selectedSubCategory.toLowerCase(),
-    )
+    final selectedSubCategory =
+        subCategories.any(
+          (item) => item.toLowerCase() == _selectedSubCategory.toLowerCase(),
+        )
         ? subCategories.firstWhere(
             (item) => item.toLowerCase() == _selectedSubCategory.toLowerCase(),
           )
@@ -677,10 +686,8 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _MaterialPriceEditorSheet(
-        material: material,
-        service: _service,
-      ),
+      builder: (context) =>
+          _MaterialPriceEditorSheet(material: material, service: _service),
     );
 
     if (!mounted || result == null) return;
@@ -693,6 +700,137 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     }
 
     await ApiModalSheet.showError(result.message);
+  }
+
+  Future<void> _deleteMaterial(DatabaseMaterial material) async {
+    final confirmed = await _showDeleteMaterialSheet(material);
+    if (confirmed != true) return;
+
+    final result = await _service.deletePlatformMaterial(material.id);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      await ApiModalSheet.showSuccess(
+        result['message']?.toString() ?? 'Material deleted successfully',
+      );
+      if (!mounted) return;
+      _loadMaterials();
+      return;
+    }
+
+    await ApiModalSheet.showError(
+      result['message']?.toString() ?? 'Failed to delete material',
+    );
+  }
+
+  Future<bool?> _showDeleteMaterialSheet(DatabaseMaterial material) {
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        return Container(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Delete material?',
+                        style: GoogleFonts.openSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: ColorsApp.textColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This will permanently delete ${material.name} from global materials.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ColorsApp.btnColor,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.openSans(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        text: 'Delete Material',
+                        onPressed: () => Navigator.pop(context, true),
+                        backgroundColor: Colors.redAccent,
+                        height: 48,
+                        padding: 12,
+                        textSize: 13,
+                        borderRadius: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _loadNextPage() async {
@@ -827,7 +965,9 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                                 Text(
                                   [
                                     material.category,
-                                    if ((material.subCategory ?? '').trim().isNotEmpty)
+                                    if ((material.subCategory ?? '')
+                                        .trim()
+                                        .isNotEmpty)
                                       material.subCategory!.trim(),
                                   ].join(' • '),
                                   style: GoogleFonts.openSans(
@@ -865,23 +1005,55 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                         children: [
                           _buildMetaChip(_priceLabel(material)),
                           if ((material.pricingUnit).trim().isNotEmpty)
-                            _buildMetaChip('Pricing unit: ${material.pricingUnit}'),
+                            _buildMetaChip(
+                              'Pricing unit: ${material.pricingUnit}',
+                            ),
                           if ((material.unit ?? '').trim().isNotEmpty)
                             _buildMetaChip('Unit: ${material.unit}'),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: CustomButton(
-                          text: 'Update Price',
-                          onPressed: () => _editMaterial(material),
-                          backgroundColor: ColorsApp.btnColor,
-                          height: 46,
-                          padding: 12,
-                          textSize: 14,
-                          borderRadius: 12,
-                        ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: CustomButton(
+                              text: 'Update Price',
+                              onPressed: () => _editMaterial(material),
+                              backgroundColor: ColorsApp.btnColor,
+                              height: 46,
+                              padding: 12,
+                              textSize: 14,
+                              borderRadius: 12,
+                            ),
+                          ),
+                          if (widget.companyName == _globalScopeName) ...[
+                            const SizedBox(width: 10),
+                            Tooltip(
+                              message: 'Delete material',
+                              child: SizedBox(
+                                width: 46,
+                                height: 46,
+                                child: OutlinedButton(
+                                  onPressed: () => _deleteMaterial(material),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.redAccent,
+                                    side: const BorderSide(
+                                      color: Colors.redAccent,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.delete_outline,
+                                    size: 21,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ],
                   ),
@@ -986,9 +1158,8 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
       seen.add(key);
       uniqueItems.add(normalized);
     }
-    final selectedValue = uniqueItems.any(
-      (item) => item.toLowerCase() == value.toLowerCase(),
-    )
+    final selectedValue =
+        uniqueItems.any((item) => item.toLowerCase() == value.toLowerCase())
         ? uniqueItems.firstWhere(
             (item) => item.toLowerCase() == value.toLowerCase(),
           )
@@ -1001,10 +1172,13 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
         borderRadius: BorderRadius.circular(16),
       ),
       child: DropdownButtonFormField<String>(
+        isExpanded: true,
         initialValue: selectedValue,
         decoration: InputDecoration(
           labelText: label,
           border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
           labelStyle: GoogleFonts.openSans(
             color: Colors.grey.shade600,
             fontSize: 13,
@@ -1143,7 +1317,8 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
           : '',
     );
     _pricingUnitOptions = _resolvePricingUnitOptions(widget.material);
-    _selectedPricingUnit = _pricingUnitOptions.contains(widget.material.pricingUnit)
+    _selectedPricingUnit =
+        _pricingUnitOptions.contains(widget.material.pricingUnit)
         ? widget.material.pricingUnit
         : _pricingUnitOptions.first;
     _pricePerSqmController.addListener(_formatPricePerSqmInput);
@@ -1159,13 +1334,11 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     super.dispose();
   }
 
-  void _formatPricePerSqmInput() => _formatCurrencyController(
-    _pricePerSqmController,
-  );
+  void _formatPricePerSqmInput() =>
+      _formatCurrencyController(_pricePerSqmController);
 
-  void _formatPricePerUnitInput() => _formatCurrencyController(
-    _pricePerUnitController,
-  );
+  void _formatPricePerUnitInput() =>
+      _formatCurrencyController(_pricePerUnitController);
 
   void _formatCurrencyController(TextEditingController controller) {
     final original = controller.text;
@@ -1177,7 +1350,9 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     if (value == null) return;
 
     final hasDecimal = digits.contains('.');
-    final formatted = hasDecimal ? _formatDecimalInput(digits) : _moneyFmt.format(value);
+    final formatted = hasDecimal
+        ? _formatDecimalInput(digits)
+        : _moneyFmt.format(value);
     if (formatted == original) return;
 
     final diff = formatted.length - original.length;
@@ -1259,7 +1434,8 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
       context,
       _MaterialUpdateResult(
         success: result['success'] == true,
-        message: result['message']?.toString() ??
+        message:
+            result['message']?.toString() ??
             (result['success'] == true
                 ? 'Material updated successfully'
                 : 'Failed to update material'),
@@ -1370,10 +1546,7 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
           DropdownButtonFormField<String>(
             initialValue: initialValue,
             items: options.map((item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(item),
-              );
+              return DropdownMenuItem<String>(value: item, child: Text(item));
             }).toList(),
             onChanged: onChanged,
             decoration: InputDecoration(
@@ -1392,9 +1565,7 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
                 ? const TextInputType.numberWithOptions(decimal: true)
                 : TextInputType.text,
             inputFormatters: isPriceField
-                ? [
-                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                  ]
+                ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))]
                 : null,
             decoration: InputDecoration(
               hintText: helperText,
@@ -1452,8 +1623,5 @@ class _MaterialUpdateResult {
   final bool success;
   final String message;
 
-  const _MaterialUpdateResult({
-    required this.success,
-    required this.message,
-  });
+  const _MaterialUpdateResult({required this.success, required this.message});
 }

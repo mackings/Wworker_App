@@ -8,11 +8,13 @@ import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
 
 class PlatformOwnerService {
-  final Dio _dio = Dio(BaseOptions(
-    baseUrl: Urls.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _dio = Dio(
+    BaseOptions(
+      baseUrl: Urls.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   static void _prettyPrintJson(dynamic data) {
     try {
@@ -30,8 +32,9 @@ class PlatformOwnerService {
       final payload = response.data;
       final data = payload is Map<String, dynamic> ? payload['data'] : null;
       final rows = data is Map<String, dynamic> ? data['data'] : null;
-      final pagination =
-          data is Map<String, dynamic> ? data['pagination'] : null;
+      final pagination = data is Map<String, dynamic>
+          ? data['pagination']
+          : null;
       final count = rows is List ? rows.length : 0;
       debugPrint(
         "📄 DATA: {success: ${payload is Map<String, dynamic> ? payload['success'] : null}, message: ${payload is Map<String, dynamic> ? payload['message'] : null}, count: $count, pagination: $pagination}",
@@ -83,7 +86,7 @@ class PlatformOwnerService {
         },
       ),
     );
-  
+
     _dio.interceptors.add(RetryTwiceInterceptor(_dio));
     _dio.interceptors.add(ApiFeedbackInterceptor());
   }
@@ -99,10 +102,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [GET DASHBOARD STATS]");
@@ -113,22 +113,19 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [DASHBOARD STATS SUCCESS]");
-      return {
-        'success': true,
-        'data': response.data['data'],
-      };
+      return {'success': true, 'data': response.data['data']};
     } on DioException catch (e) {
-      debugPrint("⚠️ [DASHBOARD STATS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [DASHBOARD STATS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch dashboard stats',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch dashboard stats',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -142,16 +139,10 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
 
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
@@ -176,17 +167,16 @@ class PlatformOwnerService {
         'pagination': response.data['pagination'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET ALL COMPANIES ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET ALL COMPANIES ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to fetch companies',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -195,10 +185,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [GET COMPANY USAGE] Company ID: $companyId");
@@ -209,22 +196,19 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [GET COMPANY USAGE SUCCESS]");
-      return {
-        'success': true,
-        'data': response.data['data'],
-      };
+      return {'success': true, 'data': response.data['data']};
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET COMPANY USAGE ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET COMPANY USAGE ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch company usage',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch company usage',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -238,16 +222,10 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
 
       if (companyName != null && companyName.isNotEmpty) {
         queryParams['companyName'] = companyName;
@@ -272,17 +250,17 @@ class PlatformOwnerService {
         'pagination': response.data['pagination'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET PENDING PRODUCTS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET PENDING PRODUCTS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch pending products',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch pending products',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -294,10 +272,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       final requestData = <String, dynamic>{};
@@ -320,17 +295,16 @@ class PlatformOwnerService {
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [APPROVE PRODUCT ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [APPROVE PRODUCT ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to approve product',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -342,17 +316,11 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       if (reason.isEmpty) {
-        return {
-          'success': false,
-          'message': 'Rejection reason is required',
-        };
+        return {'success': false, 'message': 'Rejection reason is required'};
       }
 
       debugPrint("📤 [REJECT PRODUCT] Product ID: $productId");
@@ -370,17 +338,16 @@ class PlatformOwnerService {
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [REJECT PRODUCT ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [REJECT PRODUCT ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to reject product',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -395,10 +362,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [CREATE GLOBAL PRODUCT] Name: $name, Category: $category");
@@ -429,21 +393,22 @@ class PlatformOwnerService {
       debugPrint("✅ [CREATE GLOBAL PRODUCT SUCCESS]");
       return {
         'success': true,
-        'message': response.data['message'] ?? 'Global product created successfully',
+        'message':
+            response.data['message'] ?? 'Global product created successfully',
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [CREATE GLOBAL PRODUCT ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [CREATE GLOBAL PRODUCT ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to create global product',
+        'message':
+            e.response?.data['message'] ?? 'Failed to create global product',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -474,10 +439,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [GET PLATFORM OVERVIEW]");
@@ -488,22 +450,19 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [PLATFORM OVERVIEW SUCCESS]");
-      return {
-        'success': true,
-        'data': response.data['data'],
-      };
+      return {'success': true, 'data': response.data['data']};
     } on DioException catch (e) {
-      debugPrint("⚠️ [PLATFORM OVERVIEW ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [PLATFORM OVERVIEW ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch platform overview',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch platform overview',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -520,16 +479,10 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
-      final queryParams = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParams = <String, dynamic>{'page': page, 'limit': limit};
 
       if (status != null && status.isNotEmpty) {
         queryParams['status'] = status;
@@ -567,17 +520,16 @@ class PlatformOwnerService {
         'pagination': response.data['pagination'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET ALL PRODUCTS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET ALL PRODUCTS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to fetch products',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -586,10 +538,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [GET PRODUCT DETAILS] Product ID: $productId");
@@ -600,22 +549,19 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [GET PRODUCT DETAILS SUCCESS]");
-      return {
-        'success': true,
-        'data': response.data['data'],
-      };
+      return {'success': true, 'data': response.data['data']};
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET PRODUCT DETAILS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET PRODUCT DETAILS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch product details',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch product details',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -624,10 +570,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'No auth token found',
-        };
+        return {'success': false, 'message': 'No auth token found'};
       }
 
       debugPrint("📤 [GET COMPANY PROFILE] Company ID: $companyId");
@@ -638,22 +581,19 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [GET COMPANY PROFILE SUCCESS]");
-      return {
-        'success': true,
-        'data': response.data['data'],
-      };
+      return {'success': true, 'data': response.data['data']};
     } on DioException catch (e) {
-      debugPrint("⚠️ [GET COMPANY PROFILE ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [GET COMPANY PROFILE ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch company profile',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch company profile',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -669,10 +609,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       final queryParams = {
@@ -697,17 +634,17 @@ class PlatformOwnerService {
         'pagination': response.data['pagination'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [PENDING MATERIALS ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [PENDING MATERIALS ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to fetch pending materials',
+        'message':
+            e.response?.data['message'] ?? 'Failed to fetch pending materials',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -719,19 +656,14 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       debugPrint("📤 [APPROVE MATERIAL] ID: $materialId");
 
       final response = await _dio.patch(
         '/api/platform/materials/$materialId/approve',
-        data: {
-          if (notes != null) 'notes': notes,
-        },
+        data: {if (notes != null) 'notes': notes},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -742,17 +674,16 @@ class PlatformOwnerService {
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [APPROVE MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [APPROVE MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to approve material',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -764,19 +695,14 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       debugPrint("📤 [REJECT MATERIAL] ID: $materialId");
 
       final response = await _dio.patch(
         '/api/platform/materials/$materialId/reject',
-        data: {
-          'reason': reason,
-        },
+        data: {'reason': reason},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -787,17 +713,16 @@ class PlatformOwnerService {
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [REJECT MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [REJECT MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to reject material',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -822,10 +747,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       debugPrint("📤 [CREATE GLOBAL MATERIAL] Name: $name");
@@ -836,21 +758,43 @@ class PlatformOwnerService {
         'isGlobal': true,
       };
 
-      if (standardWidth != null) formPayload['standardWidth'] = standardWidth;
-      if (standardLength != null) formPayload['standardLength'] = standardLength;
-      if (standardUnit != null) formPayload['standardUnit'] = standardUnit;
-      if (pricePerSqm != null) formPayload['pricePerSqm'] = pricePerSqm;
-      if (pricePerUnit != null) formPayload['pricePerUnit'] = pricePerUnit;
-      if (pricingUnit != null) formPayload['pricingUnit'] = pricingUnit;
-      if (wasteThreshold != null) formPayload['wasteThreshold'] = wasteThreshold;
-      if (notes != null) formPayload['notes'] = notes;
+      if (standardWidth != null) {
+        formPayload['standardWidth'] = standardWidth;
+      }
+      if (standardLength != null) {
+        formPayload['standardLength'] = standardLength;
+      }
+      if (standardUnit != null) {
+        formPayload['standardUnit'] = standardUnit;
+      }
+      if (pricePerSqm != null) {
+        formPayload['pricePerSqm'] = pricePerSqm;
+      }
+      if (pricePerUnit != null) {
+        formPayload['pricePerUnit'] = pricePerUnit;
+      }
+      if (pricingUnit != null) {
+        formPayload['pricingUnit'] = pricingUnit;
+      }
+      if (wasteThreshold != null) {
+        formPayload['wasteThreshold'] = wasteThreshold;
+      }
+      if (notes != null) {
+        formPayload['notes'] = notes;
+      }
 
-      if (types != null) formPayload['types'] = jsonEncode(types);
+      if (types != null) {
+        formPayload['types'] = jsonEncode(types);
+      }
       if (commonThicknesses != null) {
         formPayload['commonThicknesses'] = jsonEncode(commonThicknesses);
       }
-      if (foamVariants != null) formPayload['foamVariants'] = jsonEncode(foamVariants);
-      if (sizeVariants != null) formPayload['sizeVariants'] = jsonEncode(sizeVariants);
+      if (foamVariants != null) {
+        formPayload['foamVariants'] = jsonEncode(foamVariants);
+      }
+      if (sizeVariants != null) {
+        formPayload['sizeVariants'] = jsonEncode(sizeVariants);
+      }
 
       if (imagePath != null && imagePath.isNotEmpty) {
         formPayload['image'] = await MultipartFile.fromFile(imagePath);
@@ -870,21 +814,22 @@ class PlatformOwnerService {
       debugPrint("✅ [CREATE GLOBAL MATERIAL SUCCESS]");
       return {
         'success': true,
-        'message': response.data['message'] ?? 'Global material created successfully',
+        'message':
+            response.data['message'] ?? 'Global material created successfully',
         'data': response.data['data'],
       };
     } on DioException catch (e) {
-      debugPrint("⚠️ [CREATE GLOBAL MATERIAL ERROR] => ${e.response?.data ?? e.message}");
+      debugPrint(
+        "⚠️ [CREATE GLOBAL MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': e.response?.data['message'] ?? 'Failed to create global material',
+        'message':
+            e.response?.data['message'] ?? 'Failed to create global material',
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -900,10 +845,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       final queryParams = <String, dynamic>{
@@ -913,8 +855,7 @@ class PlatformOwnerService {
           'companyName': companyName.trim(),
         if (category != null && category.trim().isNotEmpty)
           'category': category.trim(),
-        if (status != null && status.trim().isNotEmpty)
-          'status': status.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
         if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
       };
 
@@ -948,10 +889,7 @@ class PlatformOwnerService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
-      return {
-        'success': false,
-        'message': 'An unexpected error occurred',
-      };
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 
@@ -966,10 +904,7 @@ class PlatformOwnerService {
     try {
       final token = await _getToken();
       if (token == null) {
-        return {
-          'success': false,
-          'message': 'Authentication required',
-        };
+        return {'success': false, 'message': 'Authentication required'};
       }
 
       final body = <String, dynamic>{
@@ -1018,10 +953,42 @@ class PlatformOwnerService {
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Delete a global platform material.
+  Future<Map<String, dynamic>> deletePlatformMaterial(String materialId) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Authentication required'};
+      }
+
+      debugPrint("📤 [DELETE PLATFORM MATERIAL] ID: $materialId");
+
+      final response = await _dio.delete(
+        '/api/platform/materials/$materialId',
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return {
+        'success': response.data['success'] == true,
+        'message': response.data['message'] ?? 'Material deleted successfully',
+        'data': response.data['data'],
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [DELETE PLATFORM MATERIAL ERROR] => ${e.response?.data ?? e.message}",
+      );
       return {
         'success': false,
-        'message': 'An unexpected error occurred',
+        'message': e.response?.data['message'] ?? 'Failed to delete material',
+        'errors': e.response?.data['errors'],
       };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
     }
   }
 }

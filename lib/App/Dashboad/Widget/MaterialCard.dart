@@ -558,6 +558,21 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     return false;
   }
 
+  int _manualPriceMultiplier() {
+    final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
+    if (_usesQuantityBasedInput(_selectedMaterial)) {
+      return quantity < 1 ? 1 : quantity;
+    }
+
+    final billableUnits = _costCalculation?.calculation.billableUnits ?? 0;
+    if (billableUnits > 0) return billableUnits;
+
+    final minimumUnits = _costCalculation?.calculation.minimumUnits ?? 0;
+    if (minimumUnits > 0) return minimumUnits;
+
+    return quantity < 1 ? 1 : quantity;
+  }
+
   double _effectiveProjectCost() {
     final calculatedTotal = _costCalculation?.pricing.totalMaterialCost;
     if (calculatedTotal != null && calculatedTotal > 0) {
@@ -567,8 +582,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     if (_costCalculation?.calculation.needsPricing == true) {
       final manualUnitPrice = _parseAmountInput(manualUnitPriceController.text);
       if (manualUnitPrice != null && manualUnitPrice > 0) {
-        final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
-        return manualUnitPrice * (quantity < 1 ? 1 : quantity);
+        return manualUnitPrice * _manualPriceMultiplier();
       }
     }
 
@@ -1236,23 +1250,30 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final normalizedQuantity = quantity < 1 ? 1 : quantity;
+    final manualMultiplier = _manualPriceMultiplier();
     final lineTotal = needsManualPrice
-        ? (manualUnitPrice! * normalizedQuantity)
+        ? (manualUnitPrice! * manualMultiplier)
         : _costCalculation!.pricing.totalMaterialCost;
     final unitPrice = normalizedQuantity > 0
         ? lineTotal / normalizedQuantity
         : lineTotal;
+    final standardArea = _costCalculation!.dimensions.standardAreaSqm;
+    final manualPricePerSqm = needsManualPrice && standardArea > 0
+        ? manualUnitPrice / standardArea
+        : null;
     final calculationPayload = {
       "mode": _costCalculation!.calculation.mode,
       "minimumUnits": _costCalculation!.calculation.minimumUnits,
       "billableUnits": _costCalculation!.calculation.billableUnits,
       "quantity": _costCalculation!.calculation.quantity,
       "needsPricing": needsManualPrice,
-      "pricePerSqm": _costCalculation!.pricing.pricePerSqm,
+      "pricePerSqm": manualPricePerSqm ?? _costCalculation!.pricing.pricePerSqm,
       "pricePerUnit": needsManualPrice
           ? manualUnitPrice
           : _costCalculation!.pricing.pricePerUnit,
-      "pricePerFullUnit": _costCalculation!.pricing.pricePerFullUnit,
+      "pricePerFullUnit": needsManualPrice
+          ? manualUnitPrice
+          : _costCalculation!.pricing.pricePerFullUnit,
       "totalMaterialCost": lineTotal,
     };
 
@@ -1606,6 +1627,25 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                   ),
                 ),
               ),
+            if (!usesQuantityBasedInput &&
+                _costCalculation?.calculation.needsPricing == true) ...[
+              const SizedBox(height: 16),
+              _buildSectionHeader("Manual Pricing"),
+              const SizedBox(height: 12),
+              _buildCurrencyInputField(
+                "Manual full unit price",
+                manualUnitPriceController,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "This price is multiplied by the billable units for this material.",
+                style: GoogleFonts.openSans(
+                  fontSize: 11,
+                  fontStyle: FontStyle.italic,
+                  color: const Color(0xFF9E9E9E),
+                ),
+              ),
+            ],
             const SizedBox(height: 20),
           ] else ...[
             Container(
@@ -1936,6 +1976,15 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final effectiveProjectCost = _effectiveProjectCost();
     final effectiveUnitPrice = _effectiveUnitPriceForQuantityMaterial() ?? 0;
     final quantity = int.tryParse(quantityController.text.trim()) ?? 1;
+    final manualUnitPrice = _parseAmountInput(manualUnitPriceController.text);
+    final standardArea = _costCalculation!.dimensions.standardAreaSqm;
+    final displayPricePerSqm =
+        manualUnitPrice != null && manualUnitPrice > 0 && standardArea > 0
+        ? manualUnitPrice / standardArea
+        : _costCalculation!.pricing.pricePerSqm;
+    final displayFullUnitPrice = manualUnitPrice != null && manualUnitPrice > 0
+        ? manualUnitPrice
+        : _costCalculation!.pricing.totalBoardPrice;
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(12),
@@ -2009,11 +2058,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
               "Price per sq m:",
-              "₦${_costCalculation!.pricing.pricePerSqm.toStringAsFixed(2)}",
+              "₦${displayPricePerSqm.toStringAsFixed(2)}",
             ),
             _buildResultRow(
               "Full Board Price:",
-              "₦${_costCalculation!.pricing.totalBoardPrice.toStringAsFixed(2)}",
+              "₦${displayFullUnitPrice.toStringAsFixed(2)}",
             ),
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
