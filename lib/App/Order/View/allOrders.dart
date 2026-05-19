@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Order/Api/OrderService.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart' hide OrderService;
 import 'package:wworker/App/Order/Widget/AssignStaffSheet.dart';
 import 'package:wworker/App/Order/Widget/Order_card.dart';
 import 'package:wworker/App/Order/Widget/UpdateorderSheet.dart';
-import 'package:wworker/App/Order/Widget/addPaymentsheet.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
 class _FilterOption {
@@ -14,6 +14,12 @@ class _FilterOption {
 
   const _FilterOption({required this.value, required this.label});
 }
+
+const _surface = Color(0xFFFAF7F3);
+const _primary = Color(0xFFA16438);
+const _text = Color(0xFF211D1A);
+const _muted = Color(0xFF756A61);
+const _border = Color(0xFFE8DED6);
 
 class AllOrdersPage extends StatefulWidget {
   const AllOrdersPage({super.key});
@@ -71,7 +77,9 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
   }
 
   Future<void> _deleteOrder(OrderModel order) async {
-    // Show loading
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -82,18 +90,19 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
 
     final result = await _orderService.deleteOrder(order.id);
 
-    Navigator.pop(context); // Close loading dialog
+    if (!mounted) return;
+    navigator.pop();
 
     if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Order deleted successfully'),
           backgroundColor: Colors.green,
         ),
       );
-      _loadOrders(); // Reload orders
+      _loadOrders();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to delete order'),
           backgroundColor: Colors.red,
@@ -116,7 +125,6 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     );
   }
 
-  // NEW: Show Assign Staff Sheet
   void _showAssignStaffSheet(OrderModel order) {
     showModalBottomSheet(
       context: context,
@@ -136,14 +144,15 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     return orders.where((order) {
       final status = _normalize(order.status);
 
-      final statusOk = statusFilter == null || status == _normalize(statusFilter!);
+      final statusOk =
+          statusFilter == null || status == _normalize(statusFilter!);
 
       return statusOk;
     }).toList();
   }
 
   String _normalize(String value) {
-    return value.trim().toLowerCase().replaceAll(RegExp(r'\s+'), '');
+    return value.trim().toLowerCase().replaceAll(RegExp(r'[\s_-]+'), '');
   }
 
   List<_FilterOption> _availableStatusFilters() {
@@ -156,36 +165,20 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
     ];
   }
 
-  String _prettyLabel(String value) {
-    final normalized = value.trim().replaceAll(RegExp(r'[_-]+'), ' ');
-    if (normalized.isEmpty) {
-      return value;
-    }
-    return normalized
-        .split(RegExp(r'\s+'))
-        .map((word) {
-          if (word.isEmpty) {
-            return word;
-          }
-          final lower = word.toLowerCase();
-          return '${lower[0].toUpperCase()}${lower.substring(1)}';
-        })
-        .join(' ');
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _surface,
         elevation: 0,
-        title: const Text(
-          "All Orders",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
-          ),
+        centerTitle: true,
+        foregroundColor: _text,
+        title: const Text("All Orders"),
+        titleTextStyle: GoogleFonts.openSans(
+          color: _text,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
         actions: [
           Consumer(
@@ -206,78 +199,24 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
 
   Widget _buildBody() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFA16438)),
-      );
+      return const Center(child: CircularProgressIndicator(color: _primary));
     }
 
     if (errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load orders',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                errorMessage!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadOrders,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
+      return _StateMessage(
+        icon: Icons.error_outline_rounded,
+        title: 'Failed to load orders',
+        message: errorMessage!,
+        actionLabel: 'Retry',
+        onAction: _loadOrders,
       );
     }
 
     if (orders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.shopping_cart_outlined,
-              size: 80,
-              color: Colors.grey[400],
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'No orders found',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
-          ],
-        ),
+      return const _StateMessage(
+        icon: Icons.shopping_bag_outlined,
+        title: 'No orders found',
+        message: 'Approved quotations will appear here after an order is made.',
       );
     }
 
@@ -285,13 +224,21 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
 
     return RefreshIndicator(
       onRefresh: _loadOrders,
-      color: const Color(0xFFA16438),
+      color: _primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(18, 10, 18, 24),
         itemCount: filteredOrders.isEmpty ? 2 : filteredOrders.length + 1,
         itemBuilder: (context, index) {
           if (index == 0) {
-            return _buildFilterBar();
+            return Column(
+              children: [
+                _OrdersHeader(
+                  total: orders.length,
+                  visible: filteredOrders.length,
+                ),
+                _buildFilterBar(),
+              ],
+            );
           }
 
           if (filteredOrders.isEmpty) {
@@ -300,7 +247,7 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
               child: Center(
                 child: Text(
                   "No orders match these filters",
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: GoogleFonts.openSans(color: _muted, fontSize: 13),
                 ),
               ),
             );
@@ -317,8 +264,8 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
                 ? () => _deleteOrder(order)
                 : null,
             onUpdateStatus: () => _showUpdateStatusSheet(order),
-            onAssignStaff: () => _showAssignStaffSheet(order), // NEW
-            showFinancialInfo: false, // Hide financial info in All Orders
+            onAssignStaff: () => _showAssignStaffSheet(order),
+            showFinancialInfo: false,
           );
         },
       ),
@@ -330,23 +277,24 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: const [
-              Text(
-                "Filters",
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
+          Text(
+            "Filters",
+            style: GoogleFonts.openSans(
+              color: _text,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           _buildFilterRow(
             title: "Status",
             options: statusOptions,
@@ -375,10 +323,10 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
           width: 64,
           child: Text(
             title,
-            style: const TextStyle(
+            style: GoogleFonts.openSans(
               fontSize: 12,
-              color: Colors.black54,
-              fontWeight: FontWeight.w600,
+              color: _muted,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ),
@@ -424,13 +372,150 @@ class _AllOrdersPageState extends State<AllOrdersPage> {
         decoration: BoxDecoration(
           color: selected ? const Color(0xFFA16438) : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? const Color(0xFFA16438) : _border,
+          ),
         ),
         child: Text(
           label,
-          style: TextStyle(
+          style: GoogleFonts.openSans(
             fontSize: 11,
-            color: selected ? Colors.white : Colors.black87,
-            fontWeight: FontWeight.w600,
+            color: selected ? Colors.white : _muted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OrdersHeader extends StatelessWidget {
+  final int total;
+  final int visible;
+
+  const _OrdersHeader({required this.total, required this.visible});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2E211A),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.inventory_2_outlined, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Orders',
+                  style: GoogleFonts.openSans(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  visible == total
+                      ? '$total active order${total == 1 ? '' : 's'}'
+                      : 'Showing $visible of $total orders',
+                  style: GoogleFonts.openSans(
+                    color: Colors.white.withValues(alpha: 0.72),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(22),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: _border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 38, color: _primary),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.openSans(
+                  color: _text,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.openSans(
+                  color: _muted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: onAction,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: Text(actionLabel!),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _primary,
+                    foregroundColor: Colors.white,
+                    textStyle: GoogleFonts.openSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ),

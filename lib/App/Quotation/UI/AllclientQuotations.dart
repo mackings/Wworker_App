@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 import 'package:wworker/App/Quotation/Api/ClientQuotation.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
@@ -7,10 +8,12 @@ import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
 import 'package:wworker/App/Quotation/UI/BomSummary.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
 import 'package:wworker/Constant/urls.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
+const Color _quoteBg = Color(0xFFFAF7F3);
+const Color _quoteInk = Color(0xFF211D1A);
+const Color _quoteMuted = Color(0xFF756A61);
+const Color _quoteBrand = Color(0xFF8B4513);
+const Color _quoteBorder = Color(0xFFE8DED6);
 
 class AllClientQuotations extends ConsumerStatefulWidget {
   final bool isForInvoice;
@@ -34,6 +37,7 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
   List<Quotation> quotations = [];
   bool isLoading = true;
   String? errorMessage;
+  String? _selectedQuotationId;
 
   @override
   void initState() {
@@ -78,16 +82,23 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _quoteBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _quoteBg,
+        surfaceTintColor: _quoteBg,
         elevation: 0,
-        title: CustomText(
-          title: widget.isForInvoice
+        centerTitle: true,
+        title: Text(
+          widget.isForInvoice
               ? "Select Quotation for Invoice"
               : widget.isImportMode
-                  ? "Import BOMs"
-                  : "Quotations",
+              ? "Import BOMs"
+              : "Quotations",
+          style: GoogleFonts.openSans(
+            color: _quoteInk,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       body: _buildBody(),
@@ -96,108 +107,78 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
 
   Widget _buildBody() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFFA16438)),
-      );
+      return const Center(child: CircularProgressIndicator(color: _quoteBrand));
     }
 
     if (errorMessage != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 60, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Failed to load quotations',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
-              ),
+      return _QuotationStateMessage(
+        icon: Icons.error_outline,
+        title: 'Failed to load quotations',
+        message: errorMessage!,
+        action: ElevatedButton.icon(
+          onPressed: _loadQuotations,
+          icon: const Icon(Icons.refresh, size: 18),
+          label: const Text('Retry'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: _quoteBrand,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
             ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Text(
-                errorMessage!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
+            textStyle: GoogleFonts.openSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadQuotations,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA16438),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       );
     }
 
     if (quotations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.receipt_long, size: 80, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            Text(
-              widget.isForInvoice
-                  ? 'No quotations found for ${widget.clientName}'
-                  : widget.isImportMode
-                      ? 'No quotations available for import.'
-                      : 'No quotations found.',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              widget.isForInvoice
-                  ? 'Create a quotation for this client first'
-                  : widget.isImportMode
-                      ? 'Create quotations to import them here'
-                      : 'Create a quotation to get started',
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-            ),
-          ],
-        ),
+      return _QuotationStateMessage(
+        icon: Icons.receipt_long_outlined,
+        title: widget.isForInvoice
+            ? 'No quotations for ${widget.clientName}'
+            : widget.isImportMode
+            ? 'No quotations available'
+            : 'No quotations found',
+        message: widget.isForInvoice
+            ? 'Create a quotation for this client first.'
+            : widget.isImportMode
+            ? 'Create quotations to import them here.'
+            : 'Create a quotation to get started.',
       );
     }
 
     return RefreshIndicator(
       onRefresh: _loadQuotations,
-      color: const Color(0xFFA16438),
+      color: _quoteBrand,
       child: ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        itemCount: quotations.length,
+        padding: EdgeInsets.fromLTRB(
+          16,
+          8,
+          16,
+          MediaQuery.of(context).padding.bottom + 24,
+        ),
+        itemCount: quotations.length + 1,
         itemBuilder: (context, index) {
-          final quotation = quotations[index];
+          if (index == 0) return _buildHeader();
+
+          final quotation = quotations[index - 1];
           final firstItem = quotation.items.isNotEmpty
               ? quotation.items.first
               : null;
 
           return GestureDetector(
-            onTap: () {
+            onTap: () async {
               if (widget.isForInvoice) {
+                final navigator = Navigator.of(context);
+                setState(() => _selectedQuotationId = quotation.id);
+                await Future.delayed(const Duration(milliseconds: 140));
+                if (!mounted) return;
                 // Navigate to invoice preview
-                Navigator.push(
-                  context,
+                navigator.push(
                   MaterialPageRoute(
                     builder: (context) => InvoicePreview(quotation: quotation),
                   ),
@@ -228,10 +209,86 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
                       ]
                     : [],
               },
-              onDelete: () => _deleteQuotation(quotation.id),
+              showSelectionIndicator: widget.isForInvoice,
+              isSelected: _selectedQuotationId == quotation.id,
+              onDelete: widget.isForInvoice
+                  ? null
+                  : () => _deleteQuotation(quotation.id),
             ),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    final title = widget.isForInvoice
+        ? 'Choose quotation'
+        : widget.isImportMode
+        ? 'Import quotation BOMs'
+        : 'Client quotations';
+    final subtitle = widget.isForInvoice
+        ? '${widget.clientName ?? 'Client'} has ${quotations.length} quotation${quotations.length == 1 ? '' : 's'} available for invoice generation.'
+        : '${quotations.length} quotation${quotations.length == 1 ? '' : 's'} available.';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: _quoteBorder),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.035),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: _quoteBrand.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.description_outlined,
+                color: _quoteBrand,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.openSans(
+                      color: _quoteInk,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.openSans(
+                      color: _quoteMuted,
+                      fontSize: 12,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -372,6 +429,64 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
   }
 }
 
+class _QuotationStateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final Widget? action;
+
+  const _QuotationStateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.action,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: _quoteBrand.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(icon, color: _quoteBrand, size: 28),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.openSans(
+                color: _quoteInk,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.openSans(
+                color: _quoteMuted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+            if (action != null) ...[const SizedBox(height: 18), action!],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ✨ Modern Bottom Sheet Widget
 class _QuotationItemsBottomSheet extends StatelessWidget {
   final Quotation quotation;
@@ -440,8 +555,8 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                               Text(
                                 quotation.quotationNumber,
                                 style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
                                   color: Color(0xFF302E2E),
                                 ),
                               ),
@@ -527,7 +642,7 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                     color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                         offset: const Offset(0, -5),
                       ),
@@ -685,7 +800,7 @@ class _QuotationItemsBottomSheet extends StatelessWidget {
                   "₦${item.sellingPrice.toStringAsFixed(2)}",
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     color: Color(0xFFA16438),
                   ),
                 ),

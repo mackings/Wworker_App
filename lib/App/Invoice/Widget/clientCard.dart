@@ -1,138 +1,88 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class ClientsCard extends StatelessWidget {
   final List<String> clientNames;
   final Function(String clientName) onGenerateInvoice;
 
   const ClientsCard({
-    Key? key,
+    super.key,
     required this.clientNames,
     required this.onGenerateInvoice,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-
-      padding: const EdgeInsets.all(16),
-      decoration: ShapeDecoration(
-        color: const Color(0xFFFCFCFC),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: double.infinity,
-            decoration: ShapeDecoration(
-              color: const Color(0xFFF5F8F2),
-              shape: RoundedRectangleBorder(
-                side: const BorderSide(width: 1, color: Color(0xFF8B4513)),
-                borderRadius: BorderRadius.circular(4),
+    return Column(
+      children: clientNames.map((clientName) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: const Color(0xFFE8DED6)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.025),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 12,
-            ), // Increased padding
-            child: const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  // Makes client name take available space
-                  child: Text(
-                    'Client Name',
-                    style: TextStyle(
-                      color: Color(0xFF8B4513),
-                      fontSize: 14, // Slightly larger font
-                      fontFamily: 'Open Sans',
-                      fontWeight: FontWeight.w500, // Slightly bolder
-                    ),
-                  ),
-                ),
-                Text(
-                  'Invoice',
-                  style: TextStyle(
-                    color: Color(0xFF8B4513),
-                    fontSize: 14, // Slightly larger font
-                    fontFamily: 'Open Sans',
-                    fontWeight: FontWeight.w500, // Slightly bolder
-                  ),
-                ),
-              ],
-            ),
+            ],
           ),
-
-          const SizedBox(height: 16),
-
-          // 🧾 Client Rows - Responsive
-          ...clientNames.map((clientName) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              decoration: ShapeDecoration(
-                shape: RoundedRectangleBorder(
-                  side: const BorderSide(
-                    width: 1,
-                    color: Color(0xFFD3D3D3), // Surface-Overlay
-                  ),
-                  borderRadius: BorderRadius.circular(8),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B4513).withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.person_outline_rounded,
+                  color: Color(0xFF8B4513),
+                  size: 20,
                 ),
               ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ), // Increased padding
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Client Name - Expanded to take available space
-                  Expanded(
-                    child: Text(
-                      clientName,
-                      style: const TextStyle(
-                        color: Color(0xFF302E2E), // Typography-Subtext
-                        fontSize: 12, // Slightly larger
-                        fontFamily: 'Open Sans',
-                        fontWeight: FontWeight.w400,
-                      ),
-                      overflow: TextOverflow.ellipsis, // Handle long names
-                    ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  clientName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    color: const Color(0xFF211D1A),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
-
-                  const SizedBox(width: 16), // Increased spacing
-                  // Generate Invoice Button
-                  InkWell(
-                    onTap: () => onGenerateInvoice(clientName),
-                    borderRadius: BorderRadius.circular(4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ), // Increased padding
-                      decoration: ShapeDecoration(
-                        color: const Color(0xFFB7835E), // Brown-Brown-300
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: const Text(
-                        'Generate Invoice',
-                        style: TextStyle(
-                          color: Color(0xFFFEFEFE),
-                          fontSize: 12,
-                          fontFamily: 'Open Sans',
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            );
-          }).toList(),
-        ],
-      ),
+              const SizedBox(width: 10),
+              TextButton.icon(
+                onPressed: () => onGenerateInvoice(clientName),
+                icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                label: const Text('Invoice'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF8B4513),
+                  backgroundColor: const Color(0xFFFFF3E8),
+                  textStyle: GoogleFonts.openSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
     );
   }
 }

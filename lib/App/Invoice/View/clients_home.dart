@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Invoice/Api/client_service.dart';
 import 'package:wworker/App/Invoice/Model/Client_model.dart';
 import 'package:wworker/App/Invoice/View/invoiceList.dart';
 import 'package:wworker/App/Invoice/Widget/clientCard.dart';
-import 'package:wworker/App/Order/View/QuoforOrder.dart';
-import 'package:wworker/App/Order/View/allOrders.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Widget/Optionmodal.dart';
+
+const Color _invoiceBg = Color(0xFFFAF7F3);
+const Color _invoiceInk = Color(0xFF211D1A);
+const Color _invoiceMuted = Color(0xFF756A61);
+const Color _invoiceBrand = Color(0xFF8B4513);
+const Color _invoiceBorder = Color(0xFFE8DED6);
 
 class ClientsHome extends StatefulWidget {
   const ClientsHome({super.key});
@@ -66,14 +71,17 @@ class _ClientsHomeState extends State<ClientsHome> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: _invoiceBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: _invoiceBg,
+        surfaceTintColor: _invoiceBg,
         elevation: 0,
-        title: const Text(
+        centerTitle: true,
+        title: Text(
           "Clients",
-          style: TextStyle(
-            color: Color(0xFF302E2E),
+          style: GoogleFonts.openSans(
+            color: _invoiceInk,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -84,46 +92,27 @@ class _ClientsHomeState extends State<ClientsHome> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                child: CircularProgressIndicator(color: Color(0xFFA16438)),
+                child: CircularProgressIndicator(color: _invoiceBrand),
               );
             }
 
             if (snapshot.hasError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 60,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Error: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.grey),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+              return _StateMessage(
+                icon: Icons.error_outline,
+                title: 'Could not load clients',
+                message: snapshot.error.toString(),
+                iconColor: Colors.redAccent,
               );
             }
 
             final clients = snapshot.data ?? [];
 
             if (clients.isEmpty) {
-              return const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.people_outline, size: 80, color: Colors.grey),
-                    SizedBox(height: 16),
-                    Text(
-                      "No clients found",
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
-                    ),
-                  ],
-                ),
+              return const _StateMessage(
+                icon: Icons.people_outline,
+                title: 'No clients found',
+                message:
+                    'Create a quotation first to see invoice clients here.',
               );
             }
 
@@ -134,18 +123,38 @@ class _ClientsHomeState extends State<ClientsHome> {
               _filteredClientNames = _allClientNames;
             }
 
-            return Column(
+            return ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                8,
+                16,
+                MediaQuery.of(context).padding.bottom + 24,
+              ),
               children: [
-                // Search Bar
-                Padding(
-                  padding: const EdgeInsets.all(16),
+                _buildHeader(_allClientNames.length),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: _invoiceBorder),
+                  ),
                   child: TextField(
                     controller: _searchController,
+                    style: GoogleFonts.openSans(
+                      color: _invoiceInk,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
                     decoration: InputDecoration(
-                      hintText: "Search clients...",
+                      hintText: "Search clients",
+                      hintStyle: GoogleFonts.openSans(
+                        color: _invoiceMuted.withValues(alpha: 0.65),
+                        fontSize: 13,
+                      ),
                       prefixIcon: const Icon(
                         Icons.search,
-                        color: Color(0xFFA16438),
+                        color: _invoiceBrand,
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -155,23 +164,7 @@ class _ClientsHomeState extends State<ClientsHome> {
                               },
                             )
                           : null,
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFFA16438),
-                          width: 1.5,
-                        ),
-                      ),
+                      border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 14,
@@ -183,96 +176,197 @@ class _ClientsHomeState extends State<ClientsHome> {
                 // Results Count
                 if (_searchController.text.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.only(top: 10, left: 4),
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
                         "${_filteredClientNames.length} client${_filteredClientNames.length != 1 ? 's' : ''} found",
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          color: _invoiceMuted,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 14),
 
                 // Client List
-                Expanded(
-                  child: _filteredClientNames.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off,
-                                size: 80,
-                                color: Colors.grey[400],
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                "No clients match your search",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: ClientsCard(
-                            clientNames: _filteredClientNames,
-                            onGenerateInvoice: (clientName) {
-                              debugPrint(
-                                "🧾 Generating invoice for $clientName",
-                              );
+                if (_filteredClientNames.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 80),
+                    child: _StateMessage(
+                      icon: Icons.search_off,
+                      title: 'No matching clients',
+                      message: 'Try another client name.',
+                    ),
+                  )
+                else
+                  ClientsCard(
+                    clientNames: _filteredClientNames,
+                    onGenerateInvoice: (clientName) {
+                      debugPrint("🧾 Generating invoice for $clientName");
 
-                              showModalBottomSheet(
-                                context: context,
-                                backgroundColor: Colors.transparent,
-                                isScrollControlled: true,
-                                builder: (context) => SelectOptionSheet(
-                                  title: "Select Action",
-                                  options: [
-                                    OptionItem(
-                                      label: "Generate Invoice from Quotation",
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                AllClientQuotations(
-                                                  isForInvoice: true,
-                                                  clientName: clientName,
-                                                ),
-                                          ),
-                                        );
-                                      },
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: Colors.transparent,
+                        isScrollControlled: true,
+                        builder: (context) => SelectOptionSheet(
+                          title: "Select Action",
+                          options: [
+                            OptionItem(
+                              label: "Generate Invoice from Quotation",
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => AllClientQuotations(
+                                      isForInvoice: true,
+                                      clientName: clientName,
                                     ),
-                                    OptionItem(
-                                      label: "Generate from Invoice list",
-                                      onTap: () {
-                                        Navigator.pop(context);
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                InvoiceListPage(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
+                                  ),
+                                );
+                              },
+                            ),
+                            OptionItem(
+                              label: "Generate from Invoice list",
+                              onTap: () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => InvoiceListPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                ),
+                      );
+                    },
+                  ),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(int count) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _invoiceBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _invoiceBrand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.receipt_long_outlined,
+              color: _invoiceBrand,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Generate invoice',
+                  style: GoogleFonts.openSans(
+                    color: _invoiceInk,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  '$count client${count == 1 ? '' : 's'} with quotation records',
+                  style: GoogleFonts.openSans(
+                    color: _invoiceMuted,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StateMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String message;
+  final Color iconColor;
+
+  const _StateMessage({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.iconColor = _invoiceBrand,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(icon, color: iconColor, size: 28),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.openSans(
+                color: _invoiceInk,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.openSans(
+                color: _invoiceMuted,
+                fontSize: 12,
+                height: 1.35,
+              ),
+            ),
+          ],
         ),
       ),
     );

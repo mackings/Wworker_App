@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:wworker/App/Order/Model/orderModel.dart';
 import 'package:wworker/Constant/urls.dart';
 
-
-
 class OrderCard extends StatelessWidget {
-  
   final OrderModel order;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onAddPayment;
   final VoidCallback? onUpdateStatus;
   final VoidCallback? onViewReceipt;
-  final VoidCallback? onAssignStaff; // NEW
+  final VoidCallback? onAssignStaff;
   final bool showFinancialInfo;
 
   const OrderCard({
@@ -24,7 +22,7 @@ class OrderCard extends StatelessWidget {
     this.onAddPayment,
     this.onUpdateStatus,
     this.onViewReceipt,
-    this.onAssignStaff, // NEW
+    this.onAssignStaff,
     this.showFinancialInfo = true,
   });
 
@@ -42,12 +40,16 @@ class OrderCard extends StatelessWidget {
     Color statusColor;
     String statusText;
 
-    switch (order.status.toLowerCase()) {
+    final normalizedStatus = order.status.trim().toLowerCase().replaceAll(
+      RegExp(r'[\s_-]+'),
+      '',
+    );
+    switch (normalizedStatus) {
       case 'completed':
         statusColor = AppColors.success;
         statusText = 'Completed';
         break;
-      case 'in_progress':
+      case 'inprogress':
         statusColor = AppColors.warning;
         statusText = 'In Progress';
         break;
@@ -55,7 +57,7 @@ class OrderCard extends StatelessWidget {
         statusColor = AppColors.error;
         statusText = 'Cancelled';
         break;
-      case 'on_hold':
+      case 'onhold':
         statusColor = AppColors.info;
         statusText = 'On Hold';
         break;
@@ -67,232 +69,129 @@ class OrderCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 24),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8DED6)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              color: Colors.black.withValues(alpha: 0.035),
+              blurRadius: 14,
+              offset: const Offset(0, 7),
             ),
           ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image Section with Delete Button & Assignment Badge
-            Stack(
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(12),
-                    topRight: Radius.circular(12),
-                  ),
-                  child: Image.network(
-                    image,
-                    width: double.infinity,
-                    height: 200,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: double.infinity,
-                        height: 200,
-                        color: Colors.grey[300],
-                        child: const Icon(Icons.image_not_supported, size: 50),
-                      );
-                    },
-                  ),
-                ),
-                
-                // NEW: Assignment Badge (Top Left)
-                if (order.isAssigned)
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                _OrderImage(imageUrl: image),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(
-                            Icons.person,
-                            size: 14,
-                            color: Color(0xFFA16438),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            order.assignedTo!.displayName,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFFA16438),
+                          Expanded(
+                            child: Text(
+                              order.clientName,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.openSans(
+                                color: AppColors.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                height: 1.25,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                
-                // Delete Button (Top Right)
-                if (onDelete != null)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: IconButton(
-                      onPressed: () => _showDeleteConfirmation(context),
-                      icon: const Icon(Icons.delete_outline),
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppColors.error,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-
-            // Details Section
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  _buildDetailRow("Client:", order.clientName),
-                  const SizedBox(height: 16),
-                  _buildDetailRow("Order No:", order.orderNumber),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    "Start Date:",
-                    order.startDate != null
-                        ? DateFormat('MMMM d, yyyy').format(order.startDate!)
-                        : 'N/A',
-                  ),
-                  const SizedBox(height: 16),
-                  _buildDetailRow(
-                    "End Date:",
-                    order.endDate != null
-                        ? DateFormat('MMMM d, yyyy').format(order.endDate!)
-                        : 'N/A',
-                  ),
-                  
-                  // Conditionally show financial information
-                  if (showFinancialInfo) ...[
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      "Amount Paid:",
-                      "₦${_formatNumber(order.amountPaid)}",
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow("Email:", order.email),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      "Balance:",
-                      "₦${_formatNumber(order.balance)}",
-                      valueColor: AppColors.primary,
-                      valueBold: true,
-                    ),
-                  ],
-                  
-                  // NEW: Show Assignment Info
-                  if (order.isAssigned) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: const Color(0xFFA16438).withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.person_outline,
-                            size: 16,
-                            color: Color(0xFFA16438),
                           ),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Assigned to',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: Color(0xFFA16438),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                Text(
-                                  order.assignedTo!.displayName,
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Color(0xFF302E2E),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                if (order.assignedTo!.position.isNotEmpty)
-                                  Text(
-                                    order.assignedTo!.position,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          if (onAssignStaff != null)
-                            IconButton(
-                              onPressed: onAssignStaff,
-                              icon: const Icon(Icons.edit_outlined),
-                              iconSize: 18,
-                              color: const Color(0xFFA16438),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
+                          _StatusPill(label: statusText, color: statusColor),
                         ],
                       ),
+                      const SizedBox(height: 4),
+                      Text(
+                        order.orderNumber,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.openSans(
+                          color: const Color(0xFF756A61),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _InfoChip(
+                            icon: Icons.play_arrow_rounded,
+                            label: order.startDate != null
+                                ? DateFormat('MMM d').format(order.startDate!)
+                                : 'No start',
+                          ),
+                          _InfoChip(
+                            icon: Icons.flag_outlined,
+                            label: order.endDate != null
+                                ? DateFormat('MMM d').format(order.endDate!)
+                                : 'No end',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                if (onDelete != null) ...[
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: () => _showDeleteConfirmation(context),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Delete order',
+                    icon: const Icon(Icons.delete_outline, size: 20),
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFF3F3),
+                      foregroundColor: AppColors.error,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ],
-                  
-                  const SizedBox(height: 16),
-                  _buildStatusRow("Status:", statusText, statusColor),
-
-                  // Action Buttons
-                  if (onAddPayment != null || 
-                      onUpdateStatus != null || 
-                      onViewReceipt != null ||
-                      onAssignStaff != null) ...[
-                    const SizedBox(height: 20),
-                    const Divider(),
-                    const SizedBox(height: 12),
-                    
-                    // Different button layouts based on showFinancialInfo
-                    if (showFinancialInfo)
-                      _buildFinancialActions()
-                    else
-                      _buildOrderManagementActions(),
-                  ],
+                  ),
                 ],
-              ),
+              ],
             ),
+            if (showFinancialInfo) ...[
+              const SizedBox(height: 12),
+              _FinanceStrip(
+                amountPaid: "₦${_formatNumber(order.amountPaid)}",
+                balance: "₦${_formatNumber(order.balance)}",
+                email: order.email,
+              ),
+            ],
+            if (order.isAssigned) ...[
+              const SizedBox(height: 12),
+              _AssignedStrip(
+                name: order.assignedTo!.displayName,
+                position: order.assignedTo!.position,
+                onEdit: onAssignStaff,
+              ),
+            ],
+            if (onAddPayment != null ||
+                onUpdateStatus != null ||
+                onViewReceipt != null ||
+                onAssignStaff != null) ...[
+              const SizedBox(height: 12),
+              if (showFinancialInfo)
+                _buildFinancialActions()
+              else
+                _buildOrderManagementActions(),
+            ],
           ],
         ),
       ),
@@ -314,9 +213,13 @@ class OrderCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    textStyle: GoogleFonts.openSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     disabledBackgroundColor: Colors.grey[300],
                   ),
@@ -333,9 +236,13 @@ class OrderCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.info,
                     side: BorderSide(color: AppColors.info),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    textStyle: GoogleFonts.openSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                     disabledForegroundColor: Colors.grey,
                   ),
@@ -362,14 +269,17 @@ class OrderCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    textStyle: GoogleFonts.openSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
-            // NEW: Assign Staff Button
             if (onUpdateStatus != null && onAssignStaff != null)
               const SizedBox(width: 12),
             if (onAssignStaff != null)
@@ -384,79 +294,18 @@ class OrderCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.primary,
                     side: const BorderSide(color: AppColors.primary),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    textStyle: GoogleFonts.openSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
               ),
           ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDetailRow(
-    String label,
-    String value, {
-    Color? valueColor,
-    bool valueBold = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Flexible(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              color: valueColor ?? AppColors.textPrimary,
-              fontWeight: valueBold ? FontWeight.bold : FontWeight.w600,
-            ),
-            textAlign: TextAlign.right,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatusRow(String label, String statusText, Color statusColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 16,
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: statusColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            statusText,
-            style: TextStyle(
-              fontSize: 14,
-              color: statusColor,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
         ),
       ],
     );
@@ -494,7 +343,261 @@ class OrderCard extends StatelessWidget {
   }
 }
 
-// App Colors Class
+class _OrderImage extends StatelessWidget {
+  final String imageUrl;
+
+  const _OrderImage({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Image.network(
+        imageUrl,
+        width: 70,
+        height: 70,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            width: 70,
+            height: 70,
+            color: const Color(0xFFF6F0EB),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              size: 24,
+              color: AppColors.primary,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _StatusPill extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusPill({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.openSans(
+          color: color,
+          fontSize: 10.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _InfoChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8F3EF),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: const Color(0xFF756A61)),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              color: const Color(0xFF756A61),
+              fontSize: 10.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FinanceStrip extends StatelessWidget {
+  final String amountPaid;
+  final String balance;
+  final String email;
+
+  const _FinanceStrip({
+    required this.amountPaid,
+    required this.balance,
+    required this.email,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _MiniMetric(label: 'Paid', value: amountPaid),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniMetric(label: 'Balance', value: balance),
+              ),
+            ],
+          ),
+          if (email.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(
+                  Icons.mail_outline_rounded,
+                  size: 14,
+                  color: Color(0xFF756A61),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.openSans(
+                      color: const Color(0xFF756A61),
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniMetric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _MiniMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.openSans(
+            color: const Color(0xFF756A61),
+            fontSize: 10.5,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.openSans(
+            color: AppColors.textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AssignedStrip extends StatelessWidget {
+  final String name;
+  final String position;
+  final VoidCallback? onEdit;
+
+  const _AssignedStrip({
+    required this.name,
+    required this.position,
+    this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF6ED),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE6C7AE)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.person_outline_rounded,
+            size: 18,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    color: AppColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (position.isNotEmpty)
+                  Text(
+                    position,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.openSans(
+                      color: const Color(0xFF756A61),
+                      fontSize: 10.5,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          if (onEdit != null)
+            IconButton(
+              onPressed: onEdit,
+              visualDensity: VisualDensity.compact,
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              color: AppColors.primary,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class AppColors {
   static const Color primary = Color(0xFFA16438);
   static const Color textPrimary = Color(0xFF302E2E);
