@@ -5,7 +5,6 @@ import 'package:wworker/App/Invoice/Model/Client_model.dart';
 import 'package:wworker/App/Quotation/UI/SecQuote.dart';
 import 'package:wworker/App/Quotation/Widget/FQCard.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
-import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 class FirstQuote extends ConsumerStatefulWidget {
   final List<Map<String, dynamic>>? selectedQuotations;
@@ -22,6 +21,11 @@ class FirstQuote extends ConsumerStatefulWidget {
 }
 
 class _FirstQuoteState extends ConsumerState<FirstQuote> {
+  static const Color _pageBg = Color(0xFFFAF7F3);
+  static const Color _ink = Color(0xFF211D1A);
+  static const Color _brand = Color(0xFF8B4513);
+  static const Color _border = Color(0xFFE8DED6);
+
   final ClientService _clientService = ClientService();
 
   final TextEditingController _emailController = TextEditingController();
@@ -60,7 +64,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
   }
 
   String _buildAutoDescription() {
-    final quotations = widget.selectedQuotations ?? const <Map<String, dynamic>>[];
+    final quotations =
+        widget.selectedQuotations ?? const <Map<String, dynamic>>[];
     if (quotations.isEmpty) {
       return 'Quotation';
     }
@@ -192,33 +197,52 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _pageBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        centerTitle: true,
+        backgroundColor: _pageBg,
+        surfaceTintColor: _pageBg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: _ink,
+            size: 20,
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: const Text(
           "Client Information",
           style: TextStyle(
-            color: Color(0xFF302E2E),
-            fontWeight: FontWeight.w600,
+            color: _ink,
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
           ),
         ),
       ),
-      backgroundColor: Colors.white,
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).padding.bottom + 24,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 16),
+                  _buildHeroCard(),
+                  const SizedBox(height: 14),
 
                   // Client Selection Section
                   _buildClientSelectionSection(),
 
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 14),
 
                   // Client Form
                   FirstQuoteCard(
@@ -229,10 +253,9 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                     busStopController: _busStopController,
                   ),
 
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 22),
 
-                  CustomButton(
-                    text: "Continue",
+                  _buildContinueButton(
                     onPressed: () {
                       if (_formKey.currentState!.validate()) {
                         Nav.push(
@@ -257,7 +280,6 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                       }
                     },
                   ),
-                  const SizedBox(height: 30),
                 ],
               ),
             ),
@@ -267,31 +289,97 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
     );
   }
 
+  Widget _buildHeroCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _brand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.person_outline_rounded,
+              color: _brand,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Who is this for?",
+                  style: TextStyle(
+                    color: _ink,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "Select a saved client or enter new client details.",
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildClientSelectionSection() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F8F2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.people_outline,
-                color: Color(0xFFA16438),
-                size: 20,
-              ),
+              const Icon(Icons.people_outline, color: _brand, size: 20),
               const SizedBox(width: 8),
               const Text(
                 "Select Client",
                 style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF302E2E),
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
                 ),
               ),
               const Spacer(),
@@ -301,19 +389,23 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                   height: 16,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Color(0xFFA16438),
+                    color: _brand,
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           Row(
             children: [
               Expanded(
                 child: Text(
                   "Tap a saved client to prefill details",
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
               TextButton.icon(
@@ -321,23 +413,23 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                 icon: const Icon(Icons.person_add, size: 16),
                 label: const Text("New client"),
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFFA16438),
+                  foregroundColor: _brand,
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Search/Select Field
           TextField(
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search clients...",
-              prefixIcon: const Icon(
-                Icons.search,
-                color: Color(0xFFA16438),
-                size: 20,
-              ),
+              prefixIcon: const Icon(Icons.search, color: _brand, size: 20),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear, size: 20),
@@ -348,23 +440,26 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                   : null,
               filled: true,
               fillColor: Colors.white,
+              hintStyle: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: Color(0xFFA16438),
-                  width: 2,
-                ),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: _brand, width: 1.4),
               ),
+              isDense: true,
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
+                horizontal: 14,
                 vertical: 12,
               ),
             ),
@@ -380,32 +475,26 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFFA16438).withOpacity(0.3),
-                ),
+                border: Border.all(color: _brand.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.person_add,
-                    size: 16,
-                    color: Color(0xFFA16438),
-                  ),
+                  const Icon(Icons.person_add, size: 16, color: _brand),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       "No client found for \"${_searchController.text.trim()}\"",
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFA16438),
-                        fontWeight: FontWeight.w600,
+                        color: _brand,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
                   TextButton(
                     onPressed: _createNewClientFromSearch,
                     style: TextButton.styleFrom(
-                      foregroundColor: const Color(0xFFA16438),
+                      foregroundColor: _brand,
                       padding: const EdgeInsets.symmetric(
                         horizontal: 10,
                         vertical: 6,
@@ -430,11 +519,11 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               constraints: const BoxConstraints(maxHeight: 200),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _border),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -459,7 +548,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                         client.clientName[0].toUpperCase(),
                         style: const TextStyle(
                           color: Color(0xFFA16438),
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                           fontSize: 14,
                         ),
                       ),
@@ -468,15 +557,18 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                       client.clientName,
                       style: const TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF302E2E),
+                        fontWeight: FontWeight.w700,
+                        color: _ink,
                       ),
                     ),
                     subtitle: Text(
                       client.phoneNumber.isNotEmpty
                           ? client.phoneNumber
                           : "No phone number",
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     onTap: () => _selectClient(client),
                   );
@@ -492,25 +584,19 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF3E0),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: const Color(0xFFA16438).withOpacity(0.3),
-                ),
+                border: Border.all(color: _brand.withValues(alpha: 0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.person_add,
-                    size: 16,
-                    color: Color(0xFFA16438),
-                  ),
+                  const Icon(Icons.person_add, size: 16, color: _brand),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       "Creating new client: ${_nameController.text.trim()}",
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFFA16438),
-                        fontWeight: FontWeight.w600,
+                        color: _brand,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
@@ -525,8 +611,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFA16438)),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: _brand),
               ),
               child: Row(
                 children: [
@@ -537,7 +623,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                       _selectedClient!.clientName[0].toUpperCase(),
                       style: const TextStyle(
                         color: Color(0xFFA16438),
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.w700,
                         fontSize: 16,
                       ),
                     ),
@@ -570,8 +656,8 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                           _selectedClient!.clientName,
                           style: const TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF302E2E),
+                            fontWeight: FontWeight.w800,
+                            color: _ink,
                           ),
                         ),
                         if (_selectedClient!.phoneNumber.isNotEmpty)
@@ -579,7 +665,7 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
                             _selectedClient!.phoneNumber,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[600],
+                              color: Colors.grey.shade600,
                             ),
                           ),
                       ],
@@ -611,6 +697,29 @@ class _FirstQuoteState extends ConsumerState<FirstQuote> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildContinueButton({required VoidCallback onPressed}) {
+    return SizedBox(
+      width: double.infinity,
+      height: 50,
+      child: FilledButton(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFFB7835E),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+        child: const Text("Continue"),
       ),
     );
   }

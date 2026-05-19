@@ -869,7 +869,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                           ) ??
                           '';
                       final quantity =
-                          int.tryParse(quantityController.text.trim()) ?? 1;
+                          double.tryParse(quantityController.text.trim()) ?? 1;
 
                       if (width == null || length == null || unit.isEmpty) {
                         setModalState(() => isCalculating = false);

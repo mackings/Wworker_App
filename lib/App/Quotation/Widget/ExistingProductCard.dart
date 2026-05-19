@@ -21,25 +21,29 @@ class ExistingProductCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final displayName = _capitalizeFirst(
+      name.isEmpty ? "Untitled product" : name,
+    );
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final isTight = constraints.maxWidth < 360;
-        final imageSize = isTight ? 62.0 : 70.0;
-        final buttonWidth = isTight ? 82.0 : 96.0;
+        final imageSize = isTight ? 70.0 : 82.0;
+        final buttonWidth = isTight ? 74.0 : 86.0;
 
         return Material(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(20),
           child: InkWell(
             onTap: onTap,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(20),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               width: double.infinity,
-              padding: EdgeInsets.all(isTight ? 10 : 12),
+              padding: EdgeInsets.all(isTight ? 10 : 14),
               decoration: BoxDecoration(
                 color: isSelected ? const Color(0xFFFFF7F0) : Colors.white,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
                   color: isSelected
                       ? const Color(0xFFB7835E)
@@ -48,9 +52,9 @@ class ExistingProductCard extends StatelessWidget {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 18,
+                    offset: const Offset(0, 10),
                   ),
                 ],
               ),
@@ -63,13 +67,14 @@ class ExistingProductCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          name.isEmpty ? "Untitled product" : name,
-                          maxLines: 1,
+                          displayName,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.openSans(
                             color: const Color(0xFF211D1A),
-                            fontSize: isTight ? 13.5 : 14.5,
-                            fontWeight: FontWeight.w600,
+                            fontSize: isTight ? 13 : 14,
+                            height: 1.15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -78,8 +83,8 @@ class ExistingProductCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.openSans(
-                            color: const Color(0xFF302E2E),
-                            fontSize: isTight ? 11 : 11.5,
+                            color: const Color(0xFF756A61),
+                            fontSize: isTight ? 10.5 : 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.2,
                           ),
@@ -105,6 +110,12 @@ class ExistingProductCard extends StatelessWidget {
       },
     );
   }
+
+  String _capitalizeFirst(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed[0].toUpperCase() + trimmed.substring(1);
+  }
 }
 
 class _ProductImage extends StatelessWidget {
@@ -118,15 +129,22 @@ class _ProductImage extends StatelessWidget {
     final hasImage = imageUrl.trim().isNotEmpty;
 
     return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
         width: size,
         height: size,
-        color: const Color(0xFFFAF7F3),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAF7F3),
+          borderRadius: BorderRadius.circular(18),
+        ),
         child: hasImage
             ? Image.network(
                 imageUrl,
                 fit: BoxFit.cover,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const _ImageFallback(isLoading: true);
+                },
                 errorBuilder: (_, __, ___) => const _ImageFallback(),
               )
             : const _ImageFallback(),
@@ -136,16 +154,33 @@ class _ProductImage extends StatelessWidget {
 }
 
 class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
+  final bool isLoading;
+
+  const _ImageFallback({this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Icon(
-        Icons.inventory_2_outlined,
-        color: Color(0xFFB7835E),
-        size: 24,
-      ),
+    return Center(
+      child: isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE8DED6)),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                color: Color(0xFFB7835E),
+                size: 23,
+              ),
+            ),
     );
   }
 }
@@ -162,7 +197,7 @@ class _Tag extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: const Color(0xFFFAF7F3),
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(999),
         border: Border.all(color: const Color(0xFFE8DED6)),
       ),
       child: Text(
@@ -198,7 +233,7 @@ class _SelectButton extends StatelessWidget {
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: isSelected ? const Color(0xFF2E7D32) : const Color(0xFFB7835E),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Text(
         isSelected ? "Selected" : "Select",
@@ -207,7 +242,7 @@ class _SelectButton extends StatelessWidget {
         style: GoogleFonts.openSans(
           color: Colors.white,
           fontSize: compact ? 12 : 12.5,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w800,
         ),
       ),
     );

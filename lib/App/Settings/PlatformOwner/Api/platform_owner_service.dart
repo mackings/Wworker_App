@@ -730,7 +730,9 @@ class PlatformOwnerService {
   Future<Map<String, dynamic>> createGlobalMaterial({
     required String name,
     required String category,
+    String? subCategory,
     String? imagePath,
+    String? unit,
     double? standardWidth,
     double? standardLength,
     String? standardUnit,
@@ -758,6 +760,12 @@ class PlatformOwnerService {
         'isGlobal': true,
       };
 
+      if (subCategory != null && subCategory.trim().isNotEmpty) {
+        formPayload['subCategory'] = subCategory.trim();
+      }
+      if (unit != null && unit.trim().isNotEmpty) {
+        formPayload['unit'] = unit.trim();
+      }
       if (standardWidth != null) {
         formPayload['standardWidth'] = standardWidth;
       }

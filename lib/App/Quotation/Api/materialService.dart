@@ -257,7 +257,7 @@ class MaterialService {
     String? sizeVariant,
     double? foamThickness,
     String? foamDensity,
-    int quantity = 1,
+    double quantity = 1,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();

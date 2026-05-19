@@ -18,6 +18,8 @@ class _SelectExistingProductScreenState
     extends ConsumerState<SelectExistingProductScreen> {
   bool isLoading = true;
   String? selectedProductId;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -45,15 +47,28 @@ class _SelectExistingProductScreenState
   }
 
   @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final products = ref.watch(productProvider);
+    final filteredProducts = products.where((product) {
+      final query = _searchQuery.trim().toLowerCase();
+      if (query.isEmpty) return true;
+      return product.name.toLowerCase().contains(query) ||
+          product.productId.toLowerCase().contains(query) ||
+          product.category.toLowerCase().contains(query);
+    }).toList();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFCF8FC),
+      backgroundColor: const Color(0xFFFAF7F3),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFFAF7F3),
         elevation: 0,
-        surfaceTintColor: Colors.white,
+        surfaceTintColor: const Color(0xFFFAF7F3),
         centerTitle: true,
         title: Text(
           "Products",
@@ -74,16 +89,27 @@ class _SelectExistingProductScreenState
               color: const Color(0xFFB7835E),
               onRefresh: _loadProducts,
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
-                itemCount: products.length + 1,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 28),
+                itemCount: filteredProducts.length + 2,
                 separatorBuilder: (_, index) =>
                     SizedBox(height: index == 0 ? 12 : 10),
                 itemBuilder: (context, index) {
                   if (index == 0) {
                     return _SelectionNotice(count: products.length);
                   }
+                  if (index == 1) {
+                    return _SearchField(
+                      controller: _searchController,
+                      onChanged: (value) =>
+                          setState(() => _searchQuery = value),
+                    );
+                  }
 
-                  final product = products[index - 1];
+                  if (filteredProducts.isEmpty) {
+                    return const _NoProductMatches();
+                  }
+
+                  final product = filteredProducts[index - 2];
                   return ExistingProductCard(
                     imageUrl: product.image,
                     name: product.name,
@@ -160,6 +186,86 @@ class _SelectionNotice extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
+
+  const _SearchField({required this.controller, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Search product, ID, or category',
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFE8DED6)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(18),
+          borderSide: const BorderSide(color: Color(0xFFB7835E)),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoProductMatches extends StatelessWidget {
+  const _NoProductMatches();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E8),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.search_off_rounded,
+              color: Color(0xFFB7835E),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'No products match your search.',
+              style: GoogleFonts.openSans(
+                color: const Color(0xFF302E2E),
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

@@ -13,6 +13,9 @@ class CustomImgBg extends StatefulWidget {
   final String? initialImageUrl; // ✅ added
   final String? selectedImagePath; // optional: let parent control preview
   final void Function(File?)? onImageSelected;
+  final EdgeInsetsGeometry overlayPadding;
+  final double iconSize;
+  final double textSize;
 
   const CustomImgBg({
     super.key,
@@ -23,6 +26,12 @@ class CustomImgBg extends StatefulWidget {
     this.initialImageUrl, // ✅ added
     this.selectedImagePath,
     this.onImageSelected,
+    this.overlayPadding = const EdgeInsets.symmetric(
+      horizontal: 64,
+      vertical: 56,
+    ),
+    this.iconSize = 66,
+    this.textSize = 14,
   });
 
   @override
@@ -71,9 +80,7 @@ class _CustomImgBgState extends State<CustomImgBg> {
       child: Container(
         width: double.infinity,
         height: widget.height,
-        padding: selectedFile == null
-            ? const EdgeInsets.symmetric(horizontal: 64, vertical: 56)
-            : EdgeInsets.zero,
+        padding: selectedFile == null ? widget.overlayPadding : EdgeInsets.zero,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           image: DecorationImage(image: imageProvider, fit: BoxFit.cover),
@@ -81,16 +88,16 @@ class _CustomImgBgState extends State<CustomImgBg> {
         child: selectedFile == null
             ? Container(
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(widget.borderRadius),
                 ),
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.add_a_photo,
-                        size: 66,
+                        size: widget.iconSize,
                         color: Colors.white,
                       ),
                       const SizedBox(height: 8),
@@ -98,7 +105,7 @@ class _CustomImgBgState extends State<CustomImgBg> {
                         widget.placeholderText,
                         textAlign: TextAlign.center,
                         style: GoogleFonts.openSans(
-                          fontSize: 14,
+                          fontSize: widget.textSize,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
                           height: 1.6,
@@ -115,7 +122,7 @@ class _CustomImgBgState extends State<CustomImgBg> {
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.35),
+                      color: Colors.black.withValues(alpha: 0.35),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
-
 class QuotationItem {
   final String product;
   final String description;
@@ -21,120 +19,273 @@ class QuotationItem {
 
 class QuotationTable extends StatelessWidget {
   final List<QuotationItem> items;
+  static const Color _ink = Color(0xFF211D1A);
+  static const Color _muted = Color(0xFF756A61);
+  static const Color _brand = Color(0xFF8B4513);
+  static const Color _border = Color(0xFFE8DED6);
 
   const QuotationTable({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Container(
-            width: constraints.maxWidth > 600 ? 600 : constraints.maxWidth,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFFBFBFB)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(),
-                const SizedBox(height: 12),
-                _buildRows(),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader() {
-    final headerStyle = GoogleFonts.openSans(
-      fontSize: 12,
-      fontWeight: FontWeight.w600,
-      color: const Color(0xFF8B4513),
+    final total = items.fold<double>(
+      0,
+      (sum, item) =>
+          sum +
+          (double.tryParse(item.total.replaceAll(RegExp(r'[₦,]'), '')) ?? 0),
     );
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: ShapeDecoration(
-        color: const Color(0xFFF5F8F2),
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFF8B4513)),
-          borderRadius: BorderRadius.circular(6),
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTitleRow(total),
+          const SizedBox(height: 12),
+          if (items.isEmpty)
+            _buildEmptyState()
+          else
+            ...items.asMap().entries.map(
+              (entry) => _buildItemCard(entry.key + 1, entry.value),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTitleRow(double total) {
+    return Row(
+      children: [
+        Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: _brand.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: const Icon(
+            Icons.receipt_long_outlined,
+            color: _brand,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Quotation Items',
+                style: GoogleFonts.openSans(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: _ink,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${items.length} item${items.length == 1 ? '' : 's'}',
+                style: GoogleFonts.openSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF3E8),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: _brand.withValues(alpha: 0.20)),
+          ),
+          child: Text(
+            '₦${_formatTotal(total)}',
+            style: GoogleFonts.openSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: _brand,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatTotal(double value) {
+    final text = value.toStringAsFixed(2);
+    final parts = text.split('.');
+    final whole = parts.first.replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (_) => ',',
+    );
+    return '$whole.${parts.last}';
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+      ),
+      child: Text(
+        'No quotation items added yet.',
+        style: GoogleFonts.openSans(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: _muted,
         ),
       ),
-      child: Row(
+    );
+  }
+
+  Widget _buildItemCard(int index, QuotationItem item) {
+    final description = item.description.trim();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFCF8),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            flex: 2,
-            child: Center(child: Text('Product', style: headerStyle)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: _brand.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$index',
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: _brand,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.product,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.openSans(
+                        fontSize: 14,
+                        height: 1.25,
+                        fontWeight: FontWeight.w800,
+                        color: _ink,
+                      ),
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Text(
+                        description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500,
+                          color: _muted,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            flex: 4,
-            child: Center(child: Text('Desc', style: headerStyle)),
-          ),
-          Expanded(
-            flex: 2,
-            child: Center(child: Text('Qty', style: headerStyle)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Center(child: Text('Price', style: headerStyle)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Center(child: Text('Total', style: headerStyle)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetric(
+                  label: 'Qty',
+                  value: item.quantity.toString(),
+                  alignEnd: false,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetric(label: 'Unit', value: item.unitPrice),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildMetric(label: 'Total', value: item.total),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRows() {
-    return Column(children: items.map((item) => _buildRow(item)).toList());
-  }
-
-  Widget _buildRow(QuotationItem item) {
-    final textStyle = GoogleFonts.openSans(
-      fontSize: 12,
-      fontWeight: FontWeight.w400,
-      color: const Color(0xFF302E2E),
-      height: 1.5,
-    );
-
-    final totalStyle = GoogleFonts.openSans(
-      fontSize: 12,
-      fontWeight: FontWeight.w700,
-      color: const Color(0xFF302E2E),
-      height: 1.5,
-    );
-
+  Widget _buildMetric({
+    required String label,
+    required String value,
+    bool alignEnd = true,
+  }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      decoration: ShapeDecoration(
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFD3D3D3)),
-          borderRadius: BorderRadius.circular(8),
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: alignEnd
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
-          Expanded(flex: 2, child: Text(item.product, style: textStyle)),
-          Expanded(flex: 2, child: Text(item.description, style: textStyle)),
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Text(item.quantity.toString(), style: textStyle),
+          Text(
+            label,
+            style: GoogleFonts.openSans(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: _muted,
             ),
           ),
-          Expanded(flex: 3, child: Text(item.unitPrice, style: textStyle)),
-          Expanded(
-            flex: 3,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Text(item.total, style: totalStyle),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.openSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: _ink,
             ),
           ),
         ],

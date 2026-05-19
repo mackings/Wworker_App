@@ -10,8 +10,6 @@ import 'package:wworker/App/OverHead/Widget/OCCalculator.dart';
 import 'package:wworker/App/OverHead/Widget/OCwidgets.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 
-
-
 class AddOverheadCostCard extends StatefulWidget {
   final String title;
   final IconData? icon;
@@ -29,14 +27,32 @@ class AddOverheadCostCard extends StatefulWidget {
 }
 
 class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
+  static const Color _pageBg = Color(0xFFFAF7F3);
+  static const Color _ink = Color(0xFF211D1A);
+  static const Color _muted = Color(0xFF756A61);
+  static const Color _brand = Color(0xFF8B4513);
+  static const Color _border = Color(0xFFE8DED6);
+
   final OverheadCostService _service = OverheadCostService();
 
   // Categories
-  final List<String> categories = ['Depreciation', 'Others', 'Rent', 'Salaries'];
+  final List<String> categories = [
+    'Depreciation',
+    'Others',
+    'Rent',
+    'Salaries',
+  ];
   String selectedCategory = 'Depreciation';
 
   // Periods
-  final List<String> periods = ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
+  final List<String> periods = [
+    'Hourly',
+    'Daily',
+    'Weekly',
+    'Monthly',
+    'Quarterly',
+    'Yearly',
+  ];
   String? selectedPeriod = 'Monthly';
 
   // Duration for viewing totals
@@ -94,20 +110,22 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
 
     try {
       debugPrint("🔍 Checking sync status...");
-      
+
       // Get cached data from local device
       final cachedItems = await _loadOverheadCostsFromPrefs();
       localItemCount = cachedItems.length;
-      
+
       // Get server data
       final serverItems = await _service.getOverheadCosts();
       serverItemCount = serverItems.length;
-      
-      debugPrint("📊 Local: $localItemCount items | Server: $serverItemCount items");
-      
+
+      debugPrint(
+        "📊 Local: $localItemCount items | Server: $serverItemCount items",
+      );
+
       // Check for differences
       bool needsSync = false;
-      
+
       // Different counts = needs sync
       if (localItemCount != serverItemCount) {
         needsSync = true;
@@ -116,12 +134,13 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         // Same count, but check if IDs match
         final localIds = cachedItems.map((e) => e.id).toSet();
         final serverIds = serverItems.map((e) => e.id).toSet();
-        
-        if (!localIds.containsAll(serverIds) || !serverIds.containsAll(localIds)) {
+
+        if (!localIds.containsAll(serverIds) ||
+            !serverIds.containsAll(localIds)) {
           needsSync = true;
           debugPrint("⚠️ Item mismatch detected");
         }
-        
+
         // Also check for different costs/descriptions
         if (!needsSync) {
           for (var cachedItem in cachedItems) {
@@ -129,7 +148,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
               (item) => item.id == cachedItem.id,
               orElse: () => cachedItem,
             );
-            
+
             if (serverItem.id != cachedItem.id ||
                 serverItem.cost != cachedItem.cost ||
                 serverItem.description != cachedItem.description) {
@@ -140,7 +159,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           }
         }
       }
-      
+
       if (mounted && needsSync) {
         setState(() => hasUnsyncedData = true);
         _showSyncPrompt();
@@ -156,7 +175,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   void _showSyncPrompt() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -186,7 +205,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                 style: GoogleFonts.openSans(fontSize: 14),
               ),
               const SizedBox(height: 16),
-              
+
               // ✅ Show comparison
               Container(
                 padding: const EdgeInsets.all(12),
@@ -241,15 +260,15 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
-              
+
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFF3E0),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFA16438).withOpacity(0.3)),
+                  border: Border.all(color: _brand.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
@@ -325,8 +344,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => WillPopScope(
-        onWillPop: () async => false,
+      builder: (context) => PopScope(
+        canPop: false,
         child: Center(
           child: Container(
             padding: const EdgeInsets.all(24),
@@ -338,9 +357,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(
-                  color: Color(0xFFA16438),
-                ),
+                const CircularProgressIndicator(color: Color(0xFFA16438)),
                 const SizedBox(height: 16),
                 Text(
                   'Syncing overhead costs...',
@@ -352,10 +369,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                 const SizedBox(height: 8),
                 Text(
                   'Please wait',
-                  style: GoogleFonts.openSans(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
+                  style: GoogleFonts.openSans(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),
@@ -367,10 +381,10 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     try {
       // Save current data to local storage
       await _saveOverheadCostsToPrefs(items);
-      
+
       // Refresh from server to get latest data
       final serverItems = await _service.getOverheadCosts();
-      
+
       // Update local state with server data
       if (mounted) {
         setState(() {
@@ -379,7 +393,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           serverItemCount = serverItems.length;
           localItemCount = serverItems.length;
         });
-        
+
         // Save synced data to local storage
         await _saveOverheadCostsToPrefs(serverItems);
       }
@@ -417,9 +431,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
               children: [
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: Text('Sync failed: ${e.toString()}'),
-                ),
+                Expanded(child: Text('Sync failed: ${e.toString()}')),
               ],
             ),
             backgroundColor: Colors.red,
@@ -445,8 +457,12 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
 
   // Show settings dialog
   Future<void> _showSettingsDialog() async {
-    final markupController = TextEditingController(text: markupPercentage.toString());
-    final workingDaysController = TextEditingController(text: workingDaysPerMonth.toString());
+    final markupController = TextEditingController(
+      text: markupPercentage.toString(),
+    );
+    final workingDaysController = TextEditingController(
+      text: workingDaysPerMonth.toString(),
+    );
     String tempMethod = pricingMethod;
 
     await showDialog(
@@ -472,27 +488,31 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                RadioListTile<String>(
-                  title: const Text('Method 1'),
-                  subtitle: const Text('Direct Markup (No MOC in cost price)'),
-                  value: 'Method 1',
+                RadioGroup<String>(
                   groupValue: tempMethod,
                   onChanged: (value) {
-                    setDialogState(() => tempMethod = value!);
+                    if (value != null) {
+                      setDialogState(() => tempMethod = value);
+                    }
                   },
-                  activeColor: const Color(0xFFA16438),
+                  child: Column(
+                    children: const [
+                      RadioListTile<String>(
+                        title: Text('Method 1'),
+                        subtitle: Text('Direct Markup (No MOC in cost price)'),
+                        value: 'Method 1',
+                        activeColor: Color(0xFFA16438),
+                      ),
+                      RadioListTile<String>(
+                        title: Text('Method 2'),
+                        subtitle: Text('Include Manufacturing Overhead Cost'),
+                        value: 'Method 2',
+                        activeColor: Color(0xFFA16438),
+                      ),
+                    ],
+                  ),
                 ),
-                RadioListTile<String>(
-                  title: const Text('Method 2'),
-                  subtitle: const Text('Include Manufacturing Overhead Cost'),
-                  value: 'Method 2',
-                  groupValue: tempMethod,
-                  onChanged: (value) {
-                    setDialogState(() => tempMethod = value!);
-                  },
-                  activeColor: const Color(0xFFA16438),
-                ),
-                
+
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 16),
@@ -560,13 +580,16 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
             ElevatedButton(
               onPressed: () async {
                 final markup = double.tryParse(markupController.text) ?? 30.0;
-                final workingDays = int.tryParse(workingDaysController.text) ?? 26;
+                final workingDays =
+                    int.tryParse(workingDaysController.text) ?? 26;
 
                 // Validate
                 if (markup <= 0 || markup > 1000) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Please enter a valid markup percentage (1-1000)'),
+                      content: Text(
+                        'Please enter a valid markup percentage (1-1000)',
+                      ),
                       backgroundColor: Colors.redAccent,
                     ),
                   );
@@ -587,6 +610,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                 await PricingSettingsManager.saveMarkup(markup);
                 await PricingSettingsManager.savePricingMethod(tempMethod);
                 await PricingSettingsManager.saveWorkingDays(workingDays);
+
+                if (!context.mounted) return;
 
                 // Update local state
                 setState(() {
@@ -622,15 +647,17 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final costsJson = costs
-          .map((cost) => {
-                "id": cost.id,
-                "category": cost.category,
-                "description": cost.description,
-                "period": cost.period,
-                "cost": cost.cost,
-                "user": cost.user,
-                "createdAt": cost.createdAt.toIso8601String(),
-              })
+          .map(
+            (cost) => {
+              "id": cost.id,
+              "category": cost.category,
+              "description": cost.description,
+              "period": cost.period,
+              "cost": cost.cost,
+              "user": cost.user,
+              "createdAt": cost.createdAt.toIso8601String(),
+            },
+          )
           .toList();
       await prefs.setString('overhead_costs', jsonEncode(costsJson));
       debugPrint("💾 Saved ${costs.length} overhead costs to prefs");
@@ -649,7 +676,9 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
       }
 
       final List<dynamic> costsJson = jsonDecode(costsString);
-      final costs = costsJson.map((json) => OverheadCost.fromJson(json)).toList();
+      final costs = costsJson
+          .map((json) => OverheadCost.fromJson(json))
+          .toList();
 
       debugPrint("📖 Loaded ${costs.length} overhead costs from prefs");
       return costs;
@@ -672,7 +701,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           serverItemCount = fetchedItems.length;
         });
         await _saveOverheadCostsToPrefs(fetchedItems);
-        
+
         // ✅ Check sync status after fetching
         await _checkSyncStatus();
       }
@@ -680,6 +709,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
       if (mounted) {
         setState(() => isFetchingItems = false);
         final cachedItems = await _loadOverheadCostsFromPrefs();
+        if (!mounted) return;
+
         setState(() {
           items = cachedItems;
           localItemCount = cachedItems.length;
@@ -692,10 +723,12 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                   ? "⚠️ Loaded ${cachedItems.length} cached overhead costs (offline mode)"
                   : "Error fetching overhead costs: ${e.toString()}",
             ),
-            backgroundColor: cachedItems.isNotEmpty ? Colors.orange : Colors.redAccent,
+            backgroundColor: cachedItems.isNotEmpty
+                ? Colors.orange
+                : Colors.redAccent,
           ),
         );
-        
+
         // ✅ Check sync status even with cached data
         if (cachedItems.isNotEmpty && isStaff) {
           // Staff member with cached data but no server connection
@@ -750,6 +783,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           costController.clear();
           setState(() => isExpanded = false);
           await _fetchOverheadCosts();
+          if (!mounted) return;
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -760,7 +794,9 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(response["message"] ?? "Failed to add overhead cost"),
+              content: Text(
+                response["message"] ?? "Failed to add overhead cost",
+              ),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -818,6 +854,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
       if (mounted) {
         if (response["success"] == true) {
           await _fetchOverheadCosts();
+          if (!mounted) return;
+
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text("Item deleted successfully"),
@@ -856,86 +894,65 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   Widget _buildSyncWarningBanner() {
     if (!isStaff || !hasUnsyncedData) return const SizedBox.shrink();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Colors.orange.shade100,
-              Colors.orange.shade50,
-            ],
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF3E0),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.sync_problem,
+              color: Colors.orange.shade800,
+              size: 18,
+            ),
           ),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange, width: 2),
-        ),
-        child: Column(
-          children: [
-            Row(
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: Colors.orange,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: const Icon(
-                    Icons.sync_problem,
-                    color: Colors.white,
-                    size: 18,
+                Text(
+                  'Data out of sync',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    color: Colors.orange.shade900,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Data Out of Sync',
-                        style: GoogleFonts.openSans(
-                          fontSize: 13,
-                          color: Colors.orange.shade900,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Local: $localItemCount items • Server: $serverItemCount items',
-                        style: GoogleFonts.openSans(
-                          fontSize: 11,
-                          color: Colors.orange.shade800,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                TextButton(
-                  onPressed: _handleSaveAndSync,
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: Text(
-                    'Sync Now',
-                    style: GoogleFonts.openSans(
-                      fontSize: 12,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
+                const SizedBox(height: 2),
+                Text(
+                  'Local: $localItemCount items • Server: $serverItemCount items',
+                  style: GoogleFonts.openSans(
+                    fontSize: 11,
+                    color: Colors.orange.shade800,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          TextButton(
+            onPressed: _handleSaveAndSync,
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.orange.shade900,
+              textStyle: GoogleFonts.openSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            child: const Text('Sync'),
+          ),
+        ],
       ),
     );
   }
@@ -943,13 +960,26 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: _pageBg,
       appBar: AppBar(
+        centerTitle: true,
+        backgroundColor: _pageBg,
+        surfaceTintColor: _pageBg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: _ink,
+            size: 20,
+          ),
+          onPressed: () => Navigator.maybePop(context),
+        ),
         title: Text(
           widget.title,
           style: GoogleFonts.openSans(
-            fontSize: 20,
+            fontSize: 18,
             fontWeight: FontWeight.w600,
-            color: const Color(0xFFA16438),
+            color: _ink,
           ),
         ),
         actions: [
@@ -966,7 +996,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           // ✅ Enhanced sync indicator for staff
           if (isStaff && hasUnsyncedData)
             Container(
-              margin: const EdgeInsets.only(right: 8),
+              margin: const EdgeInsets.only(right: 4),
               child: IconButton(
                 icon: Stack(
                   children: [
@@ -987,7 +1017,8 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                   ],
                 ),
                 onPressed: _showSyncPrompt,
-                tooltip: "Sync Required - $localItemCount local vs $serverItemCount server",
+                tooltip:
+                    "Sync Required - $localItemCount local vs $serverItemCount server",
               ),
             ),
           IconButton(
@@ -1002,51 +1033,33 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
           ),
         ],
       ),
-      backgroundColor: const Color(0xFFF5F5F5),
       body: SafeArea(
+        top: false,
         child: Column(
           children: [
-            const SizedBox(height: 15),
-
-            // ✅ Enhanced sync warning banner
-            _buildSyncWarningBanner(),
-
-            if (isStaff && hasUnsyncedData) const SizedBox(height: 15),
-
-            // Settings Summary Banner
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF3E0),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFA16438)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: Color(0xFFA16438), size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        "$pricingMethod • ${markupPercentage.toStringAsFixed(1)}% Markup • $workingDaysPerMonth working days/month",
-                        style: GoogleFonts.openSans(
-                          fontSize: 12,
-                          color: const Color(0xFFA16438),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Column(
+                children: [
+                  _buildHeaderSummary(),
+                  if (isStaff && hasUnsyncedData) ...[
+                    const SizedBox(height: 10),
+                    _buildSyncWarningBanner(),
                   ],
-                ),
+                ],
               ),
             ),
 
-            const SizedBox(height: 15),
+            const SizedBox(height: 12),
 
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  0,
+                  16,
+                  MediaQuery.of(context).padding.bottom + 24,
+                ),
                 child: Column(
                   children: [
                     // Add Cost Form Widget
@@ -1071,7 +1084,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                       onAddItem: _handleAddItem,
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
 
                     // Duration Selector
                     if (items.isNotEmpty)
@@ -1082,7 +1095,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                         },
                       ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
 
                     // Items List
                     if (isFetchingItems)
@@ -1095,18 +1108,7 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                         ),
                       )
                     else if (items.isEmpty)
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Text(
-                            "No overhead costs added yet",
-                            style: GoogleFonts.openSans(
-                              fontSize: 14,
-                              color: const Color(0xFF9E9E9E),
-                            ),
-                          ),
-                        ),
-                      )
+                      _buildEmptyState()
                     else ...[
                       // Total Display
                       TotalDisplayWidget(
@@ -1115,65 +1117,178 @@ class _AddOverheadCostCardState extends State<AddOverheadCostCard> {
                         duration: selectedViewDuration,
                       ),
 
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
                       // Items List
-                      ...items.map((item) => OverheadCostItemCard(
-                            item: item,
-                            onDelete: () => _handleDeleteItem(item.id),
-                          )),
+                      ...items.map(
+                        (item) => OverheadCostItemCard(
+                          item: item,
+                          onDelete: () => _handleDeleteItem(item.id),
+                        ),
+                      ),
                     ],
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
 
                     // ✅ Updated Save Button with sync info
                     if (items.isNotEmpty)
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton.icon(
-                          onPressed: isStaff ? _handleSaveAndSync : () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Saved ${items.length} overhead cost items. Total ($selectedViewDuration): ₦${_calculateTotalForDuration().toStringAsFixed(2)}",
-                                ),
-                                backgroundColor: Colors.green,
-                              ),
-                            );
-                          },
+                          onPressed: isStaff
+                              ? _handleSaveAndSync
+                              : () {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Saved ${items.length} overhead cost items. Total ($selectedViewDuration): ₦${_calculateTotalForDuration().toStringAsFixed(2)}",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                },
                           icon: Icon(
                             isStaff ? Icons.sync : Icons.save,
                             color: Colors.white,
                           ),
                           label: Text(
-                            isStaff 
-                                ? (hasUnsyncedData ? "Save & Sync ($localItemCount ⇄ $serverItemCount)" : "Save & Sync")
+                            isStaff
+                                ? (hasUnsyncedData
+                                      ? "Save & Sync ($localItemCount ⇄ $serverItemCount)"
+                                      : "Save & Sync")
                                 : "Save",
                             style: GoogleFonts.openSans(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: hasUnsyncedData && isStaff 
-                                ? Colors.orange 
+                            backgroundColor: hasUnsyncedData && isStaff
+                                ? Colors.orange
                                 : const Color(0xFFA16438),
-                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                           ),
                         ),
                       ),
-
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderSummary() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _brand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: _brand,
+              size: 21,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Pricing setup",
+                  style: GoogleFonts.openSans(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: _ink,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  "$pricingMethod • ${markupPercentage.toStringAsFixed(1)}% markup • $workingDaysPerMonth working days/month",
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    height: 1.35,
+                    color: _muted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: _brand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(
+              Icons.receipt_long_outlined,
+              color: _brand,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "No overhead costs yet",
+            style: GoogleFonts.openSans(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: _ink,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Add rent, salaries, utilities, or other recurring costs.",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.openSans(
+              fontSize: 12,
+              height: 1.35,
+              color: _muted,
+            ),
+          ),
+        ],
       ),
     );
   }

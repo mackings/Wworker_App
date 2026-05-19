@@ -1,9 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Dashboad/Widget/customDash.dart';
-import 'package:wworker/App/Dashboad/Widget/emptyQuote.dart';
 import 'package:wworker/App/Invoice/View/clients_home.dart';
 import 'package:wworker/App/Order/View/QuoforOrder.dart';
 import 'package:wworker/App/Order/View/allOrders.dart';
@@ -12,7 +10,6 @@ import 'package:wworker/App/Quotation/Api/ClientQuotation.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart';
 import 'package:wworker/App/Quotation/Model/ProductModel.dart';
 import 'package:wworker/App/Quotation/Providers/ProductProvider.dart';
-import 'package:wworker/App/Quotation/Providers/QuotationProvider.dart';
 import 'package:wworker/App/Quotation/UI/Quotations.dart';
 import 'package:wworker/App/Quotation/UI/existingProduct.dart';
 import 'package:wworker/App/Quotation/Widget/ClientQCard.dart';
@@ -25,10 +22,6 @@ import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
-
-
-
 
 class Home extends ConsumerStatefulWidget {
   const Home({super.key});
@@ -144,145 +137,20 @@ class _HomeState extends ConsumerState<Home> {
 
   @override
   Widget build(BuildContext context) {
-    final notifier = ref.read(quotationProvider.notifier);
-
     return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false),
+      backgroundColor: const Color(0xFFFAF7F3),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshData, // ✅ Refresh both
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Greeting with name
-                            CustomText(
-                              title: "${_getGreeting()}, $fullname!",
-                              titleFontSize: 20,
-                              titleFontWeight: FontWeight.w600,
-                              titleColor: const Color(0xFF302E2E),
-                              textAlign: TextAlign.left,
-                            ),
-                            const SizedBox(height: 4),
-
-                            // Active company OR create company prompt
-                            if (hasCompany)
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.business,
-                                    size: 14,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Flexible(
-                                    child: Text(
-                                      companyName,
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        color: Color(0xFF8B4513),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          const CreateCompanyScreen(),
-                                    ),
-                                  ).then((_) {
-                                    _loadUserData();
-                                  });
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.orange.shade50,
-                                    borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(
-                                      color: Colors.orange.shade300,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.add_business,
-                                        size: 14,
-                                        color: Colors.orange.shade700,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Create Company',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.orange.shade700,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            const SizedBox(height: 8),
-
-                            // Subtitle
-                            Text(
-                              hasCompany
-                                  ? "Ready to create amazing woodwork quotations?"
-                                  : "Create a company to get started",
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      // Notification bell
-                      GestureDetector(
-                        onTap: () {
-                          Nav.push(NotificationsPage());
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF8B4513).withOpacity(0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.notifications_outlined,
-                            color: Color(0xFF8B4513),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 35),
+                  _buildHeroHeader(context),
+                  const SizedBox(height: 22),
 
                   CustomDashboard(
                     dashboardIcons: [
@@ -409,10 +277,159 @@ class _HomeState extends ConsumerState<Home> {
     );
   }
 
+  Widget _buildHeroHeader(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "${_getGreeting()}, $fullname!",
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF211D1A),
+                        fontSize: 21,
+                        height: 1.16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (hasCompany)
+                      _buildCompanyPill()
+                    else
+                      _buildCreateCompanyPill(context),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              InkWell(
+                onTap: () => Nav.push(NotificationsPage()),
+                borderRadius: BorderRadius.circular(18),
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B4513).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: const Icon(
+                    Icons.notifications_none_rounded,
+                    color: Color(0xFF8B4513),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            hasCompany
+                ? "Build quotations, orders, invoices, and sales records from one workspace."
+                : "Create a company profile to unlock your workspace.",
+            style: TextStyle(
+              fontSize: 14,
+              height: 1.45,
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompanyPill() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF7F3),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.business_rounded, size: 15, color: Colors.grey.shade700),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              companyName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF8B4513),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreateCompanyPill(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CreateCompanyScreen()),
+        ).then((_) => _loadUserData());
+      },
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: Colors.orange.shade50,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.add_business_rounded,
+              size: 15,
+              color: Colors.orange.shade800,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Create Company',
+              style: TextStyle(
+                color: Colors.orange.shade800,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   // ✅ Build quotations section with API data
   Widget _buildQuotationsSection() {
-    final notifier = ref.read(quotationProvider.notifier);
-
     if (isLoadingQuotations) {
       return const Center(
         child: Padding(
@@ -444,7 +461,8 @@ class _HomeState extends ConsumerState<Home> {
         CustomText(
           title: "Recent Quotations",
           textAlign: TextAlign.left,
-          titleFontSize: 17,
+          titleFontSize: 16,
+          titleFontWeight: FontWeight.w600,
         ),
         const SizedBox(height: 10),
         ListView.builder(
@@ -484,314 +502,289 @@ class _HomeState extends ConsumerState<Home> {
             );
           },
         ),
-       // const SizedBox(height: 10),
+        // const SizedBox(height: 10),
       ],
     );
   }
 
+  // ✅ Build products section
+  // ✅ Build products section
+  Widget _buildProductsSection() {
+    final products = ref.watch(productProvider);
 
-
- // ✅ Build products section
-// ✅ Build products section
-Widget _buildProductsSection() {
-  final products = ref.watch(productProvider);
-
-  if (isLoadingProducts) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            CustomText(
-              title: "Recent Products",
-              textAlign: TextAlign.left,
-              titleFontSize: 17,
-            ),
-            TextButton(onPressed: null, child: const Text("View All")),
-          ],
-        ),
-        const SizedBox(height: 10),
-        const Center(
-          child: Padding(
-            padding: EdgeInsets.all(20),
-            child: CircularProgressIndicator(color: Color(0xFF8B4513)),
-          ),
-        ),
-      ],
-    );
-  }
-
-  if (products.isEmpty) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            CustomText(
-              title: "Recent Products",
-              textAlign: TextAlign.left,
-              titleFontSize: 17,
-            ),
-            TextButton(
-              onPressed: () {
-                Nav.push(const SelectExistingProductScreen());
-              },
-              child: const Text(
-                "View All",
-                style: TextStyle(color: Color(0xFF8B4513)),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xFF8B4513).withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFF8B4513).withOpacity(0.2),
-            ),
-          ),
-          child: Center(
-            child: Column(
-              children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  size: 48,
-                  color: const Color(0xFF8B4513).withOpacity(0.5),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'No products yet',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey.shade700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Add products to get started',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          CustomText(
-            title: "Recent Products",
-            textAlign: TextAlign.left,
-            titleFontSize: 17,
-          ),
-          TextButton(
-            onPressed: () {
-              Nav.push(const SelectExistingProductScreen());
-            },
-            child: const Text(
-              "View All",
-              style: TextStyle(color: Color(0xFF8B4513)),
-            ),
-          ),
-        ],
-      ),
-
-      const SizedBox(height: 10),
-
-      SizedBox(
-        height: 135,
-        child: products.length == 1
-            ? Row(
-                children: [
-                  // Shadow card 1 (most faded)
-                  Opacity(
-                    opacity: 0.3,
-                    child: _buildProductCard(products[0], () {}),
-                  ),
-                  const SizedBox(width: 12),
-                  // Shadow card 2 (medium faded)
-                  Opacity(
-                    opacity: 0.5,
-                    child: _buildProductCard(products[0], () {}),
-                  ),
-                  const SizedBox(width: 12),
-                  // Actual product card
-                  _buildProductCard(products[0], () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => AddProduct(
-                          existingProduct: products[0] as ProductModel?,
-                          returnToHomeOnSave: true,
-                        ),
-                      ),
-                    );
-                  }),
-                ],
-              )
-            : Builder(
-                builder: (context) {
-                  final scrollController = ScrollController();
-
-                  // Auto-scroll setup
-                  Future.delayed(Duration.zero, () {
-                    Timer.periodic(const Duration(seconds: 2), (timer) {
-                      if (scrollController.hasClients) {
-                        final maxScroll =
-                            scrollController.position.maxScrollExtent;
-                        final currentScroll = scrollController.offset;
-                        final nextScroll =
-                            currentScroll + 112; // width + padding
-
-                        if (nextScroll >= maxScroll) {
-                          scrollController.animateTo(
-                            0,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
-                          );
-                        } else {
-                          scrollController.animateTo(
-                            nextScroll,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeInOut,
-                          );
-                        }
-                      }
-                    });
-                  });
-
-                  return ListView.builder(
-                    controller: scrollController,
-                    scrollDirection: Axis.horizontal,
-                    itemCount: products.length > 10 ? 10 : products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: _buildProductCard(product, () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AddProduct(
-                                existingProduct: product as ProductModel?,
-                                returnToHomeOnSave: true,
-                              ),
-                            ),
-                          );
-                        }),
-                      );
-                    },
-                  );
-                },
-              ),
-      ),
-    ],
-  );
-}
-
-
-
-// Helper method to build product card
-Widget _buildProductCard(dynamic product, VoidCallback onTap) {
-  return GestureDetector(
-    onTap: onTap,
-    child: Container(
-      width: 100,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
+    if (isLoadingProducts) {
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Product image
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
+          _buildSectionHeader(title: "Recent Products", onViewAll: null),
+          const SizedBox(height: 12),
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: CircularProgressIndicator(color: Color(0xFF8B4513)),
             ),
-            child: product.image.isNotEmpty
-                ? Image.network(
-                    product.image,
-                    height: 70,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 70,
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  )
-                : Container(
-                    height: 70,
-                    color: Colors.grey.shade200,
-                    child: const Icon(
-                      Icons.inventory_2_outlined,
-                      color: Colors.grey,
-                    ),
-                  ),
           ),
-          // Product name
-          Padding(
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      );
+    }
+
+    if (products.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader(
+            title: "Recent Products",
+            onViewAll: () => Nav.push(const SelectExistingProductScreen()),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0xFFE8DED6)),
+            ),
+            child: Row(
               children: [
-                Text(
-                  product.name,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF302E2E),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B4513).withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: Color(0xFF8B4513),
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  product.category,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey.shade600,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'No products yet',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF302E2E),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Add products to keep your catalog ready for quotations.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          height: 1.35,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          title: "Recent Products",
+          onViewAll: () => Nav.push(const SelectExistingProductScreen()),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 166,
+          child: products.length == 1
+              ? Row(
+                  children: [
+                    _buildProductCard(products[0], () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddProduct(
+                            existingProduct: products[0] as ProductModel?,
+                            returnToHomeOnSave: true,
+                          ),
+                        ),
+                      );
+                    }),
+                  ],
+                )
+              : ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: products.length > 10 ? 10 : products.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    return _buildProductCard(product, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => AddProduct(
+                            existingProduct: product as ProductModel?,
+                            returnToHomeOnSave: true,
+                          ),
+                        ),
+                      );
+                    });
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required String title,
+    required VoidCallback? onViewAll,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Color(0xFF211D1A),
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: onViewAll,
+          borderRadius: BorderRadius.circular(999),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Text(
+              "View All",
+              style: TextStyle(
+                color: onViewAll == null
+                    ? Colors.grey.shade400
+                    : const Color(0xFF8B4513),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to build product card
+  Widget _buildProductCard(dynamic product, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 134,
+        clipBehavior: Clip.antiAlias,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE8DED6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildProductImage(product),
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF302E2E),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    product.category,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
+  Widget _buildProductImage(dynamic product) {
+    final image = (product.image ?? '').toString().trim();
+    if (image.isEmpty) return _buildProductImagePlaceholder();
 
+    return Image.network(
+      image,
+      height: 86,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return _buildProductImagePlaceholder(isLoading: true);
+      },
+      errorBuilder: (_, __, ___) => _buildProductImagePlaceholder(),
+    );
+  }
 
-
-
+  Widget _buildProductImagePlaceholder({bool isLoading = false}) {
+    return Container(
+      height: 86,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(color: Color(0xFFF1F1F1)),
+      child: isLoading
+          ? const SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE0E0E0)),
+              ),
+              child: const Icon(
+                Icons.inventory_2_outlined,
+                color: Color(0xFF9E9E9E),
+                size: 24,
+              ),
+            ),
+    );
+  }
 
   Widget _buildGetStartedCard() {
     return Container(
@@ -800,27 +793,29 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF8B4513).withOpacity(0.1),
-            const Color(0xFF8B4513).withOpacity(0.05),
+            const Color(0xFF8B4513).withValues(alpha: 0.10),
+            const Color(0xFF8B4513).withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF8B4513).withOpacity(0.3)),
+        border: Border.all(
+          color: const Color(0xFF8B4513).withValues(alpha: 0.3),
+        ),
       ),
       child: Column(
         children: [
           Icon(
             Icons.rocket_launch_outlined,
             size: 48,
-            color: const Color(0xFF8B4513).withOpacity(0.7),
+            color: const Color(0xFF8B4513).withValues(alpha: 0.7),
           ),
           const SizedBox(height: 16),
           Text(
             'Get Started Creating Quotations!',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade800,
             ),
@@ -847,7 +842,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
               label: const Text(
                 'Create First Quotation',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -856,7 +851,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
                 backgroundColor: const Color(0xFF8B4513),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
             ),
@@ -877,7 +872,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
           border: Border.all(color: Colors.red.shade200, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.red.shade100.withOpacity(0.5),
+              color: Colors.red.shade100.withValues(alpha: 0.5),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -939,7 +934,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFF8B4513).withOpacity(0.1),
+                color: const Color(0xFF8B4513).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -952,7 +947,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
             const Expanded(
               child: Text(
                 'No Company Found',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -1006,22 +1001,24 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF8B4513).withOpacity(0.05),
+        color: const Color(0xFF8B4513).withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF8B4513).withOpacity(0.2)),
+        border: Border.all(
+          color: const Color(0xFF8B4513).withValues(alpha: 0.2),
+        ),
       ),
       child: Column(
         children: [
           Icon(
             Icons.business_outlined,
             size: 64,
-            color: const Color(0xFF8B4513).withOpacity(0.5),
+            color: const Color(0xFF8B4513).withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
             'No Company Yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade800,
             ),
@@ -1048,7 +1045,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
               label: const Text(
                 'Create Company',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -1057,7 +1054,7 @@ Widget _buildProductCard(dynamic product, VoidCallback onTap) {
                 backgroundColor: const Color(0xFF8B4513),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
             ),

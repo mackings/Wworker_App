@@ -17,7 +17,6 @@ import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 
 class SecQuote extends ConsumerStatefulWidget {
@@ -47,6 +46,10 @@ class SecQuote extends ConsumerStatefulWidget {
 }
 
 class _SecQuoteState extends ConsumerState<SecQuote> {
+  static const Color _pageBg = Color(0xFFFAF7F3);
+  static const Color _ink = Color(0xFF211D1A);
+  static const Color _brand = Color(0xFF8B4513);
+
   bool isLoading = false;
   bool isSharing = false;
   final NumberFormat _currency = NumberFormat.currency(
@@ -448,10 +451,9 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     // ✅ Show loading indicator while company data is loading
     if (isLoadingCompanyData) {
       return Scaffold(
-        appBar: AppBar(title: CustomText(title: "Quotation Table")),
-        body: const Center(
-          child: CircularProgressIndicator(color: Color(0xFF8B4513)),
-        ),
+        backgroundColor: _pageBg,
+        appBar: _buildModernAppBar(),
+        body: const Center(child: CircularProgressIndicator(color: _brand)),
       );
     }
 
@@ -490,10 +492,17 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: CustomText(title: "Quotation Table")),
+      backgroundColor: _pageBg,
+      appBar: _buildModernAppBar(),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 10),
+          padding: EdgeInsets.fromLTRB(
+            16,
+            8,
+            16,
+            MediaQuery.of(context).padding.bottom + 24,
+          ),
           child: Column(
             children: [
               // ✅ Using company data from SharedPreferences
@@ -515,7 +524,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                       : "No email provided",
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               QuotationInfo(
                 title: "Client Information",
                 contact: ContactInfo(
@@ -526,50 +535,12 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
                   email: widget.email,
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
               QuotationTable(items: allItems),
 
-              const SizedBox(height: 20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: CustomButton(
-                        text: isLoading ? "Saving..." : "Save",
-                        icon: isLoading ? null : Icons.save,
-                        onPressed: isLoading
-                            ? null
-                            : () => _saveQuotation(allItems, totalSum),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: CustomButton(
-                        text: isSharing ? "Sharing..." : "Share",
-                        icon: Icons.share,
-                        outlined: true,
-                        onPressed: isSharing || isLoading
-                            ? null
-                            : () => _shareQuotationPdf(
-                                context,
-                                items: allItems,
-                                totalSum: totalSum,
-                              ),
-                      ),
-                    ),
-                    // Expanded(
-                    //   child: CustomButton(
-                    //     text: "Send to Client",
-                    //     onPressed: () {
-                    //       // TODO: implement sending functionality
-                    //     },
-                    //   ),
-                    // ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              _buildActionRow(allItems: allItems, totalSum: totalSum),
+              const SizedBox(height: 10),
               // CustomButton(
               //   text: "Download PDF",
               //   outlined: true,
@@ -581,6 +552,124 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
           ),
         ),
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildModernAppBar() {
+    return AppBar(
+      centerTitle: true,
+      backgroundColor: _pageBg,
+      surfaceTintColor: _pageBg,
+      elevation: 0,
+      leading: IconButton(
+        icon: const Icon(
+          Icons.arrow_back_ios_new_rounded,
+          color: _ink,
+          size: 20,
+        ),
+        onPressed: () => Navigator.maybePop(context),
+      ),
+      title: const Text(
+        "Quotation Table",
+        style: TextStyle(
+          color: _ink,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionRow({
+    required List<QuotationItem> allItems,
+    required double totalSum,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            text: isLoading ? "Saving..." : "Save",
+            icon: isLoading ? null : Icons.save_outlined,
+            onPressed: isLoading
+                ? null
+                : () => _saveQuotation(allItems, totalSum),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildActionButton(
+            text: isSharing ? "Sharing..." : "Share",
+            icon: Icons.share_outlined,
+            outlined: true,
+            onPressed: isSharing || isLoading
+                ? null
+                : () => _shareQuotationPdf(
+                    context,
+                    items: allItems,
+                    totalSum: totalSum,
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String text,
+    required VoidCallback? onPressed,
+    IconData? icon,
+    bool outlined = false,
+  }) {
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[Icon(icon, size: 18), const SizedBox(width: 7)],
+        Flexible(
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+      ],
+    );
+
+    return SizedBox(
+      height: 50,
+      child: outlined
+          ? OutlinedButton(
+              onPressed: onPressed,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: _brand,
+                side: const BorderSide(color: _brand, width: 1.4),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              child: child,
+            )
+          : FilledButton(
+              onPressed: onPressed,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFB7835E),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(
+                  0xFFB7835E,
+                ).withValues(alpha: 0.55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              child: child,
+            ),
     );
   }
 

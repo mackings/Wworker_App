@@ -471,6 +471,13 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     'pending',
     'rejected',
   ];
+  static const List<String> _updatedFilterOptions = <String>[
+    _allFilter,
+    '1 week ago',
+    '2 weeks ago',
+    '1 month ago',
+    '3 months ago',
+  ];
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -482,7 +489,9 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
   String _selectedCategory = _allFilter;
   String _selectedSubCategory = _allFilter;
   String _selectedStatus = 'approved';
+  String _selectedUpdatedFilter = _allFilter;
   bool _pricedOnly = false;
+  bool _unpricedOnly = false;
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalItems = 0;
@@ -621,7 +630,13 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
             (material.subCategory ?? '').trim().toLowerCase() ==
                 _selectedSubCategory.toLowerCase();
         final matchesPriced = !_pricedOnly || _hasAnyPrice(material);
-        return matchesSearch && matchesSubCategory && matchesPriced;
+        final matchesUnpriced = !_unpricedOnly || !_hasAnyPrice(material);
+        final matchesUpdated = _matchesUpdatedFilter(material);
+        return matchesSearch &&
+            matchesSubCategory &&
+            matchesPriced &&
+            matchesUnpriced &&
+            matchesUpdated;
       }).toList();
     });
   }
@@ -648,12 +663,53 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
   }
 
   void _onPricedOnlyChanged(bool value) {
-    setState(() => _pricedOnly = value);
+    setState(() {
+      _pricedOnly = value;
+      if (value) _unpricedOnly = false;
+    });
+    _applyFilters();
+  }
+
+  void _onUnpricedOnlyChanged(bool value) {
+    setState(() {
+      _unpricedOnly = value;
+      if (value) _pricedOnly = false;
+    });
+    _applyFilters();
+  }
+
+  void _onUpdatedFilterChanged(String? value) {
+    if (value == null || value == _selectedUpdatedFilter) return;
+    setState(() => _selectedUpdatedFilter = value);
     _applyFilters();
   }
 
   bool _hasAnyPrice(DatabaseMaterial material) {
     return (material.pricePerSqm ?? 0) > 0 || (material.pricePerUnit ?? 0) > 0;
+  }
+
+  bool _matchesUpdatedFilter(DatabaseMaterial material) {
+    final threshold = _updatedThreshold(_selectedUpdatedFilter);
+    if (threshold == null) return true;
+    final updatedAt = material.updatedAt ?? material.createdAt;
+    if (updatedAt == null) return false;
+    return !updatedAt.isBefore(threshold);
+  }
+
+  DateTime? _updatedThreshold(String filter) {
+    final now = DateTime.now();
+    switch (filter) {
+      case '1 week ago':
+        return now.subtract(const Duration(days: 7));
+      case '2 weeks ago':
+        return now.subtract(const Duration(days: 14));
+      case '1 month ago':
+        return DateTime(now.year, now.month - 1, now.day);
+      case '3 months ago':
+        return DateTime(now.year, now.month - 3, now.day);
+      default:
+        return null;
+    }
   }
 
   List<String> _collectSubCategories(
@@ -852,6 +908,12 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     return 'No price set';
   }
 
+  String _updatedDateLabel(DatabaseMaterial material) {
+    final updatedAt = material.updatedAt ?? material.createdAt;
+    if (updatedAt == null) return '';
+    return 'Updated ${DateFormat('MMM d, yyyy').format(updatedAt)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1010,6 +1072,8 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                             ),
                           if ((material.unit ?? '').trim().isNotEmpty)
                             _buildMetaChip('Unit: ${material.unit}'),
+                          if (_updatedDateLabel(material).isNotEmpty)
+                            _buildMetaChip(_updatedDateLabel(material)),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -1119,25 +1183,48 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
               ),
             ),
             const SizedBox(width: 12),
-            const Expanded(child: SizedBox.shrink()),
+            Expanded(
+              child: _buildDropdownFilter(
+                label: 'Updated',
+                value: _selectedUpdatedFilter,
+                items: _updatedFilterOptions,
+                onChanged: _onUpdatedFilterChanged,
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: FilterChip(
-            label: Text(
-              'Priced only',
-              style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            FilterChip(
+              label: Text(
+                'Priced only',
+                style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+              ),
+              selected: _pricedOnly,
+              onSelected: _onPricedOnlyChanged,
+              selectedColor: ColorsApp.btnColor.withValues(alpha: 0.18),
+              checkmarkColor: ColorsApp.btnColor,
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.white,
+              labelStyle: GoogleFonts.openSans(color: ColorsApp.textColor),
             ),
-            selected: _pricedOnly,
-            onSelected: _onPricedOnlyChanged,
-            selectedColor: ColorsApp.btnColor.withValues(alpha: 0.18),
-            checkmarkColor: ColorsApp.btnColor,
-            side: BorderSide(color: Colors.grey.shade300),
-            backgroundColor: Colors.white,
-            labelStyle: GoogleFonts.openSans(color: ColorsApp.textColor),
-          ),
+            FilterChip(
+              label: Text(
+                'Unpriced only',
+                style: GoogleFonts.openSans(fontWeight: FontWeight.w600),
+              ),
+              selected: _unpricedOnly,
+              onSelected: _onUnpricedOnlyChanged,
+              selectedColor: Colors.redAccent.withValues(alpha: 0.14),
+              checkmarkColor: Colors.redAccent,
+              side: BorderSide(color: Colors.grey.shade300),
+              backgroundColor: Colors.white,
+              labelStyle: GoogleFonts.openSans(color: ColorsApp.textColor),
+            ),
+          ],
         ),
       ],
     );

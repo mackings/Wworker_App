@@ -20,51 +20,77 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Paint the device bottom inset area too (keeps it white instead of letting
-    // the page behind show through).
-    return Container(
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(14, 0, 14, bottomInset + 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(26),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.10),
+              blurRadius: 22,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: List.generate(items.length, (index) {
               final item = items[index];
               final isSelected = index == currentIndex;
 
-              return GestureDetector(
-                onTap: () => onTap(index),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      item.icon,
-                      color: isSelected ? selectedColor : unselectedColor,
-                      size: 26,
+              return Expanded(
+                child: InkWell(
+                  onTap: () => onTap(index),
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 220),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? selectedColor.withValues(alpha: 0.10)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        color: isSelected ? selectedColor : unselectedColor,
-                        fontSize: 12,
-                        fontWeight: isSelected
-                            ? FontWeight.w600
-                            : FontWeight.w400,
-                      ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 220),
+                          width: isSelected ? 28 : 0,
+                          height: 3,
+                          margin: const EdgeInsets.only(bottom: 6),
+                          decoration: BoxDecoration(
+                            color: selectedColor,
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                        ),
+                        Icon(
+                          item.icon,
+                          color: isSelected ? selectedColor : unselectedColor,
+                          size: isSelected ? 25 : 23,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          item.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: isSelected ? selectedColor : unselectedColor,
+                            fontSize: 11,
+                            fontWeight: isSelected
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               );
             }),

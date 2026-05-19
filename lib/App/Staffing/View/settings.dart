@@ -8,15 +8,11 @@ import 'package:wworker/App/Settings/Model/company_settings_model.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/UI/platform_dashboard_new.dart';
 import 'package:wworker/App/Settings/View/tawk_live_chat.dart';
-import 'package:wworker/App/Staffing/Widgets/database.dart';
-import 'package:wworker/App/Staffing/Widgets/notification.dart';
 import 'package:wworker/App/Staffing/Widgets/staffaccess.dart';
 import 'package:wworker/App/Invoice/View/invoice_template_settings.dart';
 import 'package:wworker/App/Auth/Api/AuthService.dart';
 import 'package:wworker/App/Auth/View/Signin.dart';
-import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/guide_help.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -28,6 +24,12 @@ class Settings extends ConsumerStatefulWidget {
 }
 
 class _SettingsState extends ConsumerState<Settings> {
+  static const Color _pageBg = Color(0xFFFAF7F3);
+  static const Color _ink = Color(0xFF211D1A);
+  static const Color _muted = Color(0xFF756A61);
+  static const Color _brand = Color(0xFF8B4513);
+  static const Color _border = Color(0xFFE8DED6);
+
   final PlatformOwnerService _platformService = PlatformOwnerService();
   final CompanySettingsService _settingsService = CompanySettingsService();
   final AuthService _authService = AuthService();
@@ -136,49 +138,58 @@ class _SettingsState extends ConsumerState<Settings> {
   Widget build(BuildContext context) {
     final guideEnabled = ref.watch(guideProvider);
     return Scaffold(
-      backgroundColor: ColorsApp.bgColor,
+      backgroundColor: _pageBg,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: ColorsApp.bgColor,
+        backgroundColor: _pageBg,
+        surfaceTintColor: _pageBg,
         elevation: 0,
-        title: CustomText(
-          title: "Settings",
-          titleFontSize: 24,
-          titleFontWeight: FontWeight.bold,
+        title: Text(
+          "Settings",
+          style: GoogleFonts.openSans(
+            color: _ink,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
         ),
         centerTitle: false,
         actions: const [
-          GuideHelpIcon(
-            title: "Settings Help",
-            message:
-                "Use Settings to configure your company, staff access, and system tools. "
-                "Turn on Guided Help here to reveal step-by-step tips in key sections "
-                "(Quotations, Orders, BOMs, Sales). Turn it off to hide the icons.",
+          Padding(
+            padding: EdgeInsets.only(right: 8),
+            child: GuideHelpIcon(
+              title: "Settings Help",
+              message:
+                  "Use Settings to configure your company, staff access, and system tools. "
+                  "Turn on Guided Help here to reveal step-by-step tips in key sections "
+                  "(Quotations, Orders, BOMs, Sales). Turn it off to hide the icons.",
+            ),
           ),
         ],
       ),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              8,
+              16,
+              MediaQuery.of(context).padding.bottom + 24,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                _buildSettingsHero(),
+                const SizedBox(height: 16),
+
                 // Company Management Section
                 _buildSectionTitle('Company Management'),
                 const SizedBox(height: 12),
 
-               // DatabaseWidget(),
+                _buildFramedChild(child: StaffAccessWidget()),
 
-                const SizedBox(height: 12),
-
-                //NotificationsWidget(),
-
-                const SizedBox(height: 12),
-
-                StaffAccessWidget(),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // Business Settings Section
                 _buildSectionTitle('Business Settings'),
@@ -188,7 +199,7 @@ class _SettingsState extends ConsumerState<Settings> {
                   title: 'Overhead Cost',
                   subtitle: 'Manage your overhead costs',
                   icon: Icons.account_balance_wallet,
-                  iconColor: Colors.green,
+                  iconColor: const Color(0xFF2E7D32),
                   onTap: () => Nav.push(AddOverheadCostCard()),
                 ),
 
@@ -198,7 +209,7 @@ class _SettingsState extends ConsumerState<Settings> {
                   title: 'Material Upload',
                   subtitle: 'Configure materials and categories',
                   icon: Icons.settings_applications,
-                  iconColor: Colors.blue,
+                  iconColor: const Color(0xFF1565C0),
                   onTap: () => Nav.push(SelectMaterialCategoryPage()),
                 ),
 
@@ -208,7 +219,7 @@ class _SettingsState extends ConsumerState<Settings> {
                   title: 'Invoice Template',
                   subtitle: 'Choose your default invoice layout',
                   icon: Icons.receipt_long,
-                  iconColor: Colors.deepOrange,
+                  iconColor: const Color(0xFFB55423),
                   onTap: () => Nav.push(const InvoiceTemplateSettings()),
                 ),
 
@@ -218,7 +229,7 @@ class _SettingsState extends ConsumerState<Settings> {
                   title: 'Live Chat Support',
                   subtitle: 'Chat with support',
                   icon: Icons.support_agent,
-                  iconColor: Colors.indigo,
+                  iconColor: const Color(0xFF4E5BA6),
                   onTap: () => Nav.push(const TawkLiveChatPage()),
                 ),
 
@@ -258,21 +269,94 @@ class _SettingsState extends ConsumerState<Settings> {
                     title: 'Platform Dashboard',
                     subtitle: 'Manage companies, products & approvals',
                     icon: Icons.admin_panel_settings,
-                    iconColor: ColorsApp.btnColor,
+                    iconColor: _brand,
                     onTap: () => Nav.push(const PlatformDashboardNew()),
                   ),
                 ],
 
-                 const SizedBox(height: 12),
-
-
-
-                const SizedBox(height: 30),
+                const SizedBox(height: 14),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSettingsHero() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: _brand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(Icons.tune_rounded, color: _brand, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Workspace controls",
+                  style: GoogleFonts.openSans(
+                    color: _ink,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Manage company access, materials, invoices, and system preferences.",
+                  style: GoogleFonts.openSans(
+                    color: _muted,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFramedChild({required Widget child}) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
     );
   }
 
@@ -284,12 +368,13 @@ class _SettingsState extends ConsumerState<Settings> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -299,13 +384,10 @@ class _SettingsState extends ConsumerState<Settings> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: ColorsApp.btnColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+              color: _brand.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
-              Icons.help_outline,
-              color: ColorsApp.btnColor,
-            ),
+            child: const Icon(Icons.help_outline, color: _brand),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -317,16 +399,13 @@ class _SettingsState extends ConsumerState<Settings> {
                   style: GoogleFonts.openSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: ColorsApp.textColor,
+                    color: _ink,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   "Show or hide help icons across the app",
-                  style: GoogleFonts.openSans(
-                    fontSize: 12,
-                    color: ColorsApp.textColor.withOpacity(0.6),
-                  ),
+                  style: GoogleFonts.openSans(fontSize: 12, color: _muted),
                 ),
               ],
             ),
@@ -334,7 +413,7 @@ class _SettingsState extends ConsumerState<Settings> {
           Switch.adaptive(
             value: isEnabled,
             onChanged: onChanged,
-            activeColor: ColorsApp.btnColor,
+            activeThumbColor: _brand,
           ),
         ],
       ),
@@ -347,10 +426,9 @@ class _SettingsState extends ConsumerState<Settings> {
       child: Text(
         title,
         style: GoogleFonts.openSans(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: ColorsApp.textColor.withOpacity(0.7),
-          letterSpacing: 0.5,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: _ink,
         ),
       ),
     );
@@ -366,33 +444,31 @@ class _SettingsState extends ConsumerState<Settings> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _border),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
+              color: Colors.black.withValues(alpha: 0.035),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+                color: iconColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
-                icon,
-                color: iconColor,
-                size: 24,
-              ),
+              child: Icon(icon, color: iconColor, size: 22),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -400,26 +476,27 @@ class _SettingsState extends ConsumerState<Settings> {
                   Text(
                     title,
                     style: GoogleFonts.openSans(
-                      fontSize: 16,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: ColorsApp.textColor,
+                      color: _ink,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 3),
                   Text(
                     subtitle,
                     style: GoogleFonts.openSans(
                       fontSize: 13,
-                      color: Colors.grey.shade600,
+                      height: 1.3,
+                      color: _muted,
                     ),
                   ),
                 ],
               ),
             ),
             Icon(
-              Icons.chevron_right,
+              Icons.chevron_right_rounded,
               color: Colors.grey.shade400,
-              size: 24,
+              size: 22,
             ),
           ],
         ),
@@ -429,11 +506,15 @@ class _SettingsState extends ConsumerState<Settings> {
 
   Widget _buildCompanySettingsSection() {
     if (isLoadingSettings) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: CircularProgressIndicator(),
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _border),
         ),
+        child: const Center(child: CircularProgressIndicator(color: _brand)),
       );
     }
 
@@ -442,7 +523,8 @@ class _SettingsState extends ConsumerState<Settings> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: _border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -469,12 +551,13 @@ class _SettingsState extends ConsumerState<Settings> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -486,18 +569,14 @@ class _SettingsState extends ConsumerState<Settings> {
           _buildSwitchRow(
             title: "Cloud Sync",
             value: settings.cloudSyncEnabled,
-            onChanged: (value) => _updateSetting(
-              current: settings,
-              cloudSyncEnabled: value,
-            ),
+            onChanged: (value) =>
+                _updateSetting(current: settings, cloudSyncEnabled: value),
           ),
           _buildSwitchRow(
             title: "Auto Backup",
             value: settings.autoBackupEnabled,
-            onChanged: (value) => _updateSetting(
-              current: settings,
-              autoBackupEnabled: value,
-            ),
+            onChanged: (value) =>
+                _updateSetting(current: settings, autoBackupEnabled: value),
           ),
           const Divider(height: 24),
           Text(
@@ -505,7 +584,7 @@ class _SettingsState extends ConsumerState<Settings> {
             style: GoogleFonts.openSans(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: ColorsApp.textColor.withOpacity(0.7),
+              color: _ink,
             ),
           ),
           const SizedBox(height: 8),
@@ -583,10 +662,7 @@ class _SettingsState extends ConsumerState<Settings> {
             const SizedBox(height: 8),
             Text(
               "Only owners or admins can change these settings.",
-              style: GoogleFonts.openSans(
-                fontSize: 12,
-                color: ColorsApp.textColor.withOpacity(0.6),
-              ),
+              style: GoogleFonts.openSans(fontSize: 12, color: _muted),
             ),
           ],
         ],
@@ -599,23 +675,34 @@ class _SettingsState extends ConsumerState<Settings> {
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.openSans(
-            fontSize: 14,
-            color: ColorsApp.textColor,
-            fontWeight: FontWeight.w500,
+    return Container(
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFCF8),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: GoogleFonts.openSans(
+                fontSize: 13,
+                color: _ink,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
-        ),
-        Switch.adaptive(
-          value: value,
-          onChanged: canEditSettings ? onChanged : null,
-          activeColor: ColorsApp.btnColor,
-        ),
-      ],
+          Switch.adaptive(
+            value: value,
+            onChanged: canEditSettings ? onChanged : null,
+            activeThumbColor: _brand,
+          ),
+        ],
+      ),
     );
   }
 }

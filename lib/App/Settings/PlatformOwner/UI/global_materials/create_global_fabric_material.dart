@@ -38,6 +38,9 @@ class _CreateGlobalFabricMaterialPageState
       name: _nameController.text.trim(),
       category: 'FABRIC',
       imagePath: _imagePath,
+      unit: _pricingUnit == 'yard'
+          ? 'Yard'
+          : (_pricingUnit == 'meter' ? 'Meter' : 'Piece'),
       pricePerUnit: double.parse(_priceController.text),
       pricingUnit: _pricingUnit,
       notes: _notesController.text.isNotEmpty
@@ -45,6 +48,7 @@ class _CreateGlobalFabricMaterialPageState
           : null,
     );
 
+    if (!mounted) return;
     setState(() => isCreating = false);
 
     if (result['success'] == true) {
@@ -91,10 +95,10 @@ class _CreateGlobalFabricMaterialPageState
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFE91E63).withOpacity(0.1),
+                color: const Color(0xFFE91E63).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: const Color(0xFFE91E63).withOpacity(0.3),
+                  color: const Color(0xFFE91E63).withValues(alpha: 0.3),
                 ),
               ),
               child: Row(
@@ -139,7 +143,7 @@ class _CreateGlobalFabricMaterialPageState
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _pricingUnit,
+                initialValue: _pricingUnit,
                 decoration: const InputDecoration(
                   labelText: 'Pricing Unit *',
                   border: OutlineInputBorder(),
@@ -206,7 +210,7 @@ class _CreateGlobalFabricMaterialPageState
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

@@ -102,7 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: Scaffold(
-        body: SafeArea(child: _pages[_selectedIndex]),
+        body: _pages[_selectedIndex],
         bottomNavigationBar: CustomBottomNavBar(
           currentIndex: _selectedIndex,
           onTap: (index) => setState(() => _selectedIndex = index),

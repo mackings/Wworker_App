@@ -2,6 +2,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+const Color _ohInk = Color(0xFF211D1A);
+const Color _ohMuted = Color(0xFF756A61);
+const Color _ohBrand = Color(0xFF8B4513);
+const Color _ohBorder = Color(0xFFE8DED6);
+
 // ==============================
 // 1. ADD COST FORM WIDGET
 // ==============================
@@ -39,11 +44,18 @@ class AddCostFormWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFD3D3D3)),
-        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _ohBorder),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,18 +68,22 @@ class AddCostFormWidget extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    const Icon(
-                      Icons.add,
-                      color: Color(0xFFA16438),
-                      size: 20,
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: _ohBrand.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.add, color: _ohBrand, size: 18),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Text(
                       "Add Cost",
                       style: GoogleFonts.openSans(
-                        fontSize: 16,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: const Color(0xFF302E2E),
+                        color: _ohInk,
                       ),
                     ),
                   ],
@@ -76,7 +92,7 @@ class AddCostFormWidget extends StatelessWidget {
                   isExpanded
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  color: const Color(0xFFA16438),
+                  color: _ohBrand,
                 ),
               ],
             ),
@@ -92,7 +108,7 @@ class AddCostFormWidget extends StatelessWidget {
             secondChild: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
+                const SizedBox(height: 14),
 
                 // Category Tabs
                 CategoryTabsWidget(
@@ -101,7 +117,7 @@ class AddCostFormWidget extends StatelessWidget {
                   onCategoryChanged: onCategoryChanged,
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // Description Field
                 CustomTextField(
@@ -110,7 +126,7 @@ class AddCostFormWidget extends StatelessWidget {
                   hintText: "e.g., Office Rent",
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Period Dropdown
                 CustomDropdown(
@@ -120,7 +136,7 @@ class AddCostFormWidget extends StatelessWidget {
                   onChanged: onPeriodChanged,
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Cost Field
                 CustomTextField(
@@ -131,7 +147,7 @@ class AddCostFormWidget extends StatelessWidget {
                   suffixText: "NGN",
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 14),
 
                 // Add Item Button
                 SizedBox(
@@ -141,9 +157,9 @@ class AddCostFormWidget extends StatelessWidget {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFA16438),
                       disabledBackgroundColor: const Color(0xFFCCA183),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      padding: const EdgeInsets.symmetric(vertical: 13),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(14),
                       ),
                     ),
                     child: isLoading
@@ -158,12 +174,16 @@ class AddCostFormWidget extends StatelessWidget {
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.add, size: 20, color: Colors.white),
+                              const Icon(
+                                Icons.add,
+                                size: 18,
+                                color: Colors.white,
+                              ),
                               const SizedBox(width: 8),
                               Text(
                                 "Add item",
                                 style: GoogleFonts.openSans(
-                                  fontSize: 16,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.white,
                                 ),
@@ -207,30 +227,18 @@ class CategoryTabsWidget extends StatelessWidget {
             onTap: () => onCategoryChanged(category),
             child: Container(
               margin: const EdgeInsets.only(right: 8),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: selected
-                        ? const Color(0xFFA16438)
-                        : Colors.transparent,
-                    width: 2,
-                  ),
-                ),
+                color: selected ? const Color(0xFFFFF3E8) : Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: selected ? _ohBrand : _ohBorder),
               ),
               child: Text(
                 category,
                 style: GoogleFonts.openSans(
                   fontSize: 14,
-                  color: selected
-                      ? const Color(0xFFA16438)
-                      : const Color(0xFF9E9E9E),
-                  fontWeight: selected
-                      ? FontWeight.w600
-                      : FontWeight.normal,
+                  color: selected ? _ohBrand : _ohMuted,
+                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 ),
               ),
             ),
@@ -268,40 +276,42 @@ class CustomTextField extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.openSans(
-            fontSize: 14,
-            color: const Color(0xFF7B7B7B),
+            fontSize: 12,
+            color: _ohMuted,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: const TextStyle(
-              color: Color(0xFFBDBDBD),
-              fontSize: 13,
-            ),
+            hintStyle: const TextStyle(color: Color(0xFFBDBDBD), fontSize: 12),
             suffixText: suffixText,
             suffixStyle: GoogleFonts.openSans(
-              fontSize: 14,
-              color: const Color(0xFF7B7B7B),
+              fontSize: 12,
+              color: _ohMuted,
               fontWeight: FontWeight.w600,
             ),
             filled: true,
-            fillColor: const Color(0xFFF5F5F5),
-            contentPadding: const EdgeInsets.all(12),
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 11,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE0E0E0),
-              ),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBorder),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE0E0E0),
-              ),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBrand, width: 1.3),
             ),
           ),
         ),
@@ -335,29 +345,49 @@ class CustomDropdown extends StatelessWidget {
         Text(
           label,
           style: GoogleFonts.openSans(
-            fontSize: 14,
-            color: const Color(0xFF7B7B7B),
+            fontSize: 12,
+            color: _ohMuted,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 5),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           decoration: InputDecoration(
             filled: true,
-            fillColor: const Color(0xFFF5F5F5),
-            contentPadding: const EdgeInsets.all(12),
+            fillColor: Colors.white,
+            isDense: true,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: const BorderSide(
-                color: Color(0xFFE0E0E0),
-              ),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: _ohBrand, width: 1.3),
             ),
           ),
           items: items
-              .map((item) => DropdownMenuItem(
-                    value: item,
-                    child: Text(item),
-                  ))
+              .map(
+                (item) => DropdownMenuItem(
+                  value: item,
+                  child: Text(
+                    item,
+                    style: GoogleFonts.openSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: _ohInk,
+                    ),
+                  ),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
@@ -383,62 +413,89 @@ class OverheadCostItemCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: _ohBorder),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildItemRow("Category", item.category),
-          _buildItemRow("Description", item.description),
-          _buildItemRow("Period", item.period),
-          _buildItemRow("Cost", "₦${item.cost.toStringAsFixed(2)}"),
-          const SizedBox(height: 8),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline, size: 18),
-              label: Text(
-                "Delete Item",
-                style: GoogleFonts.openSans(fontSize: 14),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFFA16438),
-                side: const BorderSide(color: Color(0xFFA16438)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: _ohBrand.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: const Icon(
+                  Icons.payments_outlined,
+                  color: _ohBrand,
+                  size: 19,
                 ),
               ),
-            ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.openSans(
+                        fontSize: 14,
+                        height: 1.25,
+                        fontWeight: FontWeight.w600,
+                        color: _ohInk,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${item.category} • ${item.period}',
+                      style: GoogleFonts.openSans(
+                        fontSize: 12,
+                        color: _ohMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "₦${item.cost.toStringAsFixed(2)}",
+                style: GoogleFonts.openSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _ohBrand,
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              color: const Color(0xFF7B7B7B),
-            ),
-          ),
-          Text(
-            value,
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF302E2E),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline, size: 17),
+              label: const Text("Delete"),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFA1421F),
+                textStyle: GoogleFonts.openSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
             ),
           ),
         ],
@@ -453,7 +510,14 @@ class OverheadCostItemCard extends StatelessWidget {
 class DurationSelectorWidget extends StatelessWidget {
   final String selectedDuration;
   final Function(String) onDurationChanged;
-  final List<String> durations = const ['Hourly', 'Daily', 'Weekly', 'Monthly', 'Quarterly', 'Yearly'];
+  final List<String> durations = const [
+    'Hourly',
+    'Daily',
+    'Weekly',
+    'Monthly',
+    'Quarterly',
+    'Yearly',
+  ];
 
   const DurationSelectorWidget({
     super.key,
@@ -467,8 +531,8 @@ class DurationSelectorWidget extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _ohBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -478,7 +542,7 @@ class DurationSelectorWidget extends StatelessWidget {
             style: GoogleFonts.openSans(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF302E2E),
+              color: _ohInk,
             ),
           ),
           const SizedBox(height: 12),
@@ -495,22 +559,18 @@ class DurationSelectorWidget extends StatelessWidget {
                     vertical: 8,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFFA16438)
-                        : const Color(0xFFF5F5F5),
+                    color: isSelected ? _ohBrand : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: isSelected
-                          ? const Color(0xFFA16438)
-                          : const Color(0xFFE0E0E0),
+                      color: isSelected ? _ohBrand : _ohBorder,
                     ),
                   ),
                   child: Text(
                     duration,
                     style: GoogleFonts.openSans(
                       fontSize: 13,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected ? Colors.white : const Color(0xFF302E2E),
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.white : _ohInk,
                     ),
                   ),
                 ),
@@ -545,7 +605,8 @@ class TotalDisplayWidget extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _ohBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -558,7 +619,7 @@ class TotalDisplayWidget extends StatelessWidget {
                 style: GoogleFonts.openSans(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: const Color(0xFF302E2E),
+                  color: _ohInk,
                 ),
               ),
               Container(
@@ -574,8 +635,8 @@ class TotalDisplayWidget extends StatelessWidget {
                   duration,
                   style: GoogleFonts.openSans(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFFA16438),
+                    fontWeight: FontWeight.w500,
+                    color: _ohBrand,
                   ),
                 ),
               ),
@@ -589,16 +650,16 @@ class TotalDisplayWidget extends StatelessWidget {
                 "Total ($duration):",
                 style: GoogleFonts.openSans(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF302E2E),
+                  fontWeight: FontWeight.w600,
+                  color: _ohInk,
                 ),
               ),
               Text(
                 "₦${total.toStringAsFixed(2)}",
                 style: GoogleFonts.openSans(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFA16438),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: _ohBrand,
                 ),
               ),
             ],

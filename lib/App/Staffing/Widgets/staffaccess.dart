@@ -22,7 +22,7 @@ class StaffAccessWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -71,7 +71,7 @@ class StaffAccessWidget extends StatelessWidget {
           width: 36,
           height: 36,
           decoration: BoxDecoration(
-            color: const Color(0xFF9CBA7F).withOpacity(0.15),
+            color: const Color(0xFF9CBA7F).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(10),
           ),
           child: const Icon(
@@ -84,6 +84,9 @@ class StaffAccessWidget extends StatelessWidget {
         CustomText(
           title: 'Privacy & Security',
           titleColor: const Color(0xFF302E2E),
+          titleFontSize: 15,
+          titleFontWeight: FontWeight.w600,
+          textAlign: TextAlign.left,
         ),
         const Spacer(),
         Consumer(
@@ -107,32 +110,10 @@ class StaffAccessWidget extends StatelessWidget {
       builder: (context) => SelectOptionSheet(
         title: "Select Action",
         options: [
-          OptionItem(
-            label: "Add Staff",
-            onTap: () => Nav.push(AddStaff()),
-          ),
+          OptionItem(label: "Add Staff", onTap: () => Nav.push(AddStaff())),
           OptionItem(
             label: "Manage Staff",
             onTap: () => Nav.push(StaffManagement()),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showStaffAccessSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => SelectOptionSheet(
-        title: "Staff Access",
-        options: [
-          OptionItem(label: "Add New Staff", onTap: () {}),
-          OptionItem(label: "View Staff List", onTap: () {}),
-          OptionItem(
-            label: "Manage Permissions",
-            onTap: () {},
           ),
         ],
       ),
@@ -184,8 +165,8 @@ class StaffAccessWidget extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: accentColor.withOpacity(0.35)),
-          color: accentColor.withOpacity(0.08),
+          border: Border.all(color: accentColor.withValues(alpha: 0.35)),
+          color: accentColor.withValues(alpha: 0.08),
         ),
         child: Row(
           children: [

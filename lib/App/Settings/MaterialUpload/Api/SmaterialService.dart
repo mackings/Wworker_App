@@ -526,8 +526,8 @@ class MaterialService {
 
         final qtyRaw = request['quantity'];
         final qty = qtyRaw is num
-            ? qtyRaw.toInt()
-            : int.tryParse(qtyRaw?.toString() ?? '') ?? 1;
+            ? qtyRaw.toDouble()
+            : double.tryParse(qtyRaw?.toString() ?? '') ?? 1;
         final retryBody = {'quantity': qty};
 
         debugPrint("🔁 [COST FALLBACK] Retrying unit-based => $retryBody");

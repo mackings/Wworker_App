@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 class CustomDashboard extends StatelessWidget {
   final List<DashboardIcon> dashboardIcons;
@@ -8,39 +7,35 @@ class CustomDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-
-    int crossAxisCount;
-    if (screenWidth < 360) {
-      crossAxisCount = 2; // very small phones
-    } else if (screenWidth < 900) {
-      crossAxisCount = 3; // normal phones and small tablets
-    } else if (screenWidth < 1200) {
-      crossAxisCount = 4; // medium screens
-    } else {
-      crossAxisCount = 5; // large desktop
-    }
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Padding(
-          padding: EdgeInsets.only(bottom: 16),
-          child: CustomText(title: "Quick Actions", titleFontSize: 16),
+          padding: EdgeInsets.only(bottom: 14),
+          child: Text(
+            "Quick Actions",
+            style: TextStyle(
+              color: Color(0xFF211D1A),
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
-
-        // Wrap GridView in LayoutBuilder for better responsiveness
         LayoutBuilder(
           builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final crossAxisCount = width < 360 ? 2 : 3;
+            final itemWidth =
+                (width - ((crossAxisCount - 1) * 12)) / crossAxisCount;
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: dashboardIcons.length,
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: itemWidth / 106,
               ),
               itemBuilder: (context, index) {
                 final item = dashboardIcons[index];
@@ -67,24 +62,49 @@ class _DashboardItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            height: 60,
-            decoration: BoxDecoration(
-              color: const Color(0x7FEDD0BB),
-              borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: const Color(0xFFE8DED6)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             ),
-            child: Center(
-              child: Icon(icon, color: const Color(0xFF8B4513), size: 30),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B4513).withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: const Color(0xFF8B4513), size: 24),
             ),
-          ),
-          const SizedBox(height: 6),
-          CustomText(subtitle: title, subtitleFontSize: 13),
-        ],
+            const Spacer(),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF302E2E),
+                fontSize: 12,
+                height: 1.18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
