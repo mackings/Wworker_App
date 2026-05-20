@@ -1429,6 +1429,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
   bool _isLoading = true;
   String? _error;
   List<DatabaseMaterial> _materials = [];
+  Map<String, Map<String, List<DatabaseMaterial>>> _groupedMaterials = {};
   bool _isPlatformOwner = false;
 
   @override
@@ -1460,12 +1461,17 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
     });
 
     try {
-      final data = await _service.getMaterials(
+      final data = await _service.getGroupedMaterials(
         search: search,
         companyName: null,
       );
+      final grouped = _mapGroupedMaterials(data);
+      final materials = grouped.values.expand((byType) {
+        return byType.values.expand((variants) => variants);
+      }).toList();
       setState(() {
-        _materials = data;
+        _groupedMaterials = grouped;
+        _materials = materials;
         _isLoading = false;
       });
     } catch (e) {
@@ -1474,6 +1480,38 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
         _isLoading = false;
       });
     }
+  }
+
+  Map<String, Map<String, List<DatabaseMaterial>>> _mapGroupedMaterials(
+    List<Map<String, dynamic>> data,
+  ) {
+    final grouped = <String, Map<String, List<DatabaseMaterial>>>{};
+    for (final categoryItem in data) {
+      final category = _cleanLabel(categoryItem['category']?.toString());
+      if (category.isEmpty) continue;
+
+      final subCategories = categoryItem['subCategories'];
+      if (subCategories is! List) continue;
+
+      final byType = grouped.putIfAbsent(category, () => {});
+      for (final subCategoryItem in subCategories) {
+        if (subCategoryItem is! Map) continue;
+
+        final subCategory = (subCategoryItem['subCategory'] ?? '').toString();
+        final variantsRaw = subCategoryItem['variants'];
+        if (variantsRaw is! List) continue;
+
+        final variants = byType.putIfAbsent(subCategory, () => []);
+        for (final variant in variantsRaw) {
+          if (variant is! Map) continue;
+          final json = Map<String, dynamic>.from(variant);
+          json.putIfAbsent('category', () => category);
+          json.putIfAbsent('subCategory', () => subCategory);
+          variants.add(DatabaseMaterial.fromJson(json));
+        }
+      }
+    }
+    return grouped;
   }
 
   Future<void> _deleteMaterial(DatabaseMaterial material) async {
@@ -1752,6 +1790,62 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
     return '0';
   }
 
+  String _materialPriceLabel(DatabaseMaterial material) {
+    final price = _priceShortLabel(material);
+    if (price == '0') return 'No price';
+    return _formatPriceLabel(price);
+  }
+
+  String _priceSummaryLabel(List<DatabaseMaterial> materials) {
+    final unitPrices = <double>[];
+    final sqmPrices = <double>[];
+
+    for (final material in materials) {
+      final unitPrice = _effectiveUnitPrice(material);
+      if ((unitPrice ?? 0) > 0) unitPrices.add(unitPrice!);
+
+      final sqmPrice = material.pricePerSqm;
+      if ((sqmPrice ?? 0) > 0) sqmPrices.add(sqmPrice!);
+
+      for (final type in material.types) {
+        if ((type.pricePerUnit ?? 0) > 0) unitPrices.add(type.pricePerUnit!);
+        if ((type.pricePerSqm ?? 0) > 0) sqmPrices.add(type.pricePerSqm!);
+      }
+    }
+
+    if (unitPrices.isNotEmpty) {
+      unitPrices.sort();
+      final min = unitPrices.first;
+      final max = unitPrices.last;
+      return min == max
+          ? '₦${_formatAmount(min)}'
+          : '₦${_formatAmount(min)} - ₦${_formatAmount(max)}';
+    }
+
+    if (sqmPrices.isNotEmpty) {
+      sqmPrices.sort();
+      final min = sqmPrices.first;
+      final max = sqmPrices.last;
+      return min == max
+          ? '₦${_formatAmount(min)}/sqm'
+          : '₦${_formatAmount(min)} - ₦${_formatAmount(max)}/sqm';
+    }
+
+    return 'No price';
+  }
+
+  String _formatPriceLabel(String value) {
+    if (value == '0' || value == 'No price') return 'No price';
+    if (value.startsWith('₦')) return value;
+    if (value.contains(' - ')) {
+      return value
+          .split(' - ')
+          .map((part) => part.startsWith('₦') ? part : '₦$part')
+          .join(' - ');
+    }
+    return '₦$value';
+  }
+
   String? _apiMessageText(dynamic payload) {
     if (payload == null) return null;
     if (payload is Map<String, dynamic>) {
@@ -1838,7 +1932,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
             child: RefreshIndicator(
               color: ColorsApp.btnColor,
               onRefresh: () => _loadMaterials(search: _searchController.text),
-              child: _buildPlatformOwnerPricingView(),
+              child: _buildGroupedMaterialsView(allowPricingEditor: true),
             ),
           ),
         ],
@@ -1855,45 +1949,14 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
           child: RefreshIndicator(
             color: ColorsApp.btnColor,
             onRefresh: () => _loadMaterials(search: _searchController.text),
-            child: _buildFlatContent(),
+            child: _buildGroupedMaterialsView(allowPricingEditor: false),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildFlatContent() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    if (_error != null) {
-      return _buildErrorView(_error!);
-    }
-    if (_materials.isEmpty) {
-      return _buildEmptyView('No materials found');
-    }
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: _materials.length,
-      itemBuilder: (context, index) {
-        final material = _materials[index];
-        return _DatabaseCard(
-          leading: _MaterialAvatar(category: material.category),
-          title: material.name,
-          subtitle: material.category,
-          trailing: _buildStatusChip(
-            material.status.isEmpty ? 'pending' : material.status,
-          ),
-          details: _buildMaterialDetails(material),
-          showActions: _isPlatformOwner,
-          onEdit: () => _editMaterial(material),
-          onDelete: () => _deleteMaterial(material),
-        );
-      },
-    );
-  }
-
-  Widget _buildPlatformOwnerPricingView() {
+  Widget _buildGroupedMaterialsView({required bool allowPricingEditor}) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1904,18 +1967,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
       return _buildEmptyView('No materials found');
     }
 
-    // Group: Category -> SubCategory(Type) -> variants
-    final Map<String, Map<String, List<DatabaseMaterial>>> grouped = {};
-    for (final m in _materials) {
-      final cat = _cleanLabel(m.category);
-      if (cat.isEmpty) continue;
-      final subRaw = (m.subCategory ?? '').trim();
-      grouped.putIfAbsent(cat, () => {});
-      grouped[cat]!.putIfAbsent(subRaw, () => []);
-      grouped[cat]![subRaw]!.add(m);
-    }
-
-    final categories = grouped.keys.toList()
+    final categories = _groupedMaterials.keys.toList()
       ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     return ListView(
@@ -1932,7 +1984,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Material Pricing',
+                allowPricingEditor ? 'Material Pricing' : 'Materials',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
                   color: ColorsApp.textColor,
@@ -1940,22 +1992,30 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
               ),
               const SizedBox(height: 6),
               Text(
-                'If a Category/Type is marked as "Priced", at least one material under it has a price. Tap a Type to see current pricing and update it.',
+                allowPricingEditor
+                    ? 'If a Category/Type is marked as "Priced", at least one material under it has a price. Tap a Type to see current pricing and update it.'
+                    : 'Browse all material categories, subcategories, and the materials under each subcategory.',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        for (final cat in categories) _buildCategorySection(cat, grouped[cat]!),
+        for (final cat in categories)
+          _buildCategorySection(
+            cat,
+            _groupedMaterials[cat]!,
+            allowPricingEditor: allowPricingEditor,
+          ),
       ],
     );
   }
 
   Widget _buildCategorySection(
     String category,
-    Map<String, List<DatabaseMaterial>> byType,
-  ) {
+    Map<String, List<DatabaseMaterial>> byType, {
+    required bool allowPricingEditor,
+  }) {
     final allVariants = byType.values.expand((e) => e).toList();
     final pricedCount = allVariants.where(_hasAnyPrice).length;
     final unpricedCount = allVariants.length - pricedCount;
@@ -1968,6 +2028,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
         border: Border.all(color: Colors.grey.shade200),
       ),
       child: ExpansionTile(
+        initiallyExpanded: true,
         tilePadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         childrenPadding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
         title: Text(
@@ -1981,18 +2042,23 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
           '${byType.length} types • ${allVariants.length} materials • $pricedCount priced • $unpricedCount unpriced',
           style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
         ),
-        trailing: _buildPriceStatusChip(pricedCount > 0),
+        trailing: _buildPriceLabelChip(_priceSummaryLabel(allVariants)),
         children: [
           const SizedBox(height: 6),
-          ..._buildTypeTiles(category, byType),
+          ..._buildTypeTiles(
+            category,
+            byType,
+            allowPricingEditor: allowPricingEditor,
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildPriceStatusChip(bool isPriced) {
-    final bg = isPriced ? const Color(0xFFE9F7EF) : const Color(0xFFF3F4F6);
-    final fg = isPriced ? const Color(0xFF1E7A3A) : const Color(0xFF6B7280);
+  Widget _buildPriceLabelChip(String label) {
+    final hasPrice = label != 'No price';
+    final bg = hasPrice ? const Color(0xFFE9F7EF) : const Color(0xFFF3F4F6);
+    final fg = hasPrice ? const Color(0xFF1E7A3A) : const Color(0xFF6B7280);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -2000,7 +2066,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isPriced ? 'Priced' : 'Unpriced',
+        label,
         style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg),
       ),
     );
@@ -2008,8 +2074,9 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
 
   List<Widget> _buildTypeTiles(
     String category,
-    Map<String, List<DatabaseMaterial>> byType,
-  ) {
+    Map<String, List<DatabaseMaterial>> byType, {
+    required bool allowPricingEditor,
+  }) {
     final entries = byType.entries.toList()
       ..sort((a, b) {
         final al = _cleanLabel(a.key).isEmpty ? 'General' : _cleanLabel(a.key);
@@ -2041,46 +2108,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                 ? 'Company: ${companies.first}'
                 : 'Companies: ${companies.join(', ')}';
 
-            final unitPrices = <double>[];
-            for (final m in variants) {
-              final p = _effectiveUnitPrice(m);
-              if ((p ?? 0) > 0) unitPrices.add(p!);
-              for (final t in m.types) {
-                if ((t.pricePerUnit ?? 0) > 0) {
-                  unitPrices.add(t.pricePerUnit!);
-                }
-              }
-            }
-            unitPrices.sort();
-
-            final sqmPrices = <double>[];
-            for (final m in variants) {
-              final p = m.pricePerSqm;
-              if ((p ?? 0) > 0) sqmPrices.add(p!);
-              for (final t in m.types) {
-                if ((t.pricePerSqm ?? 0) > 0) {
-                  sqmPrices.add(t.pricePerSqm!);
-                }
-              }
-            }
-            sqmPrices.sort();
-
-            String priceHint = '';
-            if (unitPrices.isNotEmpty) {
-              final min = unitPrices.first;
-              final max = unitPrices.last;
-              priceHint = min == max
-                  ? _formatAmount(min)
-                  : '${_formatAmount(min)} - ${_formatAmount(max)}';
-            } else if (sqmPrices.isNotEmpty) {
-              final min = sqmPrices.first;
-              final max = sqmPrices.last;
-              priceHint = min == max
-                  ? '${_formatAmount(min)}/sqm'
-                  : '${_formatAmount(min)} - ${_formatAmount(max)}/sqm';
-            } else {
-              priceHint = 'No price yet';
-            }
+            final priceHint = _priceSummaryLabel(variants);
 
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -2089,11 +2117,13 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey.shade200),
               ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
+              child: ExpansionTile(
+                initiallyExpanded: true,
+                tilePadding: const EdgeInsets.symmetric(
                   horizontal: 12,
-                  vertical: 4,
+                  vertical: 2,
                 ),
+                childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
                 title: Text(
                   typeLabel,
                   style: TextStyle(
@@ -2102,17 +2132,51 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                   ),
                 ),
                 subtitle: Text(
-                  '${variants.length} materials • $pricedCount priced • $unpricedCount unpriced\n$companyText\n$priceHint',
+                  allowPricingEditor
+                      ? '${variants.length} materials • $pricedCount priced • $unpricedCount unpriced\n$companyText\n$priceHint'
+                      : '${variants.length} materials • $pricedCount priced • $unpricedCount unpriced',
                   style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
                 ),
-                isThreeLine: true,
-                trailing: _buildPriceStatusChip(pricedCount > 0),
-                onTap: () => _openTypePricingEditor(
-                  category: category,
-                  subCategoryRaw: typeRaw,
-                  subCategoryLabel: typeLabel,
-                  variants: variants,
-                ),
+                trailing: _buildPriceLabelChip(priceHint),
+                children: [
+                  const SizedBox(height: 4),
+                  if (allowPricingEditor) ...[
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: TextButton.icon(
+                        onPressed: () => _openTypePricingEditor(
+                          category: category,
+                          subCategoryRaw: typeRaw,
+                          subCategoryLabel: typeLabel,
+                          variants: variants,
+                        ),
+                        icon: const Icon(Icons.edit_outlined, size: 16),
+                        label: const Text('Update pricing'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: ColorsApp.btnColor,
+                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  for (final m
+                      in variants.toList()..sort(
+                        (a, b) => _variantTitle(a).toLowerCase().compareTo(
+                          _variantTitle(b).toLowerCase(),
+                        ),
+                      ))
+                    _DatabaseCard(
+                      leading: _MaterialAvatar(category: m.category),
+                      title: _variantTitle(m),
+                      subtitle: _materialSubtitleLine(m),
+                      trailing: _buildPriceLabelChip(_materialPriceLabel(m)),
+                      details: _buildMaterialDetails(m),
+                      showActions: _isPlatformOwner,
+                      onEdit: () => _editMaterial(m),
+                      onDelete: () => _deleteMaterial(m),
+                    ),
+                ],
               ),
             );
           },
@@ -2448,7 +2512,9 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                             leading: _MaterialAvatar(category: m.category),
                             title: _variantTitle(m),
                             subtitle: _materialSubtitleLine(m),
-                            trailing: _buildPriceStatusChip(true),
+                            trailing: _buildPriceLabelChip(
+                              _materialPriceLabel(m),
+                            ),
                             details: _buildMaterialDetails(m),
                             showActions: _isPlatformOwner,
                             onEdit: () => _editMaterial(m),
@@ -2469,7 +2535,9 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                               leading: _MaterialAvatar(category: m.category),
                               title: _variantTitle(m),
                               subtitle: _materialSubtitleLine(m),
-                              trailing: _buildPriceStatusChip(false),
+                              trailing: _buildPriceLabelChip(
+                                _materialPriceLabel(m),
+                              ),
                               details: _buildMaterialDetails(m),
                               showActions: _isPlatformOwner,
                               onEdit: () => _editMaterial(m),

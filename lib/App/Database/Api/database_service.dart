@@ -488,6 +488,45 @@ class DatabaseService {
     return [];
   }
 
+  Future<List<Map<String, dynamic>>> getGroupedMaterials({
+    String? search,
+    String? category,
+    String? subCategory,
+    String? status,
+    String? companyName,
+    bool? priced,
+    bool? isActive,
+  }) async {
+    final token = await _getToken();
+    if (token == null) return [];
+
+    final response = await _dio.get(
+      "/api/database/materials/grouped",
+      queryParameters: {
+        if (companyName != null && companyName.trim().isNotEmpty)
+          'companyName': companyName.trim(),
+        if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
+        if (category != null && category.trim().isNotEmpty)
+          'category': category.trim(),
+        if (subCategory != null && subCategory.trim().isNotEmpty)
+          'subCategory': subCategory.trim(),
+        if (status != null && status.trim().isNotEmpty) 'status': status.trim(),
+        if (priced != null) 'priced': priced,
+        if (isActive != null) 'isActive': isActive,
+      },
+      options: Options(headers: {"Authorization": "Bearer $token"}),
+    );
+
+    if (response.data?["success"] == true) {
+      final data = response.data["data"] as List<dynamic>? ?? [];
+      return data
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    }
+    return [];
+  }
+
   Future<bool> updateMaterial({
     required String id,
     required Map<String, dynamic> body,
