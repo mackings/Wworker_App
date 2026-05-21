@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Auth/Api/Provider.dart';
 import 'package:wworker/App/Auth/View/Signin.dart';
+import 'package:wworker/App/Auth/Widgets/auth_shell.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/CustomTerms.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/AltSignup.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
 class Signup extends ConsumerStatefulWidget {
@@ -45,20 +45,19 @@ class _SignupState extends ConsumerState<Signup> {
     final companyEmail = _companyEmailController.text.trim();
 
     // Only fullname, email, phone, and password are required
-    if (fullname.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+    if (fullname.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill all required fields"),
-        ),
+        const SnackBar(content: Text("Please fill all required fields")),
       );
       return;
     }
 
     if (password.length < 8) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Password must be at least 8 characters"),
-        ),
+        const SnackBar(content: Text("Password must be at least 8 characters")),
       );
       return;
     }
@@ -77,17 +76,17 @@ class _SignupState extends ConsumerState<Signup> {
     state.when(
       data: (data) {
         if (data["success"] == true) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Signup successful ✅")),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text("Signup successful ✅")));
           Nav.push(const Signin());
         }
       },
       loading: () {},
       error: (err, _) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("$err")),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("$err")));
       },
     );
   }
@@ -99,105 +98,67 @@ class _SignupState extends ConsumerState<Signup> {
 
     return Stack(
       children: [
-        Scaffold(
-          appBar: AppBar(automaticallyImplyLeading: false),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 20, right: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CustomText(
-                      textAlign: TextAlign.left,
-                      title: "Create Account",
-                      subtitle:
-                          "To create account, provide details, and set password",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Full Name (Required)
-                    CustomTextField(
-                      controller: _fullnameController,
-                      label: "Full Name *",
-                      hintText: "Enter Full Name",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Email (Required)
-                    CustomTextField(
-                      controller: _emailController,
-                      label: "Email *",
-                      hintText: "Enter Email Address",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Phone (Required)
-                    CustomTextField(
-                      controller: _phoneController,
-                      label: "Phone *",
-                      hintText: "Enter Phone Number",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Password (Required)
-                    CustomTextField(
-                      controller: _passwordController,
-                      label: "Password *",
-                      hintText: "Enter Password (min 8 characters)",
-                      isPassword: true,
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Company Name (Optional)
-                    CustomTextField(
-                      controller: _companyNameController,
-                      label: "Company Name (Optional)",
-                      hintText: "Enter Company Name",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Company Email (Optional)
-                    CustomTextField(
-                      controller: _companyEmailController,
-                      label: "Company Email (Optional)",
-                      hintText: "Enter Company Email",
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    const TermsCheckbox(),
-                    const SizedBox(height: 40),
-
-                    CustomButton(
-                      text: isLoading ? "Signing up..." : "Sign Up",
-                      onPressed: () {
-                        if (!isLoading) {
-                          _handleSignup();
-                        }
-                      },
-                    ),
-
-                    const SizedBox(height: 50),
-                    CustomSignupAlt(
-                      onLoginTap: () {
-                        Nav.push(const Signin());
-                      },
-                    ),
-                  ],
-                ),
-              ),
+        AuthShell(
+          canPop: false,
+          title: 'Create account',
+          subtitle: 'Set up your workspace details and start managing jobs.',
+          icon: Icons.person_add_alt_1_outlined,
+          children: [
+            CustomTextField(
+              controller: _fullnameController,
+              label: "Full Name *",
+              hintText: "Enter full name",
             ),
-          ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _emailController,
+              label: "Email *",
+              hintText: "Enter email address",
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _phoneController,
+              label: "Phone *",
+              hintText: "Enter phone number",
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _passwordController,
+              label: "Password *",
+              hintText: "Enter password",
+              isPassword: true,
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _companyNameController,
+              label: "Company Name (Optional)",
+              hintText: "Enter company name",
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _companyEmailController,
+              label: "Company Email (Optional)",
+              hintText: "Enter company email",
+            ),
+            const SizedBox(height: 16),
+            const TermsCheckbox(),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: isLoading ? "Signing up..." : "Sign Up",
+              borderRadius: 16,
+              onPressed: () {
+                if (!isLoading) _handleSignup();
+              },
+            ),
+            const SizedBox(height: 24),
+            CustomSignupAlt(
+              onLoginTap: () {
+                Nav.push(const Signin());
+              },
+            ),
+          ],
         ),
-
-        // 🟤 Overlay Loader
-        if (isLoading)
-          Container(
-            color: Colors.black.withOpacity(0.4),
-            child: const Center(
-              child: CircularProgressIndicator(color: Color(0xFF8B4513)),
-            ),
-          ),
+        AuthLoadingOverlay(visible: isLoading),
       ],
     );
   }

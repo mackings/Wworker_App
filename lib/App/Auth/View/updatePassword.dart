@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Auth/Api/Provider.dart';
 import 'package:wworker/App/Auth/View/Signin.dart';
+import 'package:wworker/App/Auth/Widgets/auth_shell.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
 
 class Updatepassword extends ConsumerStatefulWidget {
@@ -37,6 +37,7 @@ class _UpdatepasswordState extends ConsumerState<Updatepassword> {
         .read(authServiceProvider)
         .resetPassword(password: password);
 
+    if (!mounted) return;
     setState(() => isLoading = false);
 
     if (response["success"] == true) {
@@ -55,45 +56,37 @@ class _UpdatepasswordState extends ConsumerState<Updatepassword> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(automaticallyImplyLeading: false),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const CustomText(
-                textAlign: TextAlign.left,
-                title: "Create New Password",
-                subtitle:
-                    "Reset password to quickly calculate your next project",
-              ),
-              const SizedBox(height: 20),
-              CustomTextField(
-                controller: _passwordController,
-                label: "Password",
-                hintText: "Enter Password",
-                isPassword: true,
-              ),
-
-              const SizedBox(height: 30),
-
-              CustomTextField(
-                controller: _confirmPasswordController,
-                label: "Confirm Password",
-                hintText: "Enter Password Again",
-                isPassword: true,
-              ),
-              const SizedBox(height: 40),
-              CustomButton(
-                text: isLoading ? "Resetting..." : "Reset Password",
-                onPressed: isLoading ? () {} : _resetPassword,
-              ),
-            ],
-          ),
+    return Stack(
+      children: [
+        AuthShell(
+          canPop: false,
+          title: 'Create new password',
+          subtitle: 'Choose a secure password for your workspace.',
+          icon: Icons.lock_reset_outlined,
+          children: [
+            CustomTextField(
+              controller: _passwordController,
+              label: "Password",
+              hintText: "Enter password",
+              isPassword: true,
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _confirmPasswordController,
+              label: "Confirm Password",
+              hintText: "Enter password again",
+              isPassword: true,
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: isLoading ? "Resetting..." : "Reset Password",
+              borderRadius: 16,
+              onPressed: isLoading ? () {} : _resetPassword,
+            ),
+          ],
         ),
-      ),
+        AuthLoadingOverlay(visible: isLoading),
+      ],
     );
   }
 }

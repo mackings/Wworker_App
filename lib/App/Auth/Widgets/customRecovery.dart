@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:wworker/App/Auth/Widgets/auth_shell.dart';
 
 class CustomRecoveryOption extends StatelessWidget {
   final String title;
@@ -25,19 +26,19 @@ class CustomRecoveryOption extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(16),
         decoration: ShapeDecoration(
-          color: const Color(0xFFFCFCFC),
+          color: isSelected ? const Color(0xFFFFF3E8) : Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(16),
             side: BorderSide(
-              color: isSelected ? const Color(0xFFA16438) : Colors.transparent,
+              color: isSelected ? authBrand : authBorder,
               width: 1,
             ),
           ),
-          shadows: const [
+          shadows: [
             BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 4,
-              offset: Offset(0, 1),
+              color: Colors.black.withValues(alpha: 0.025),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -52,9 +53,9 @@ class CustomRecoveryOption extends StatelessWidget {
                   height: 40,
                   padding: const EdgeInsets.all(8),
                   decoration: ShapeDecoration(
-                    color: const Color(0xFFEBF1E5),
+                    color: authBrand.withValues(alpha: 0.10),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   child: Center(child: leadingIcon),
@@ -74,7 +75,7 @@ class CustomRecoveryOption extends StatelessWidget {
                     Text(
                       subtitle,
                       style: GoogleFonts.openSans(
-                        color: const Color(0xFF7B7B7B),
+                        color: authMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                       ),
@@ -89,10 +90,9 @@ class CustomRecoveryOption extends StatelessWidget {
               height: 20,
               decoration: BoxDecoration(
                 shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: isSelected
-                      ? const Color(0xFFA16438)
-                      : const Color(0xFFD3D3D3),
+                  color: isSelected ? authBrand : authBorder,
                   width: 2,
                 ),
               ),
@@ -102,7 +102,7 @@ class CustomRecoveryOption extends StatelessWidget {
                         width: 10,
                         height: 10,
                         decoration: const BoxDecoration(
-                          color: Color(0xFFA16438),
+                          color: authBrand,
                           shape: BoxShape.rectangle,
                         ),
                       ),

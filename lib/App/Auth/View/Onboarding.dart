@@ -2,13 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:wworker/App/Auth/View/Signup.dart';
+import 'package:wworker/App/Auth/Widgets/auth_shell.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
-
-
-
 
 class FirstOnboard extends ConsumerStatefulWidget {
   const FirstOnboard({super.key});
@@ -17,9 +15,7 @@ class FirstOnboard extends ConsumerStatefulWidget {
   ConsumerState<ConsumerStatefulWidget> createState() => _FirstOnboardState();
 }
 
-
 class _FirstOnboardState extends ConsumerState<FirstOnboard> {
-
   int currentIndex = 0;
 
   static const List<Map<String, String>> onboardingData = [
@@ -41,7 +37,6 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     },
   ];
 
-
   final PageController _pageController = PageController();
 
   @override
@@ -55,13 +50,11 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     });
   }
 
-
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
-
 
   void _nextPage() {
     if (currentIndex < onboardingData.length - 1) {
@@ -78,25 +71,21 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
     Nav.push(Signup());
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: authSurface,
       body: SafeArea(
         child: Stack(
           children: [
-            
             Padding(
               padding: const EdgeInsets.symmetric(
-                horizontal: 24.0,
-                vertical: 32.0,
+                horizontal: 18.0,
+                vertical: 18.0,
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-
-
                   Expanded(
                     child: PageView.builder(
                       controller: _pageController,
@@ -112,25 +101,47 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                         return Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            SvgPicture.asset(
-                              item["image"]!,
-                              height: 300,
-                              fit: BoxFit.contain,
-                              placeholderBuilder: (context) => const SizedBox(
-                                height: 300,
-                                child: Center(
-                                  child: CircularProgressIndicator(),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: authBorder),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(
+                                      alpha: 0.035,
+                                    ),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: SvgPicture.asset(
+                                item["image"]!,
+                                height: 250,
+                                fit: BoxFit.contain,
+                                placeholderBuilder: (context) => const SizedBox(
+                                  height: 250,
+                                  child: Center(
+                                    child: CircularProgressIndicator(
+                                      color: authBrand,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
 
-                            const SizedBox(height: 40),
+                            const SizedBox(height: 24),
 
                             CustomText(
                               title: item["title"],
                               subtitle: item["subtitle"],
-                              titleColor: Colors.black,
-                              subtitleColor: Colors.black,
+                              titleColor: authInk,
+                              subtitleColor: authMuted,
+                              titleFontSize: 19,
+                              titleFontWeight: FontWeight.w600,
                             ),
                           ],
                         );
@@ -162,6 +173,7 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                     text: currentIndex == onboardingData.length - 1
                         ? "Get Started"
                         : "Next",
+                    borderRadius: 16,
                     onPressed: _nextPage,
                   ),
                 ],
@@ -178,10 +190,11 @@ class _FirstOnboardState extends ConsumerState<FirstOnboard> {
                 child: CustomText(
                   title: "Skip",
                   titleColor: ColorsApp.btnColor,
+                  titleFontSize: 14,
+                  titleFontWeight: FontWeight.w600,
                 ),
               ),
             ),
-         
           ],
         ),
       ),

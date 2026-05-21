@@ -3,16 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:wworker/App/Auth/Api/Provider.dart';
 import 'package:wworker/App/Auth/View/Signup.dart';
 import 'package:wworker/App/Auth/View/resetHome.dart';
+import 'package:wworker/App/Auth/Widgets/auth_shell.dart';
 import 'package:wworker/App/Staffing/View/Selector.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/AltSignIn.dart';
 import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 import 'package:wworker/GeneralWidgets/UI/customTextFormField.dart';
-
-
-
 
 class Signin extends ConsumerStatefulWidget {
   final String? sessionMessage;
@@ -54,9 +51,9 @@ class _SigninState extends ConsumerState<Signin> {
     final password = _passwordController.text.trim();
 
     if (email.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("All fields are required")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("All fields are required")));
       return;
     }
 
@@ -88,7 +85,9 @@ class _SigninState extends ConsumerState<Signin> {
                   // ✅ No accessible companies - should not happen due to backend check
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("You don't have access to any company. Contact support."),
+                      content: Text(
+                        "You don't have access to any company. Contact support.",
+                      ),
                       backgroundColor: Colors.redAccent,
                     ),
                   );
@@ -123,10 +122,7 @@ class _SigninState extends ConsumerState<Signin> {
         loading: () {},
         error: (err, _) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("$err"),
-              backgroundColor: Colors.redAccent,
-            ),
+            SnackBar(content: Text("$err"), backgroundColor: Colors.redAccent),
           );
         },
       );
@@ -136,64 +132,48 @@ class _SigninState extends ConsumerState<Signin> {
 
     return Stack(
       children: [
-        Scaffold(
-          appBar: AppBar(automaticallyImplyLeading: false),
-          body: SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomText(
-                    textAlign: TextAlign.left,
-                    title: "Welcome Back",
-                    subtitle: "Log in to quickly calculate your next project",
-                  ),
-                  const SizedBox(height: 20),
-                  CustomTextField(
-                    controller: _emailController,
-                    label: "Email",
-                    hintText: "Enter Email Address",
-                  ),
-                  const SizedBox(height: 20),
-                  CustomTextField(
-                    controller: _passwordController,
-                    label: "Password",
-                    hintText: "Enter Password",
-                    isPassword: true,
-                  ),
-                  const SizedBox(height: 40),
-                  CustomButton(
-                    text: isLoading ? "Signing in..." : "Sign In",
-                    onPressed: isLoading ? () {} : _handleSignin,
-                  ),
-                  const SizedBox(height: 20),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () => Nav.push(const ResetHome()),
-                      child: CustomText(
-                        subtitle: "Forgot password?",
-                        subtitleColor: Colors.blue,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  CustomSigninAlt(
-                    onLoginTap: () {
-                      Nav.pushReplacement(const Signup());
-                    },
-                  ),
-                ],
+        AuthShell(
+          canPop: false,
+          title: 'Welcome back',
+          subtitle:
+              'Sign in to manage quotations, orders, invoices, and materials.',
+          icon: Icons.lock_open_outlined,
+          children: [
+            CustomTextField(
+              controller: _emailController,
+              label: "Email",
+              hintText: "Enter email address",
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _passwordController,
+              label: "Password",
+              hintText: "Enter password",
+              isPassword: true,
+            ),
+            const SizedBox(height: 24),
+            CustomButton(
+              text: isLoading ? "Signing in..." : "Sign In",
+              borderRadius: 16,
+              onPressed: isLoading ? () {} : _handleSignin,
+            ),
+            const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Nav.push(const ResetHome()),
+                child: const Text("Forgot password?"),
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            CustomSigninAlt(
+              onLoginTap: () {
+                Nav.pushReplacement(const Signup());
+              },
+            ),
+          ],
         ),
-        if (isLoading)
-          Container(
-            color: Colors.black.withOpacity(0.3),
-            child: const Center(child: CircularProgressIndicator()),
-          ),
+        AuthLoadingOverlay(visible: isLoading),
       ],
     );
   }

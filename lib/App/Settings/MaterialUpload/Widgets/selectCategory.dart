@@ -28,6 +28,8 @@ class _SelectMaterialCategoryPageState
   final _nameController = TextEditingController();
   final _subCategoryController = TextEditingController();
   final _thicknessController = TextEditingController();
+  final _standardWidthController = TextEditingController();
+  final _standardLengthController = TextEditingController();
   final _priceController = TextEditingController();
   final _notesController = TextEditingController();
 
@@ -46,14 +48,19 @@ class _SelectMaterialCategoryPageState
   final _units = const [
     'Piece',
     'Yard',
-    'bag',
+    'Bag',
     'Pair',
     'Pack',
     'Set',
     'Roll',
     'sqm',
+    'Liter',
+    'Pound weight',
+    'Gallon',
+    'Kilogram',
   ];
-  final _thicknessUnits = const ['inches', 'mm', 'cm'];
+  final _dimensionUnits = const ['inches', 'mm', 'cm', 'meters', 'feet'];
+  final _thicknessUnits = const ['inches', 'mm', 'cm', 'meters', 'feet'];
   final _pricingUnits = const [
     'piece',
     'yard',
@@ -63,11 +70,16 @@ class _SelectMaterialCategoryPageState
     'set',
     'roll',
     'sqm',
+    'liter',
+    'pound',
+    'gallon',
+    'kilogram',
   ];
 
   String _category = 'Wood';
   String _unit = 'Piece';
   String _thicknessUnit = 'inches';
+  String _standardUnit = 'inches';
   String _pricingUnit = 'piece';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
@@ -87,6 +99,8 @@ class _SelectMaterialCategoryPageState
     _nameController.dispose();
     _subCategoryController.dispose();
     _thicknessController.dispose();
+    _standardWidthController.dispose();
+    _standardLengthController.dispose();
     _priceController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -111,14 +125,23 @@ class _SelectMaterialCategoryPageState
       _subCategoryController.text = cleanCatalogLabel(
         (selected['subCategory'] ?? '').toString(),
       );
-      if (unit.isNotEmpty && _units.contains(unit)) _unit = unit;
+      final matchingUnit = _matchingUnitOption(unit);
+      if (matchingUnit != null) _unit = matchingUnit;
       if (selected['thickness'] != null) {
         _thicknessController.text = selected['thickness'].toString();
       }
       final thicknessUnit = (selected['thicknessUnit'] ?? '').toString().trim();
-      if (_thicknessUnits.contains(thicknessUnit)) {
-        _thicknessUnit = thicknessUnit;
+      final matchingThicknessUnit = _matchingDimensionUnit(thicknessUnit);
+      if (matchingThicknessUnit != null) _thicknessUnit = matchingThicknessUnit;
+      if (selected['standardWidth'] != null) {
+        _standardWidthController.text = selected['standardWidth'].toString();
       }
+      if (selected['standardLength'] != null) {
+        _standardLengthController.text = selected['standardLength'].toString();
+      }
+      final standardUnit = (selected['standardUnit'] ?? '').toString().trim();
+      final matchingStandardUnit = _matchingDimensionUnit(standardUnit);
+      if (matchingStandardUnit != null) _standardUnit = matchingStandardUnit;
       _pricingUnit = _pricingUnitFromUnit(unit);
     });
     _loadSubCategoryOptions();
@@ -160,9 +183,35 @@ class _SelectMaterialCategoryPageState
   String _pricingUnitFromUnit(String unit) {
     final normalized = unit.trim().toLowerCase();
     if (_pricingUnits.contains(normalized)) return normalized;
-    if (normalized == 'piece') return 'piece';
-    if (normalized == 'yard') return 'yard';
+    if (normalized == 'pound weight' || normalized == 'pound') return 'pound';
+    if (normalized == 'kg') return 'kilogram';
+    if (normalized == 'square meter' || normalized == 'm2') return 'sqm';
     return 'piece';
+  }
+
+  String? _matchingUnitOption(String unit) {
+    final normalized = unit.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+    for (final option in _units) {
+      if (option.toLowerCase() == normalized) return option;
+    }
+    if (normalized == 'pound') return 'Pound weight';
+    if (normalized == 'kg') return 'Kilogram';
+    if (normalized == 'liter' || normalized == 'litre') return 'Liter';
+    return null;
+  }
+
+  String? _matchingDimensionUnit(String unit) {
+    final normalized = unit.trim().toLowerCase();
+    if (normalized.isEmpty) return null;
+    if (normalized == 'ft' || normalized == 'foot') return 'feet';
+    if (normalized == 'meter' || normalized == 'metre' || normalized == 'm') {
+      return 'meters';
+    }
+    for (final option in _dimensionUnits) {
+      if (option.toLowerCase() == normalized) return option;
+    }
+    return null;
   }
 
   Future<void> _submitMaterial() async {
@@ -193,6 +242,15 @@ class _SelectMaterialCategoryPageState
     if (_requiresThickness) {
       request['thickness'] = double.parse(_thicknessController.text.trim());
       request['thicknessUnit'] = _thicknessUnit;
+    }
+    final standardWidth = double.tryParse(_standardWidthController.text.trim());
+    final standardLength = double.tryParse(
+      _standardLengthController.text.trim(),
+    );
+    if (standardWidth != null && standardLength != null) {
+      request['standardWidth'] = standardWidth;
+      request['standardLength'] = standardLength;
+      request['standardUnit'] = _standardUnit;
     }
     if (price != null && price > 0) request['pricePerUnit'] = price;
     if (_notesController.text.trim().isNotEmpty) {
@@ -229,6 +287,14 @@ class _SelectMaterialCategoryPageState
   bool get _requiresThickness {
     final normalized = _category.trim().toLowerCase();
     return normalized == 'wood' || normalized == 'board';
+  }
+
+  bool get _supportsStandardSheetSize {
+    final normalized = _category.trim().toLowerCase();
+    return normalized == 'wood' ||
+        normalized == 'board' ||
+        normalized == 'foam' ||
+        normalized == 'marble';
   }
 
   @override
@@ -400,13 +466,13 @@ class _SelectMaterialCategoryPageState
       child: Row(
         children: [
           _ModeButton(
-            label: 'Custom',
+            label: 'Create New',
             icon: Icons.edit_outlined,
             selected: !_useCatalog,
             onTap: () => setState(() => _useCatalog = false),
           ),
           _ModeButton(
-            label: 'Catalog',
+            label: 'Edit Existing',
             icon: Icons.library_books_outlined,
             selected: _useCatalog,
             onTap: () => setState(() => _useCatalog = true),
@@ -431,6 +497,10 @@ class _SelectMaterialCategoryPageState
               _selectedCatalogMaterial = null;
               if (_useCatalog) _nameController.clear();
               if (!_requiresThickness) _thicknessController.clear();
+              if (!_supportsStandardSheetSize) {
+                _standardWidthController.clear();
+                _standardLengthController.clear();
+              }
             });
             _loadSubCategoryOptions();
           },
@@ -476,6 +546,18 @@ class _SelectMaterialCategoryPageState
             },
           ),
         ],
+        const SizedBox(height: 12),
+        _SelectInput(
+          label: 'Unit',
+          value: _unit,
+          items: _units,
+          onChanged: (value) {
+            setState(() {
+              _unit = value;
+              _pricingUnit = _pricingUnitFromUnit(value);
+            });
+          },
+        ),
         if (_requiresThickness) ...[
           const SizedBox(height: 12),
           Row(
@@ -507,6 +589,54 @@ class _SelectMaterialCategoryPageState
             ],
           ),
         ],
+        if (_supportsStandardSheetSize) ...[
+          const SizedBox(height: 12),
+          _FieldLabel('Standard sheet size'),
+          Row(
+            children: [
+              Expanded(
+                child: _TextInput(
+                  controller: _standardWidthController,
+                  label: 'Width',
+                  hint: '48',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    final other = _standardLengthController.text.trim();
+                    if (text.isEmpty && other.isEmpty) return null;
+                    final width = double.tryParse(text);
+                    if (width == null || width <= 0) return 'Required';
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _TextInput(
+                  controller: _standardLengthController,
+                  label: 'Length',
+                  hint: '96',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    final other = _standardWidthController.text.trim();
+                    if (text.isEmpty && other.isEmpty) return null;
+                    final length = double.tryParse(text);
+                    if (length == null || length <= 0) return 'Required';
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _SelectInput(
+            label: 'Size unit',
+            value: _standardUnit,
+            items: _dimensionUnits,
+            onChanged: (value) => setState(() => _standardUnit = value),
+          ),
+        ],
         const SizedBox(height: 12),
         _TextInput(
           controller: _notesController,
@@ -524,31 +654,11 @@ class _SelectMaterialCategoryPageState
       title: 'Pricing',
       icon: Icons.payments_outlined,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _SelectInput(
-                label: 'Unit',
-                value: _unit,
-                items: _units,
-                onChanged: (value) {
-                  setState(() {
-                    _unit = value;
-                    _pricingUnit = _pricingUnitFromUnit(value);
-                  });
-                },
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _SelectInput(
-                label: 'Pricing unit',
-                value: _pricingUnit,
-                items: _pricingUnits,
-                onChanged: (value) => setState(() => _pricingUnit = value),
-              ),
-            ),
-          ],
+        _SelectInput(
+          label: 'Pricing unit',
+          value: _pricingUnit,
+          items: _pricingUnits,
+          onChanged: (value) => setState(() => _pricingUnit = value),
         ),
         const SizedBox(height: 12),
         _TextInput(
