@@ -28,6 +28,7 @@ class _SelectMaterialCategoryPageState
   final _nameController = TextEditingController();
   final _subCategoryController = TextEditingController();
   final _thicknessController = TextEditingController();
+  final _colorController = TextEditingController();
   final _standardWidthController = TextEditingController();
   final _standardLengthController = TextEditingController();
   final _priceController = TextEditingController();
@@ -91,6 +92,10 @@ class _SelectMaterialCategoryPageState
   @override
   void initState() {
     super.initState();
+    _subCategoryController.addListener(_syncGeneratedMaterialName);
+    _thicknessController.addListener(_syncGeneratedMaterialName);
+    _colorController.addListener(_syncGeneratedMaterialName);
+    _syncGeneratedMaterialName();
     _loadSubCategoryOptions();
   }
 
@@ -99,6 +104,7 @@ class _SelectMaterialCategoryPageState
     _nameController.dispose();
     _subCategoryController.dispose();
     _thicknessController.dispose();
+    _colorController.dispose();
     _standardWidthController.dispose();
     _standardLengthController.dispose();
     _priceController.dispose();
@@ -118,7 +124,6 @@ class _SelectMaterialCategoryPageState
     final unit = (selected['unit'] ?? _unit).toString().trim();
     setState(() {
       _selectedCatalogMaterial = selected;
-      _nameController.text = catalogMaterialDisplayName(selected);
       _category = cleanCatalogLabel(
         (selected['category'] ?? _category).toString(),
       );
@@ -127,10 +132,17 @@ class _SelectMaterialCategoryPageState
       );
       final matchingUnit = _matchingUnitOption(unit);
       if (matchingUnit != null) _unit = matchingUnit;
-      if (selected['thickness'] != null) {
+      if (_requiresThickness && selected['thickness'] != null) {
         _thicknessController.text = selected['thickness'].toString();
+      } else if (!_requiresThickness && selected['size'] != null) {
+        _thicknessController.text = cleanCatalogLabel(
+          selected['size'].toString(),
+        );
       }
-      final thicknessUnit = (selected['thicknessUnit'] ?? '').toString().trim();
+      final thicknessUnit =
+          (selected['thicknessUnit'] ?? selected['sizeUnit'] ?? '')
+              .toString()
+              .trim();
       final matchingThicknessUnit = _matchingDimensionUnit(thicknessUnit);
       if (matchingThicknessUnit != null) _thicknessUnit = matchingThicknessUnit;
       if (selected['standardWidth'] != null) {
@@ -139,10 +151,14 @@ class _SelectMaterialCategoryPageState
       if (selected['standardLength'] != null) {
         _standardLengthController.text = selected['standardLength'].toString();
       }
+      _colorController.text = cleanCatalogLabel(
+        (selected['color'] ?? '').toString(),
+      );
       final standardUnit = (selected['standardUnit'] ?? '').toString().trim();
       final matchingStandardUnit = _matchingDimensionUnit(standardUnit);
       if (matchingStandardUnit != null) _standardUnit = matchingStandardUnit;
       _pricingUnit = _pricingUnitFromUnit(unit);
+      _syncGeneratedMaterialName();
     });
     _loadSubCategoryOptions();
   }
@@ -237,11 +253,15 @@ class _SelectMaterialCategoryPageState
             'unit': _unit,
           };
 
+    request['name'] = _generatedMaterialName();
     request['unit'] = _unit;
     request['pricingUnit'] = _pricingUnit;
     if (_requiresThickness) {
       request['thickness'] = double.parse(_thicknessController.text.trim());
       request['thicknessUnit'] = _thicknessUnit;
+    } else if (_thicknessController.text.trim().isNotEmpty) {
+      request['size'] = _thicknessController.text.trim();
+      request['sizeUnit'] = _thicknessUnit;
     }
     final standardWidth = double.tryParse(_standardWidthController.text.trim());
     final standardLength = double.tryParse(
@@ -255,6 +275,9 @@ class _SelectMaterialCategoryPageState
     if (price != null && price > 0) request['pricePerUnit'] = price;
     if (_notesController.text.trim().isNotEmpty) {
       request['notes'] = _notesController.text.trim();
+    }
+    if (_colorController.text.trim().isNotEmpty) {
+      request['color'] = _colorController.text.trim();
     }
     if (_imagePath != null) request['imagePath'] = _imagePath;
 
@@ -285,16 +308,42 @@ class _SelectMaterialCategoryPageState
   }
 
   bool get _requiresThickness {
-    final normalized = _category.trim().toLowerCase();
-    return normalized == 'wood' || normalized == 'board';
+    final normalized = _unit.trim().toLowerCase();
+    return normalized == 'sqm' ||
+        normalized == 'square meter' ||
+        normalized == 'm2';
+  }
+
+  String _formatNamePart(String value) {
+    return cleanCatalogLabel(
+      value,
+    ).trim().replaceAll(RegExp(r'\s+'), '_').replaceAll(RegExp(r'_+'), '_');
+  }
+
+  String _generatedMaterialName() {
+    final material = _formatNamePart(_category);
+    final subCategory = _formatNamePart(_subCategoryController.text);
+    final unit = _formatNamePart(_unit);
+    final sizeOrThickness = _formatNamePart(_thicknessController.text);
+    final color = _formatNamePart(_colorController.text);
+
+    return [
+      material,
+      subCategory,
+      unit,
+      if (sizeOrThickness.isNotEmpty) sizeOrThickness,
+      if (color.isNotEmpty) color,
+    ].where((part) => part.isNotEmpty).join('_');
+  }
+
+  void _syncGeneratedMaterialName() {
+    final generated = _generatedMaterialName();
+    if (_nameController.text == generated) return;
+    _nameController.text = generated;
   }
 
   bool get _supportsStandardSheetSize {
-    final normalized = _category.trim().toLowerCase();
-    return normalized == 'wood' ||
-        normalized == 'board' ||
-        normalized == 'foam' ||
-        normalized == 'marble';
+    return _requiresThickness;
   }
 
   @override
@@ -495,12 +544,12 @@ class _SelectMaterialCategoryPageState
             setState(() {
               _category = value;
               _selectedCatalogMaterial = null;
-              if (_useCatalog) _nameController.clear();
               if (!_requiresThickness) _thicknessController.clear();
               if (!_supportsStandardSheetSize) {
                 _standardWidthController.clear();
                 _standardLengthController.clear();
               }
+              _syncGeneratedMaterialName();
             });
             _loadSubCategoryOptions();
           },
@@ -518,8 +567,8 @@ class _SelectMaterialCategoryPageState
         _TextInput(
           controller: _nameController,
           label: 'Material name',
-          hint: _useCatalog ? 'Pick from catalog' : 'Custom Spray',
-          readOnly: _useCatalog,
+          hint: 'Auto-generated',
+          readOnly: true,
           validator: (value) =>
               value == null || value.trim().isEmpty ? 'Name is required' : null,
         ),
@@ -542,7 +591,10 @@ class _SelectMaterialCategoryPageState
             selected: _subCategoryController.text.trim(),
             loading: _loadingSubCategories,
             onSelected: (value) {
-              setState(() => _subCategoryController.text = value);
+              setState(() {
+                _subCategoryController.text = value;
+                _syncGeneratedMaterialName();
+              });
             },
           ),
         ],
@@ -552,43 +604,63 @@ class _SelectMaterialCategoryPageState
           value: _unit,
           items: _units,
           onChanged: (value) {
+            final wasThicknessMode = _requiresThickness;
             setState(() {
               _unit = value;
               _pricingUnit = _pricingUnitFromUnit(value);
+              if (wasThicknessMode != _requiresThickness) {
+                _thicknessController.clear();
+              }
+              if (!_supportsStandardSheetSize) {
+                _standardWidthController.clear();
+                _standardLengthController.clear();
+              }
+              _syncGeneratedMaterialName();
             });
           },
         ),
-        if (_requiresThickness) ...[
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _TextInput(
-                  controller: _thicknessController,
-                  label: 'Thickness',
-                  hint: '0.25',
-                  keyboardType: TextInputType.number,
-                  validator: (value) {
-                    final thickness = double.tryParse(value?.trim() ?? '');
-                    if (thickness == null || thickness <= 0) {
-                      return 'Required';
-                    }
-                    return null;
-                  },
-                ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _TextInput(
+                controller: _thicknessController,
+                label: _requiresThickness ? 'Thickness' : 'Size',
+                hint: _requiresThickness
+                    ? '0.25'
+                    : 'Short size text, e.g. small, 2 inch, jumbo',
+                keyboardType: _requiresThickness
+                    ? TextInputType.number
+                    : TextInputType.text,
+                validator: (value) {
+                  final text = value?.trim() ?? '';
+                  if (!_requiresThickness) return null;
+                  final thickness = double.tryParse(text);
+                  if (thickness == null || thickness <= 0) {
+                    return 'Thickness is required';
+                  }
+                  return null;
+                },
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _SelectInput(
-                  label: 'Thickness unit',
-                  value: _thicknessUnit,
-                  items: _thicknessUnits,
-                  onChanged: (value) => setState(() => _thicknessUnit = value),
-                ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _SelectInput(
+                label: _requiresThickness ? 'Thickness unit' : 'Size unit',
+                value: _thicknessUnit,
+                items: _thicknessUnits,
+                onChanged: (value) => setState(() => _thicknessUnit = value),
               ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _TextInput(
+          controller: _colorController,
+          label: 'Color',
+          hint: 'Optional color',
+          validator: (_) => null,
+        ),
         if (_supportsStandardSheetSize) ...[
           const SizedBox(height: 12),
           _FieldLabel('Standard sheet size'),
@@ -603,6 +675,7 @@ class _SelectMaterialCategoryPageState
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     final other = _standardLengthController.text.trim();
+                    if (_requiresThickness && text.isEmpty) return 'Required';
                     if (text.isEmpty && other.isEmpty) return null;
                     final width = double.tryParse(text);
                     if (width == null || width <= 0) return 'Required';
@@ -620,6 +693,7 @@ class _SelectMaterialCategoryPageState
                   validator: (value) {
                     final text = value?.trim() ?? '';
                     final other = _standardWidthController.text.trim();
+                    if (_requiresThickness && text.isEmpty) return 'Required';
                     if (text.isEmpty && other.isEmpty) return null;
                     final length = double.tryParse(text);
                     if (length == null || length <= 0) return 'Required';
