@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:wworker/App/Product/Widget/imgBg.dart';
@@ -26,6 +28,7 @@ class _SelectMaterialCategoryPageState
   final _materialService = MaterialService();
 
   final _nameController = TextEditingController();
+  final _categoryNameController = TextEditingController();
   final _subCategoryController = TextEditingController();
   final _thicknessController = TextEditingController();
   final _colorController = TextEditingController();
@@ -84,6 +87,7 @@ class _SelectMaterialCategoryPageState
   String _pricingUnit = 'piece';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
+  Timer? _categoryLookupDebounce;
   bool _useCatalog = false;
   bool _submitting = false;
   bool _loadingSubCategories = false;
@@ -92,6 +96,7 @@ class _SelectMaterialCategoryPageState
   @override
   void initState() {
     super.initState();
+    _categoryNameController.addListener(_handleCategoryNameChanged);
     _subCategoryController.addListener(_syncGeneratedMaterialName);
     _thicknessController.addListener(_syncGeneratedMaterialName);
     _colorController.addListener(_syncGeneratedMaterialName);
@@ -101,7 +106,9 @@ class _SelectMaterialCategoryPageState
 
   @override
   void dispose() {
+    _categoryLookupDebounce?.cancel();
     _nameController.dispose();
+    _categoryNameController.dispose();
     _subCategoryController.dispose();
     _thicknessController.dispose();
     _colorController.dispose();
@@ -116,17 +123,24 @@ class _SelectMaterialCategoryPageState
     final selected = await pickSupportedCatalogMaterial(
       context: context,
       materialService: _materialService,
-      preferredCategory: _category,
-      title: 'Select $_category catalog material',
+      preferredCategory: _effectiveCategory,
+      title: 'Select $_effectiveCategory catalog material',
     );
     if (selected == null) return;
 
     final unit = (selected['unit'] ?? _unit).toString().trim();
     setState(() {
       _selectedCatalogMaterial = selected;
-      _category = cleanCatalogLabel(
+      final selectedCategory = cleanCatalogLabel(
         (selected['category'] ?? _category).toString(),
       );
+      if (_categories.contains(selectedCategory)) {
+        _category = selectedCategory;
+        _categoryNameController.clear();
+      } else {
+        _category = 'Other';
+        _categoryNameController.text = selectedCategory;
+      }
       _subCategoryController.text = cleanCatalogLabel(
         (selected['subCategory'] ?? '').toString(),
       );
@@ -167,7 +181,7 @@ class _SelectMaterialCategoryPageState
     setState(() => _loadingSubCategories = true);
 
     final result = await _materialService.getGroupedMaterials(
-      category: _category,
+      category: _effectiveCategory,
       isActive: true,
     );
 
@@ -248,12 +262,14 @@ class _SelectMaterialCategoryPageState
         : <String, dynamic>{
             'useCatalog': false,
             'name': _nameController.text.trim(),
-            'category': _category,
+            'category': _effectiveCategory,
             'subCategory': _subCategoryController.text.trim(),
             'unit': _unit,
           };
 
     request['name'] = _generatedMaterialName();
+    request['category'] = _effectiveCategory;
+    request['subCategory'] = _subCategoryController.text.trim();
     request['unit'] = _unit;
     request['pricingUnit'] = _pricingUnit;
     if (_requiresThickness) {
@@ -261,7 +277,6 @@ class _SelectMaterialCategoryPageState
       request['thicknessUnit'] = _thicknessUnit;
     } else if (_thicknessController.text.trim().isNotEmpty) {
       request['size'] = _thicknessController.text.trim();
-      request['sizeUnit'] = _thicknessUnit;
     }
     final standardWidth = double.tryParse(_standardWidthController.text.trim());
     final standardLength = double.tryParse(
@@ -314,6 +329,23 @@ class _SelectMaterialCategoryPageState
         normalized == 'm2';
   }
 
+  bool get _isOtherCategory => _category.trim().toLowerCase() == 'other';
+
+  String get _effectiveCategory {
+    if (!_isOtherCategory) return _category;
+    final customCategory = cleanCatalogLabel(_categoryNameController.text);
+    return customCategory.isEmpty ? _category : customCategory;
+  }
+
+  void _handleCategoryNameChanged() {
+    _syncGeneratedMaterialName();
+    if (!_isOtherCategory) return;
+    _categoryLookupDebounce?.cancel();
+    _categoryLookupDebounce = Timer(const Duration(milliseconds: 450), () {
+      if (mounted) _loadSubCategoryOptions();
+    });
+  }
+
   String _formatNamePart(String value) {
     return cleanCatalogLabel(
       value,
@@ -321,7 +353,7 @@ class _SelectMaterialCategoryPageState
   }
 
   String _generatedMaterialName() {
-    final material = _formatNamePart(_category);
+    final material = _formatNamePart(_effectiveCategory);
     final subCategory = _formatNamePart(_subCategoryController.text);
     final unit = _formatNamePart(_unit);
     final sizeOrThickness = _formatNamePart(_thicknessController.text);
@@ -544,6 +576,7 @@ class _SelectMaterialCategoryPageState
             setState(() {
               _category = value;
               _selectedCatalogMaterial = null;
+              if (!_isOtherCategory) _categoryNameController.clear();
               if (!_requiresThickness) _thicknessController.clear();
               if (!_supportsStandardSheetSize) {
                 _standardWidthController.clear();
@@ -555,6 +588,17 @@ class _SelectMaterialCategoryPageState
           },
         ),
         const SizedBox(height: 12),
+        if (_isOtherCategory) ...[
+          _TextInput(
+            controller: _categoryNameController,
+            label: 'Category Name',
+            hint: 'Enter material category',
+            validator: (value) => value == null || value.trim().isEmpty
+                ? 'Category name is required'
+                : null,
+          ),
+          const SizedBox(height: 12),
+        ],
         if (_useCatalog) ...[
           _CatalogPickerTile(
             selectedName: _selectedCatalogMaterial == null
@@ -579,7 +623,6 @@ class _SelectMaterialCategoryPageState
           hint: _subCategoryOptions.isEmpty
               ? 'Type a new subcategory'
               : 'Select below or type a new one',
-          readOnly: _useCatalog,
           validator: (value) => value == null || value.trim().isEmpty
               ? 'Sub category is required'
               : null,
@@ -620,40 +663,47 @@ class _SelectMaterialCategoryPageState
           },
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _TextInput(
-                controller: _thicknessController,
-                label: _requiresThickness ? 'Thickness' : 'Size',
-                hint: _requiresThickness
-                    ? '0.25'
-                    : 'Short size text, e.g. small, 2 inch, jumbo',
-                keyboardType: _requiresThickness
-                    ? TextInputType.number
-                    : TextInputType.text,
-                validator: (value) {
-                  final text = value?.trim() ?? '';
-                  if (!_requiresThickness) return null;
-                  final thickness = double.tryParse(text);
-                  if (thickness == null || thickness <= 0) {
-                    return 'Thickness is required';
-                  }
-                  return null;
-                },
+        if (_requiresThickness)
+          Row(
+            children: [
+              Expanded(
+                child: _TextInput(
+                  controller: _thicknessController,
+                  label: 'Thickness',
+                  hint: '0.25',
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    final text = value?.trim() ?? '';
+                    final thickness = double.tryParse(text);
+                    if (thickness == null || thickness <= 0) {
+                      return 'Thickness is required';
+                    }
+                    return null;
+                  },
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _SelectInput(
-                label: _requiresThickness ? 'Thickness unit' : 'Size unit',
-                value: _thicknessUnit,
-                items: _thicknessUnits,
-                onChanged: (value) => setState(() => _thicknessUnit = value),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SelectInput(
+                  label: 'Thickness unit',
+                  value: _thicknessUnit,
+                  items: _thicknessUnits,
+                  onChanged: (value) => setState(() {
+                    _thicknessUnit = value;
+                    _syncGeneratedMaterialName();
+                  }),
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          )
+        else
+          _TextInput(
+            controller: _thicknessController,
+            label: 'Size',
+            hint: 'Any short text that describes the size',
+            keyboardType: TextInputType.text,
+            validator: (_) => null,
+          ),
         const SizedBox(height: 12),
         _TextInput(
           controller: _colorController,
@@ -702,13 +752,6 @@ class _SelectMaterialCategoryPageState
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 10),
-          _SelectInput(
-            label: 'Size unit',
-            value: _standardUnit,
-            items: _dimensionUnits,
-            onChanged: (value) => setState(() => _standardUnit = value),
           ),
         ],
         const SizedBox(height: 12),

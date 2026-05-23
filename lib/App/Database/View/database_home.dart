@@ -1536,6 +1536,17 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
   Future<void> _editMaterial(DatabaseMaterial material) async {
     final nameController = TextEditingController(text: material.name);
     final categoryController = TextEditingController(text: material.category);
+    final subCategoryController = TextEditingController(
+      text: material.subCategory ?? '',
+    );
+    final unitMaterialController = TextEditingController(
+      text: material.unit ?? '',
+    );
+    final pricingUnitController = TextEditingController(
+      text: material.pricingUnit,
+    );
+    final sizeController = TextEditingController(text: material.size ?? '');
+    final colorController = TextEditingController(text: material.color ?? '');
     final priceSqmController = TextEditingController(
       text: material.pricePerSqm != null
           ? _formatAmount(material.pricePerSqm!)
@@ -1557,6 +1568,43 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
     final unitController = TextEditingController(
       text: material.standardUnit ?? '',
     );
+    String cleanNamePart(String value) {
+      return value
+          .trim()
+          .replaceAll('"', '')
+          .replaceAll("'", '')
+          .replaceAll(RegExp(r'\s+'), '_')
+          .replaceAll(RegExp(r'_+'), '_');
+    }
+
+    String generatedName() {
+      final sizeOrThickness = sizeController.text.trim().isNotEmpty
+          ? sizeController.text
+          : material.thickness?.toString() ?? '';
+      return [
+        cleanNamePart(categoryController.text),
+        cleanNamePart(subCategoryController.text),
+        cleanNamePart(unitMaterialController.text),
+        if (cleanNamePart(sizeOrThickness).isNotEmpty)
+          cleanNamePart(sizeOrThickness),
+        if (cleanNamePart(colorController.text).isNotEmpty)
+          cleanNamePart(colorController.text),
+      ].where((part) => part.isNotEmpty).join('_');
+    }
+
+    void syncGeneratedName() {
+      final generated = generatedName();
+      if (nameController.text != generated) {
+        nameController.text = generated;
+      }
+    }
+
+    categoryController.addListener(syncGeneratedName);
+    subCategoryController.addListener(syncGeneratedName);
+    unitMaterialController.addListener(syncGeneratedName);
+    sizeController.addListener(syncGeneratedName);
+    colorController.addListener(syncGeneratedName);
+    syncGeneratedName();
 
     await showModalBottomSheet(
       context: context,
@@ -1593,11 +1641,37 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    CustomTextField(label: 'Name', controller: nameController),
+                    CustomTextField(
+                      label: 'Name',
+                      controller: nameController,
+                      enabled: false,
+                    ),
                     const SizedBox(height: 12),
                     CustomTextField(
                       label: 'Category',
                       controller: categoryController,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Sub Category',
+                      controller: subCategoryController,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Unit',
+                      controller: unitMaterialController,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Pricing Unit',
+                      controller: pricingUnitController,
+                    ),
+                    const SizedBox(height: 12),
+                    CustomTextField(label: 'Size', controller: sizeController),
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Color',
+                      controller: colorController,
                     ),
                     const SizedBox(height: 12),
                     CustomTextField(
@@ -1644,6 +1718,36 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                           'category',
                           categoryController.text,
                           material.category,
+                        );
+                        _setIfChanged(
+                          updates,
+                          'subCategory',
+                          subCategoryController.text,
+                          material.subCategory ?? '',
+                        );
+                        _setIfChanged(
+                          updates,
+                          'unit',
+                          unitMaterialController.text,
+                          material.unit ?? '',
+                        );
+                        _setIfChanged(
+                          updates,
+                          'pricingUnit',
+                          pricingUnitController.text,
+                          material.pricingUnit,
+                        );
+                        _setIfChanged(
+                          updates,
+                          'size',
+                          sizeController.text,
+                          material.size ?? '',
+                        );
+                        _setIfChanged(
+                          updates,
+                          'color',
+                          colorController.text,
+                          material.color ?? '',
                         );
 
                         final priceSqm = _parseAmountInput(
@@ -1702,7 +1806,7 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
                           id: material.id,
                           body: updates,
                         );
-                        if (!mounted) return;
+                        if (!context.mounted) return;
                         Navigator.pop(context);
                         _showSnack(
                           context,
@@ -1723,6 +1827,19 @@ class _DatabaseMaterialsTabState extends State<DatabaseMaterialsTab> {
         );
       },
     );
+
+    nameController.dispose();
+    categoryController.dispose();
+    subCategoryController.dispose();
+    unitMaterialController.dispose();
+    pricingUnitController.dispose();
+    sizeController.dispose();
+    colorController.dispose();
+    priceSqmController.dispose();
+    priceUnitController.dispose();
+    widthController.dispose();
+    lengthController.dispose();
+    unitController.dispose();
   }
 
   String _cleanLabel(String? input) {
