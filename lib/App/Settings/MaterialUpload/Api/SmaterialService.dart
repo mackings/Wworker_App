@@ -288,6 +288,60 @@ class MaterialService {
     }
   }
 
+  /// Get actual saved materials from MongoDB, grouped by category/subcategory.
+  Future<Map<String, dynamic>> getDatabaseGroupedMaterials({
+    String? category,
+    String? subCategory,
+    String? search,
+    bool? isActive,
+    bool? priced,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'No auth token found'};
+      }
+
+      final companyError = await _validateCompany();
+      if (companyError != null) return companyError;
+
+      final queryParams = <String, dynamic>{};
+      if (category != null && category.trim().isNotEmpty) {
+        queryParams['category'] = category.trim();
+      }
+      if (subCategory != null && subCategory.trim().isNotEmpty) {
+        queryParams['subCategory'] = subCategory.trim();
+      }
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+      if (isActive != null) queryParams['isActive'] = isActive;
+      if (priced != null) queryParams['priced'] = priced;
+
+      final data = await dioGetWithEtagCache(
+        dio: _dio,
+        path: '/api/database/materials/grouped',
+        queryParameters: queryParams,
+        headers: {"Authorization": "Bearer $token"},
+      );
+
+      return (data is Map<String, dynamic>)
+          ? data
+          : (data is Map
+                ? Map<String, dynamic>.from(data)
+                : <String, dynamic>{});
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message':
+            e.response?.data['message'] ??
+            'Failed to fetch grouped database materials',
+      };
+    } catch (_) {
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
   /// Get material categories with counts from supported catalog summary
   Future<Map<String, dynamic>> getMaterialCategories() async {
     try {

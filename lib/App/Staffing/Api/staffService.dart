@@ -163,6 +163,11 @@ class CompanyService {
     return AuthService().switchCompany(companyIndex: companyIndex);
   }
 
+  // 🟢 GET COMPANIES
+  Future<Map<String, dynamic>> getCompanies() async {
+    return AuthService().getCompanies();
+  }
+
   // 🟢 INVITE STAFF
   Future<Map<String, dynamic>> inviteStaff({
     required String fullname,

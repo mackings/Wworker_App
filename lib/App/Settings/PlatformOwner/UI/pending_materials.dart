@@ -325,7 +325,12 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                   ? _buildErrorView()
                   : materials.isEmpty
                   ? _buildEmptyView()
-                  : _buildMaterialsList(),
+                  : Column(
+                      children: [
+                        _buildPaginationInfo(),
+                        Expanded(child: _buildMaterialsList()),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -382,7 +387,10 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                             icon: const Icon(Icons.clear),
                             onPressed: () {
                               _searchController.clear();
-                              setState(() => searchQuery = null);
+                              setState(() {
+                                searchQuery = null;
+                                currentPage = 1;
+                              });
                               _loadMaterials();
                             },
                           )
@@ -396,9 +404,10 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                   ),
                   onChanged: (_) => setState(() {}),
                   onSubmitted: (value) {
-                    setState(
-                      () => searchQuery = value.isNotEmpty ? value : null,
-                    );
+                    setState(() {
+                      searchQuery = value.isNotEmpty ? value : null;
+                      currentPage = 1;
+                    });
                     _loadMaterials();
                   },
                 ),
@@ -505,11 +514,8 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   Widget _buildMaterialsList() {
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      itemCount: materials.length + 1,
+      itemCount: materials.length,
       itemBuilder: (context, index) {
-        if (index == materials.length) {
-          return _buildPaginationInfo();
-        }
         return _buildMaterialCard(materials[index]);
       },
     );
@@ -544,7 +550,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -893,25 +899,70 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   Widget _buildPaginationInfo() {
     if (pagination == null) return const SizedBox();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
+    final hasPrevious = pagination!.page > 1;
+    final hasNext = pagination!.page < pagination!.pages;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          Text(
-            'Page ${pagination!.page} of ${pagination!.pages}',
-            style: GoogleFonts.openSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: ColorsApp.textColor,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Page ${pagination!.page} of ${pagination!.pages}',
+                  style: GoogleFonts.openSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Total: ${pagination!.total} materials',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Total: ${pagination!.total} materials',
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+          IconButton(
+            tooltip: 'Previous page',
+            onPressed: hasPrevious
+                ? () {
+                    setState(() => currentPage -= 1);
+                    _loadMaterials();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            color: ColorsApp.btnColor,
+          ),
+          IconButton(
+            tooltip: 'Next page',
+            onPressed: hasNext
+                ? () {
+                    setState(() => currentPage += 1);
+                    _loadMaterials();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            color: ColorsApp.btnColor,
           ),
         ],
       ),

@@ -406,6 +406,31 @@ class AuthService {
     }
   }
 
+  // 🟢 GET USER COMPANIES
+  Future<Map<String, dynamic>> getCompanies() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        return {"success": false, "message": "No authentication token found"};
+      }
+
+      final response = await _dio.get(
+        "/api/auth/companies",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.data["success"] == true && response.data["data"] is List) {
+        await prefs.setString("companies", jsonEncode(response.data["data"]));
+      }
+
+      return response.data;
+    } on DioException catch (e) {
+      return _handleError(e);
+    }
+  }
+
   // 🟢 SWITCH ACTIVE COMPANY
   Future<Map<String, dynamic>> switchCompany({
     required int companyIndex,

@@ -28,6 +28,8 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
 
   DashboardStats? stats;
   DashboardActivity? activity;
+  int? companiesTotalOverride;
+  int? companiesActiveOverride;
   bool isLoading = true;
   String? error;
 
@@ -75,13 +77,28 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
 
     try {
       final result = await _service.getDashboardStats();
+      final companiesResult = await _service.getAllCompanies(limit: 50);
 
       if (result['success'] == true) {
+        final loadedCompanies = companiesResult['success'] == true
+            ? (companiesResult['data'] as List?)
+                  ?.map((item) => CompanyInfo.fromJson(item))
+                  .toList()
+            : null;
+        final pagination = companiesResult['pagination'];
+        final totalCompanies = pagination is Map
+            ? pagination['total'] as int?
+            : null;
+
         setState(() {
           stats = DashboardStats.fromJson(result['data']['stats']);
           activity = DashboardActivity.fromJson(
             result['data']['recentActivity'],
           );
+          companiesTotalOverride = totalCompanies;
+          companiesActiveOverride = loadedCompanies
+              ?.where((company) => company.isActive)
+              .length;
           isLoading = false;
         });
         _animationController.forward();
@@ -312,6 +329,9 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
 
   Widget _buildStatsOverview() {
     final numberFormat = NumberFormat.compact();
+    final companiesTotal = companiesTotalOverride ?? stats!.companies.total;
+    final companiesActive = companiesActiveOverride ?? stats!.companies.active;
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.maxWidth;
@@ -340,8 +360,8 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               children: [
                 _buildAnimatedStatCard(
                   'Companies',
-                  numberFormat.format(stats!.companies.total),
-                  '${stats!.companies.active} active',
+                  numberFormat.format(companiesTotal),
+                  '$companiesActive active',
                   Icons.business_center,
                   const Color(0xFF667EEA),
                   0,

@@ -132,7 +132,7 @@ class PlatformOwnerService {
   /// Get All Companies
   Future<Map<String, dynamic>> getAllCompanies({
     int page = 1,
-    int limit = 20,
+    int limit = 50,
     String? search,
     bool? isActive,
   }) async {

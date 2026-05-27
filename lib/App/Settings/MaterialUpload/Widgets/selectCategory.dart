@@ -79,12 +79,14 @@ class _SelectMaterialCategoryPageState
     'gallon',
     'kilogram',
   ];
+  final _sqmPricingBasisOptions = const ['SQM', 'Sheet Size'];
 
   String _category = 'Wood';
   String _unit = 'Piece';
   String _thicknessUnit = 'inches';
   String _standardUnit = 'inches';
   String _pricingUnit = 'piece';
+  String _sqmPricingBasis = 'SQM';
   String? _imagePath;
   Map<String, dynamic>? _selectedCatalogMaterial;
   Timer? _categoryLookupDebounce;
@@ -119,12 +121,12 @@ class _SelectMaterialCategoryPageState
     super.dispose();
   }
 
-  Future<void> _pickCatalogMaterial() async {
-    final selected = await pickSupportedCatalogMaterial(
-      context: context,
-      materialService: _materialService,
-      preferredCategory: _effectiveCategory,
-      title: 'Select $_effectiveCategory catalog material',
+  Future<void> _pickExistingMaterial() async {
+    final selected = await _pickSavedMaterial(
+      preferredCategory:
+          _isOtherCategory && _categoryNameController.text.isEmpty
+          ? null
+          : _effectiveCategory,
     );
     if (selected == null) return;
 
@@ -172,9 +174,179 @@ class _SelectMaterialCategoryPageState
       final matchingStandardUnit = _matchingDimensionUnit(standardUnit);
       if (matchingStandardUnit != null) _standardUnit = matchingStandardUnit;
       _pricingUnit = _pricingUnitFromUnit(unit);
+      _sqmPricingBasis = 'SQM';
       _syncGeneratedMaterialName();
     });
     _loadSubCategoryOptions();
+  }
+
+  Future<Map<String, dynamic>?> _pickSavedMaterial({
+    String? preferredCategory,
+  }) async {
+    final response = await _materialService.getDatabaseGroupedMaterials(
+      category: preferredCategory,
+      isActive: true,
+    );
+
+    if (!mounted) return null;
+
+    final materials = <Map<String, dynamic>>[];
+    if (response['success'] == true && response['data'] is List) {
+      for (final categoryItem in response['data'] as List) {
+        if (categoryItem is! Map) continue;
+        final category = (categoryItem['category'] ?? '').toString();
+        final subCategories = categoryItem['subCategories'];
+        if (subCategories is! List) continue;
+        for (final subCategoryItem in subCategories) {
+          if (subCategoryItem is! Map) continue;
+          final subCategory = (subCategoryItem['subCategory'] ?? '').toString();
+          final variants = subCategoryItem['variants'];
+          if (variants is! List) continue;
+          for (final variant in variants) {
+            if (variant is! Map) continue;
+            final row = Map<String, dynamic>.from(variant);
+            row['category'] = (row['category'] ?? category).toString();
+            row['subCategory'] = (row['subCategory'] ?? subCategory).toString();
+            materials.add(row);
+          }
+        }
+      }
+    }
+
+    if (materials.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No saved materials found')));
+      return null;
+    }
+
+    return _showSavedMaterialPicker(materials);
+  }
+
+  Future<Map<String, dynamic>?> _showSavedMaterialPicker(
+    List<Map<String, dynamic>> materials,
+  ) {
+    return showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        var query = '';
+        var filtered = List<Map<String, dynamic>>.from(materials);
+
+        List<Map<String, dynamic>> applyFilter(String value) {
+          final needle = value.toLowerCase().trim();
+          if (needle.isEmpty) return List<Map<String, dynamic>>.from(materials);
+          return materials.where((row) {
+            final values = [
+              _materialDisplayName(row),
+              (row['category'] ?? '').toString(),
+              (row['subCategory'] ?? '').toString(),
+              (row['size'] ?? '').toString(),
+              (row['unit'] ?? '').toString(),
+              (row['color'] ?? '').toString(),
+            ];
+            return values.any((v) => v.toLowerCase().contains(needle));
+          }).toList();
+        }
+
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return SafeArea(
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.88,
+                ),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Select Saved Material',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Search saved material...',
+                        prefixIcon: Icon(Icons.search),
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setSheetState(() {
+                          query = value;
+                          filtered = applyFilter(query);
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: filtered.isEmpty
+                          ? const Center(
+                              child: Text('No saved materials match'),
+                            )
+                          : ListView.separated(
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final row = filtered[index];
+                                final metaParts =
+                                    [
+                                          (row['category'] ?? '').toString(),
+                                          (row['subCategory'] ?? '').toString(),
+                                          (row['unit'] ?? '').toString(),
+                                          (row['size'] ?? '').toString(),
+                                          (row['color'] ?? '').toString(),
+                                        ]
+                                        .map((part) => part.trim())
+                                        .where((part) => part.isNotEmpty)
+                                        .toList();
+
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 4,
+                                  ),
+                                  title: Text(
+                                    _materialDisplayName(row),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    metaParts.join(' • '),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  trailing: const Icon(Icons.chevron_right),
+                                  onTap: () => Navigator.pop(sheetContext, row),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _loadSubCategoryOptions() async {
@@ -219,6 +391,14 @@ class _SelectMaterialCategoryPageState
     return 'piece';
   }
 
+  String _materialDisplayName(Map<String, dynamic> material) {
+    final name = (material['name'] ?? '').toString().trim();
+    if (name.isNotEmpty) return name;
+    final materialName = (material['material'] ?? '').toString().trim();
+    if (materialName.isNotEmpty) return materialName;
+    return _generatedMaterialName();
+  }
+
   String? _matchingUnitOption(String unit) {
     final normalized = unit.trim().toLowerCase();
     if (normalized.isEmpty) return null;
@@ -248,7 +428,7 @@ class _SelectMaterialCategoryPageState
     FocusScope.of(context).unfocus();
 
     if (_useCatalog && _selectedCatalogMaterial == null) {
-      _showMessage('Select a catalog material first.');
+      _showMessage('Select an existing saved material first.');
       return;
     }
 
@@ -257,21 +437,22 @@ class _SelectMaterialCategoryPageState
     setState(() => _submitting = true);
 
     final price = double.tryParse(_priceController.text.trim());
-    final request = _useCatalog
-        ? buildCatalogMaterialCreateFields(_selectedCatalogMaterial!)
-        : <String, dynamic>{
-            'useCatalog': false,
-            'name': _nameController.text.trim(),
-            'category': _effectiveCategory,
-            'subCategory': _subCategoryController.text.trim(),
-            'unit': _unit,
-          };
+    final request = <String, dynamic>{
+      if (!_useCatalog) 'useCatalog': false,
+      'name': _nameController.text.trim(),
+      'category': _effectiveCategory,
+      'subCategory': _subCategoryController.text.trim(),
+      'unit': _unit,
+    };
 
     request['name'] = _generatedMaterialName();
     request['category'] = _effectiveCategory;
     request['subCategory'] = _subCategoryController.text.trim();
     request['unit'] = _unit;
-    request['pricingUnit'] = _pricingUnit;
+    request['pricingUnit'] = _submittedPricingUnit;
+    if (_pricingUnit == 'sqm') {
+      request['sqmPricingBasis'] = _sqmPricingBasis;
+    }
     if (_requiresThickness) {
       request['thickness'] = double.parse(_thicknessController.text.trim());
       request['thicknessUnit'] = _thicknessUnit;
@@ -294,15 +475,31 @@ class _SelectMaterialCategoryPageState
     if (_colorController.text.trim().isNotEmpty) {
       request['color'] = _colorController.text.trim();
     }
-    if (_imagePath != null) request['imagePath'] = _imagePath;
+    if (!_useCatalog && _imagePath != null) request['imagePath'] = _imagePath;
 
-    final result = await _materialService.createMaterial(request);
+    final selectedMaterialId =
+        (_selectedCatalogMaterial?['_id'] ?? _selectedCatalogMaterial?['id'])
+            ?.toString();
+    if (_useCatalog &&
+        (selectedMaterialId == null || selectedMaterialId.trim().isEmpty)) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      _showMessage('Selected material is missing an ID.', error: true);
+      return;
+    }
+    final result = _useCatalog
+        ? await _materialService.updateMaterial(selectedMaterialId!, request)
+        : await _materialService.createMaterial(request);
 
     if (!mounted) return;
     setState(() => _submitting = false);
 
     if (result['success'] == true) {
-      _showMessage('Material submitted for approval.');
+      _showMessage(
+        _useCatalog
+            ? 'Material updated successfully.'
+            : 'Material submitted for approval.',
+      );
       Navigator.pop(context);
       return;
     }
@@ -376,6 +573,13 @@ class _SelectMaterialCategoryPageState
 
   bool get _supportsStandardSheetSize {
     return _requiresThickness;
+  }
+
+  String get _submittedPricingUnit {
+    if (_pricingUnit == 'sqm' && _sqmPricingBasis == 'Sheet Size') {
+      return 'sheet size';
+    }
+    return _pricingUnit;
   }
 
   @override
@@ -603,8 +807,8 @@ class _SelectMaterialCategoryPageState
           _CatalogPickerTile(
             selectedName: _selectedCatalogMaterial == null
                 ? null
-                : catalogMaterialDisplayName(_selectedCatalogMaterial!),
-            onTap: _pickCatalogMaterial,
+                : _materialDisplayName(_selectedCatalogMaterial!),
+            onTap: _pickExistingMaterial,
           ),
           const SizedBox(height: 12),
         ],
@@ -651,6 +855,7 @@ class _SelectMaterialCategoryPageState
             setState(() {
               _unit = value;
               _pricingUnit = _pricingUnitFromUnit(value);
+              if (_pricingUnit != 'sqm') _sqmPricingBasis = 'SQM';
               if (wasThicknessMode != _requiresThickness) {
                 _thicknessController.clear();
               }
@@ -775,8 +980,20 @@ class _SelectMaterialCategoryPageState
           label: 'Pricing unit',
           value: _pricingUnit,
           items: _pricingUnits,
-          onChanged: (value) => setState(() => _pricingUnit = value),
+          onChanged: (value) => setState(() {
+            _pricingUnit = value;
+            if (_pricingUnit != 'sqm') _sqmPricingBasis = 'SQM';
+          }),
         ),
+        if (_pricingUnit == 'sqm') ...[
+          const SizedBox(height: 12),
+          _SelectInput(
+            label: 'Is this price per SQM or per sheet?',
+            value: _sqmPricingBasis,
+            items: _sqmPricingBasisOptions,
+            onChanged: (value) => setState(() => _sqmPricingBasis = value),
+          ),
+        ],
         const SizedBox(height: 12),
         _TextInput(
           controller: _priceController,

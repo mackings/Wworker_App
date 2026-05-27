@@ -6,8 +6,6 @@ import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/DashConfig.dart';
 import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
-
-
 class CompanySelectionScreen extends StatefulWidget {
   final List<dynamic> companies;
   final int currentIndex;
@@ -33,10 +31,8 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
   @override
   void initState() {
     super.initState();
-    // ✅ Filter companies to only show those with access granted
-    accessibleCompanies = widget.companies
-        .where((company) => company['accessGranted'] == true)
-        .toList();
+    accessibleCompanies = _accessibleCompaniesFrom(widget.companies);
+    _refreshCompanies();
 
     if (accessibleCompanies.isEmpty) {
       selectedIndex = null;
@@ -46,6 +42,31 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
     } else {
       selectedIndex = 0;
     }
+  }
+
+  List<dynamic> _accessibleCompaniesFrom(List<dynamic> companies) {
+    return companies.where((company) {
+      if (company is! Map) return false;
+      return company['accessGranted'] == true;
+    }).toList();
+  }
+
+  Future<void> _refreshCompanies() async {
+    final result = await _companyService.getCompanies();
+    if (!mounted || result['success'] != true || result['data'] is! List) {
+      return;
+    }
+
+    final refreshedCompanies = _accessibleCompaniesFrom(result['data'] as List);
+    if (refreshedCompanies.isEmpty) return;
+
+    setState(() {
+      accessibleCompanies = refreshedCompanies;
+      if (selectedIndex == null ||
+          selectedIndex! >= accessibleCompanies.length) {
+        selectedIndex = 0;
+      }
+    });
   }
 
   Future<void> _continueWithSelectedCompany() async {
@@ -74,7 +95,8 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
     }
 
     // ✅ If same company is selected, just navigate (no API call needed)
-    final hasValidCurrentIndex = widget.currentIndex >= 0 &&
+    final hasValidCurrentIndex =
+        widget.currentIndex >= 0 &&
         widget.currentIndex < accessibleCompanies.length;
     if (hasValidCurrentIndex && selectedIndex == widget.currentIndex) {
       if (widget.isFromSettings) {
@@ -110,6 +132,7 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
 
           // Wait a bit for the snackbar to show
           await Future.delayed(const Duration(milliseconds: 500));
+          if (!mounted) return;
 
           if (widget.isFromSettings) {
             Navigator.pop(context, true); // Return true (switched)
@@ -121,7 +144,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('❌ ${result['message'] ?? 'Failed to switch company'}'),
+              content: Text(
+                '❌ ${result['message'] ?? 'Failed to switch company'}',
+              ),
               backgroundColor: Colors.redAccent,
             ),
           );
@@ -143,41 +168,44 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
   // ✅ Update SharedPreferences with selected company data
   Future<void> _updateLocalCompanyData(int companyIndex) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (companyIndex >= 0 && companyIndex < accessibleCompanies.length) {
       final selectedCompany = accessibleCompanies[companyIndex];
-      
+
       // Update active company index
       await prefs.setInt('activeCompanyIndex', companyIndex);
-      
+
       // Update active company data
       await prefs.setString('activeCompany', jsonEncode(selectedCompany));
-      
+
       // Update individual company fields for easy access
       if (selectedCompany['name'] != null) {
         await prefs.setString('companyName', selectedCompany['name']);
       }
-      
+
       if (selectedCompany['email'] != null) {
         await prefs.setString('companyEmail', selectedCompany['email']);
       }
-      
+
       if (selectedCompany['phoneNumber'] != null) {
-        await prefs.setString('companyPhoneNumber', selectedCompany['phoneNumber']);
+        await prefs.setString(
+          'companyPhoneNumber',
+          selectedCompany['phoneNumber'],
+        );
       }
-      
+
       if (selectedCompany['address'] != null) {
         await prefs.setString('companyAddress', selectedCompany['address']);
       }
-      
+
       if (selectedCompany['role'] != null) {
         await prefs.setString('userRole', selectedCompany['role']);
       }
-      
+
       if (selectedCompany['position'] != null) {
         await prefs.setString('userPosition', selectedCompany['position']);
       }
-      
+
       debugPrint('✅ Local company data updated to: ${selectedCompany['name']}');
     }
   }
@@ -198,27 +226,17 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.block,
-                  size: 80,
-                  color: Colors.grey.shade400,
-                ),
+                Icon(Icons.block, size: 80, color: Colors.grey.shade400),
                 const SizedBox(height: 24),
                 const Text(
                   'No Accessible Companies',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   'You don\'t have access to any company. Please contact your administrator.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
                 ),
               ],
             ),
@@ -283,11 +301,11 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: isSelected 
+                            color: isSelected
                                 ? const Color(0xFF8B4513).withOpacity(0.1)
                                 : Colors.white,
                             border: Border.all(
-                              color: isSelected 
+                              color: isSelected
                                   ? const Color(0xFF8B4513)
                                   : Colors.grey.shade300,
                               width: isSelected ? 2 : 1,
@@ -329,7 +347,8 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                                       children: [
                                         Flexible(
                                           child: Text(
-                                            company['name'] ?? 'Unknown Company',
+                                            company['name'] ??
+                                                'Unknown Company',
                                             style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
@@ -348,7 +367,8 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                                             ),
                                             decoration: BoxDecoration(
                                               color: Colors.green.shade100,
-                                              borderRadius: BorderRadius.circular(4),
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
                                             ),
                                             child: Text(
                                               'Current',
@@ -405,7 +425,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: isLoading ? null : _continueWithSelectedCompany,
+                      onPressed: isLoading
+                          ? null
+                          : _continueWithSelectedCompany,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF8B4513),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -424,7 +446,9 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
                               ),
                             )
                           : Text(
-                              widget.isFromSettings ? 'Switch Company' : 'Continue',
+                              widget.isFromSettings
+                                  ? 'Switch Company'
+                                  : 'Continue',
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
@@ -441,9 +465,7 @@ class _CompanySelectionScreenState extends State<CompanySelectionScreen> {
             Container(
               color: Colors.black.withOpacity(0.3),
               child: const Center(
-                child: CircularProgressIndicator(
-                  color: Color(0xFF8B4513),
-                ),
+                child: CircularProgressIndicator(color: Color(0xFF8B4513)),
               ),
             ),
         ],

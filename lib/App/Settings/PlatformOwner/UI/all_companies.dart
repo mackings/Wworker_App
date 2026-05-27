@@ -49,7 +49,7 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
     try {
       final result = await _service.getAllCompanies(
         page: currentPage,
-        limit: 20,
+        limit: 50,
         search: searchQuery,
         isActive: filterActive,
       );
@@ -170,10 +170,10 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : error != null
-                      ? _buildErrorView()
-                      : companies.isEmpty
-                          ? _buildEmptyView()
-                          : _buildCompaniesList(),
+                  ? _buildErrorView()
+                  : companies.isEmpty
+                  ? _buildEmptyView()
+                  : _buildCompaniesList(),
             ),
           ),
         ],
@@ -236,21 +236,30 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
   }
 
   Widget _buildCompaniesList() {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: companies.length + (pagination != null ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == companies.length) {
-          return _buildPaginationInfo();
-        }
-        return _buildCompanyCard(companies[index]);
-      },
+    return Column(
+      children: [
+        _buildPaginationInfo(),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: companies.length,
+            itemBuilder: (context, index) {
+              return _buildCompanyCard(companies[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildCompanyCard(CompanyInfo company) {
     return GestureDetector(
-      onTap: () => Nav.push(CompanyDetailsPage(companyId: company.id)),
+      onTap: () => Nav.push(
+        CompanyDetailsPage(
+          companyId: company.id,
+          initialCompany: company.isEmbeddedLegacy ? company : null,
+        ),
+      ),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -317,24 +326,53 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
                 ),
 
                 // Status Badge
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: company.isActive
-                        ? Colors.green.shade50
-                        : Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    company.isActive ? 'Active' : 'Inactive',
-                    style: GoogleFonts.openSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: company.isActive
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: company.isActive
+                            ? Colors.green.shade50
+                            : Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        company.isActive ? 'Active' : 'Inactive',
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: company.isActive
+                              ? Colors.green.shade700
+                              : Colors.red.shade700,
+                        ),
+                      ),
                     ),
-                  ),
+                    if (company.isEmbeddedLegacy) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          'Legacy',
+                          style: GoogleFonts.openSans(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
@@ -391,11 +429,7 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
                       Icons.description,
                     ),
                     _buildDivider(),
-                    _buildStatItem(
-                      'Users',
-                      company.stats!.users,
-                      Icons.people,
-                    ),
+                    _buildStatItem('Users', company.stats!.users, Icons.people),
                   ],
                 ),
               ),
@@ -431,26 +465,56 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
   }
 
   Widget _buildDivider() {
-    return Container(
-      height: 40,
-      width: 1,
-      color: Colors.grey.shade300,
-    );
+    return Container(height: 40, width: 1, color: Colors.grey.shade300);
   }
 
   Widget _buildPaginationInfo() {
     if (pagination == null) return const SizedBox();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Center(
-        child: Text(
-          'Page ${pagination!.page} of ${pagination!.pages} • Total: ${pagination!.total} companies',
-          style: GoogleFonts.openSans(
-            fontSize: 13,
-            color: Colors.grey.shade600,
+    final hasPrevious = pagination!.page > 1;
+    final hasNext = pagination!.page < pagination!.pages;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Page ${pagination!.page} of ${pagination!.pages} • Total: ${pagination!.total} companies',
+              style: GoogleFonts.openSans(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
+            ),
           ),
-        ),
+          IconButton(
+            tooltip: 'Previous page',
+            onPressed: hasPrevious
+                ? () {
+                    setState(() => currentPage -= 1);
+                    _loadCompanies();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            color: ColorsApp.btnColor,
+          ),
+          IconButton(
+            tooltip: 'Next page',
+            onPressed: hasNext
+                ? () {
+                    setState(() => currentPage += 1);
+                    _loadCompanies();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            color: ColorsApp.btnColor,
+          ),
+        ],
       ),
     );
   }

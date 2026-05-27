@@ -259,6 +259,8 @@ class CompanyInfo {
   final DateTime createdAt;
   final DateTime updatedAt;
   final CompanyUsageStats? stats;
+  final String? source;
+  final bool isRegisteredDocument;
 
   CompanyInfo({
     required this.id,
@@ -271,9 +273,12 @@ class CompanyInfo {
     required this.createdAt,
     required this.updatedAt,
     this.stats,
+    this.source,
+    this.isRegisteredDocument = true,
   });
 
   factory CompanyInfo.fromJson(Map<String, dynamic> json) {
+    final now = DateTime.now();
     return CompanyInfo(
       id: json['_id'] ?? '',
       name: json['name'] ?? '',
@@ -282,17 +287,20 @@ class CompanyInfo {
       address: json['address'],
       isActive: json['isActive'] ?? true,
       owner: json['owner'] != null ? UserInfo.fromJson(json['owner']) : null,
-      createdAt: DateTime.parse(
-        json['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      updatedAt: DateTime.parse(
-        json['updatedAt'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? '') ?? now,
+      updatedAt: DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? now,
       stats: json['stats'] != null
           ? CompanyUsageStats.fromJson(json['stats'])
           : null,
+      source: json['source'],
+      isRegisteredDocument: json['isRegisteredDocument'] ?? true,
     );
   }
+
+  bool get isEmbeddedLegacy =>
+      id.startsWith('embedded:') ||
+      source == 'user_embedded_company' ||
+      !isRegisteredDocument;
 
   Map<String, dynamic> toJson() {
     return {
@@ -306,6 +314,8 @@ class CompanyInfo {
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
       'stats': stats?.toJson(),
+      'source': source,
+      'isRegisteredDocument': isRegisteredDocument,
     };
   }
 }
@@ -354,14 +364,14 @@ class CompanyUsageDetails {
   });
 
   factory CompanyUsageDetails.fromJson(Map<String, dynamic> json) {
+    final recentOrderItems = json['recentOrders'] as List<dynamic>? ?? [];
     return CompanyUsageDetails(
       company: CompanyInfo.fromJson(json['company'] ?? {}),
       stats: DetailedProductStats.fromJson(json['stats'] ?? {}),
-      recentOrders:
-          (json['recentOrders'] as List<dynamic>?)
-              ?.map((item) => RecentOrder.fromJson(item))
-              .toList() ??
-          [],
+      recentOrders: recentOrderItems
+          .whereType<Map>()
+          .map((item) => RecentOrder.fromJson(Map<String, dynamic>.from(item)))
+          .toList(),
     );
   }
 
@@ -482,13 +492,13 @@ class RecentOrder {
   factory RecentOrder.fromJson(Map<String, dynamic> json) {
     return RecentOrder(
       id: json['_id'] ?? '',
-      orderNumber: json['orderNumber'] ?? '',
-      totalAmount: (json['totalAmount'] ?? 0).toDouble(),
+      orderNumber: (json['orderNumber'] ?? json['orderNo'] ?? '').toString(),
+      totalAmount: (json['totalAmount'] ?? json['amount'] ?? 0).toDouble(),
       status: json['status'] ?? '',
       paymentStatus: json['paymentStatus'] ?? '',
-      createdAt: DateTime.parse(
-        json['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
+      createdAt:
+          DateTime.tryParse(json['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 

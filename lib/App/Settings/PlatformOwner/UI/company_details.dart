@@ -9,12 +9,16 @@ import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 class CompanyDetailsPage extends ConsumerStatefulWidget {
   final String companyId;
+  final CompanyInfo? initialCompany;
 
-  const CompanyDetailsPage({super.key, required this.companyId});
+  const CompanyDetailsPage({
+    super.key,
+    required this.companyId,
+    this.initialCompany,
+  });
 
   @override
-  ConsumerState<CompanyDetailsPage> createState() =>
-      _CompanyDetailsPageState();
+  ConsumerState<CompanyDetailsPage> createState() => _CompanyDetailsPageState();
 }
 
 class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
@@ -23,6 +27,7 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
   CompanyUsageDetails? companyDetails;
   bool isLoading = true;
   String? error;
+  bool usingEmbeddedFallback = false;
 
   @override
   void initState() {
@@ -34,6 +39,7 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
     setState(() {
       isLoading = true;
       error = null;
+      usingEmbeddedFallback = false;
     });
 
     try {
@@ -45,12 +51,28 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
           isLoading = false;
         });
       } else {
+        if (widget.initialCompany?.isEmbeddedLegacy == true) {
+          setState(() {
+            companyDetails = null;
+            usingEmbeddedFallback = true;
+            isLoading = false;
+          });
+          return;
+        }
         setState(() {
           error = result['message'] ?? 'Failed to load company details';
           isLoading = false;
         });
       }
     } catch (e) {
+      if (widget.initialCompany?.isEmbeddedLegacy == true) {
+        setState(() {
+          companyDetails = null;
+          usingEmbeddedFallback = true;
+          isLoading = false;
+        });
+        return;
+      }
       setState(() {
         error = 'An error occurred: $e';
         isLoading = false;
@@ -72,8 +94,10 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
         child: isLoading
             ? const Center(child: CircularProgressIndicator())
             : error != null
-                ? _buildErrorView()
-                : _buildDetailsContent(),
+            ? _buildErrorView()
+            : usingEmbeddedFallback && widget.initialCompany != null
+            ? _buildEmbeddedDetailsContent(widget.initialCompany!)
+            : _buildDetailsContent(),
       ),
     );
   }
@@ -141,6 +165,29 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
     );
   }
 
+  Widget _buildEmbeddedDetailsContent(CompanyInfo company) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCompanyHeader(company),
+          const SizedBox(height: 20),
+          _buildEmbeddedStatsOverview(company.stats),
+          const SizedBox(height: 20),
+          _buildEmbeddedOrdersOverview(company.stats),
+          const SizedBox(height: 20),
+          _buildRevenueUnavailableSection(),
+          const SizedBox(height: 20),
+          _buildSectionTitle('Recent Orders'),
+          const SizedBox(height: 12),
+          _buildEmptyRecentOrders(),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCompanyHeader(CompanyInfo company) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -165,11 +212,7 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
               color: ColorsApp.btnColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              Icons.business,
-              size: 40,
-              color: ColorsApp.btnColor,
-            ),
+            child: Icon(Icons.business, size: 40, color: ColorsApp.btnColor),
           ),
           const SizedBox(height: 16),
 
@@ -205,6 +248,24 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
               ),
             ),
           ),
+          if (company.isEmbeddedLegacy) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'Legacy embedded company',
+                style: GoogleFonts.openSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+            ),
+          ],
 
           const SizedBox(height: 20),
           const Divider(),
@@ -325,9 +386,21 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildProductStat('Pending', stats.products.pending, Colors.orange),
-                  _buildProductStat('Approved', stats.products.approved, Colors.green),
-                  _buildProductStat('Rejected', stats.products.rejected, Colors.red),
+                  _buildProductStat(
+                    'Pending',
+                    stats.products.pending,
+                    Colors.orange,
+                  ),
+                  _buildProductStat(
+                    'Approved',
+                    stats.products.approved,
+                    Colors.green,
+                  ),
+                  _buildProductStat(
+                    'Rejected',
+                    stats.products.rejected,
+                    Colors.red,
+                  ),
                 ],
               ),
             ],
@@ -337,7 +410,139 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildEmbeddedStatsOverview(CompanyUsageStats? stats) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardAspectRatio = screenWidth < 360 ? 1.0 : 1.2;
+    final safeStats =
+        stats ??
+        CompanyUsageStats(products: 0, orders: 0, quotations: 0, users: 0);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Statistics Overview'),
+        const SizedBox(height: 12),
+        GridView.count(
+          crossAxisCount: 2,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: cardAspectRatio,
+          children: [
+            _buildStatCard(
+              'Total Products',
+              safeStats.products.toString(),
+              Icons.inventory_2,
+              Colors.blue,
+            ),
+            _buildStatCard(
+              'Total Orders',
+              safeStats.orders.toString(),
+              Icons.shopping_cart,
+              Colors.green,
+            ),
+            _buildStatCard(
+              'Quotations',
+              safeStats.quotations.toString(),
+              Icons.description,
+              Colors.orange,
+            ),
+            _buildStatCard(
+              'Users',
+              safeStats.users.toString(),
+              Icons.people,
+              Colors.purple,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmbeddedOrdersOverview(CompanyUsageStats? stats) {
+    final totalOrders = stats?.orders ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Orders Breakdown',
+            style: GoogleFonts.openSans(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: ColorsApp.textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildOrderBreakdownStat(
+                'Total',
+                totalOrders.toString(),
+                Colors.green,
+              ),
+              _buildOrderBreakdownStat('Pending', '-', Colors.orange),
+              _buildOrderBreakdownStat('Completed', '-', Colors.blue),
+              _buildOrderBreakdownStat('Cancelled', '-', Colors.red),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Only total orders are available for this legacy company until the backend supports embedded company usage details.',
+            style: GoogleFonts.openSans(
+              fontSize: 12,
+              color: Colors.grey.shade600,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderBreakdownStat(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: GoogleFonts.openSans(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.openSans(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -408,7 +613,7 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
   }
 
   Widget _buildRevenueSection(RevenueData revenue) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: '₦', decimalDigits: 0);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -462,6 +667,44 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
     );
   }
 
+  Widget _buildRevenueUnavailableSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [ColorsApp.btnColor, ColorsApp.btnColor.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: ColorsApp.btnColor.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.payments_outlined, color: Colors.white, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Revenue data is not available yet for this legacy company.',
+              style: GoogleFonts.openSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildRevenueItem(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,8 +746,30 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
     );
   }
 
+  Widget _buildEmptyRecentOrders() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        'Recent orders are not available yet for this legacy company.',
+        style: GoogleFonts.openSans(fontSize: 13, color: Colors.grey.shade600),
+      ),
+    );
+  }
+
   Widget _buildOrderCard(RecentOrder order) {
-    final currencyFormat = NumberFormat.currency(symbol: '\$', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(symbol: '₦', decimalDigits: 0);
     final dateFormat = DateFormat('MMM dd, yyyy');
 
     Color statusColor;
