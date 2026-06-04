@@ -52,6 +52,58 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     });
   }
 
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().replaceAll(',', ''));
+  }
+
+  int _toQuantity(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 1;
+  }
+
+  Map<String, dynamic> _withMaterialQuantity(
+    Map<String, dynamic> item,
+    int quantity,
+  ) {
+    final normalizedQuantity = quantity < 1 ? 1 : quantity;
+    final currentQuantity = _toQuantity(item["quantity"]);
+    final storedLineTotal =
+        _toDouble(item["LineTotal"] ?? item["subtotal"]) ??
+        _toDouble(
+          item["calculation"] is Map
+              ? (item["calculation"] as Map)["totalMaterialCost"]
+              : null,
+        ) ??
+        _toDouble(item["Price"]) ??
+        0;
+    final unitPrice =
+        _toDouble(item["unitPrice"]) ??
+        (currentQuantity > 0
+            ? storedLineTotal / currentQuantity
+            : storedLineTotal);
+    final lineTotal = unitPrice * normalizedQuantity;
+    final calculation = item["calculation"] is Map
+        ? Map<String, dynamic>.from(item["calculation"] as Map)
+        : <String, dynamic>{};
+
+    if (calculation.isNotEmpty) {
+      calculation["quantity"] = normalizedQuantity;
+      calculation["totalMaterialCost"] = lineTotal;
+    }
+
+    return {
+      ...item,
+      "quantity": normalizedQuantity.toString(),
+      "unitPrice": unitPrice.toStringAsFixed(2),
+      "Price": lineTotal.toStringAsFixed(2),
+      "LineTotal": lineTotal.toStringAsFixed(2),
+      if (calculation.isNotEmpty) "calculation": calculation,
+    };
+  }
+
   Map<String, dynamic> _buildDisplayItem(Map<String, dynamic> item) {
     final displayItem = Map<String, dynamic>.from(item);
     displayItem.remove("disableIncrement");
@@ -65,7 +117,10 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
     final price = double.tryParse((item["Price"] ?? "0").toString()) ?? 0.0;
     final quantity = int.tryParse((item["quantity"] ?? "1").toString()) ?? 1;
     // Always respect material quantity on the materials page.
-    final total = calculatedTotal ?? lineTotal ?? price * quantity;
+    final unitPrice = _toDouble(item["unitPrice"]);
+    final total = unitPrice != null
+        ? unitPrice * quantity
+        : (calculatedTotal ?? lineTotal ?? price * quantity);
     final totalRounded = total.round();
     displayItem["Total"] = NumberFormat.decimalPattern().format(totalRounded);
     return displayItem;
@@ -222,10 +277,10 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                                 (item["quantity"] ?? "1").toString(),
                               ) ??
                               1;
-                          final updated = {
-                            ...item,
-                            "quantity": (currentQty + 1).toString(),
-                          };
+                          final updated = _withMaterialQuantity(
+                            item,
+                            currentQty + 1,
+                          );
                           notifier.updateMaterial(index, updated);
                         },
                         onDecreaseQuantity: () {
@@ -235,10 +290,10 @@ class _AddMaterialState extends ConsumerState<AddMaterial> {
                               ) ??
                               1;
                           if (currentQty <= 1) return;
-                          final updated = {
-                            ...item,
-                            "quantity": (currentQty - 1).toString(),
-                          };
+                          final updated = _withMaterialQuantity(
+                            item,
+                            currentQty - 1,
+                          );
                           notifier.updateMaterial(index, updated);
                         },
                         showPriceIncrementToggle: true,

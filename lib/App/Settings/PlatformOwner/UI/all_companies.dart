@@ -6,7 +6,6 @@ import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.da
 import 'package:wworker/App/Settings/PlatformOwner/UI/company_details.dart';
 import 'package:wworker/Constant/colors.dart';
 import 'package:wworker/GeneralWidgets/Nav.dart';
-import 'package:wworker/GeneralWidgets/UI/customText.dart';
 
 class AllCompaniesPage extends ConsumerStatefulWidget {
   const AllCompaniesPage({super.key});
@@ -49,7 +48,7 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
     try {
       final result = await _service.getAllCompanies(
         page: currentPage,
-        limit: 50,
+        limit: 20,
         search: searchQuery,
         isActive: filterActive,
       );
@@ -96,85 +95,163 @@ class _AllCompaniesPageState extends ConsumerState<AllCompaniesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
-      appBar: AppBar(
-        backgroundColor: ColorsApp.bgColor,
-        elevation: 0,
-        title: const CustomText(title: "All Companies"),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: Column(
+                children: [
+                  _buildPageHeader(),
+                  const SizedBox(height: 10),
+                  _buildFilterPanel(),
+                ],
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadCompanies,
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                    ? _buildErrorView()
+                    : companies.isEmpty
+                    ? _buildEmptyView()
+                    : _buildCompaniesList(),
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Column(
-        children: [
-          // Search and Filter
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by name or email...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _onSearch('');
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onSubmitted: _onSearch,
-                ),
-                const SizedBox(height: 12),
+    );
+  }
 
-                // Filter Chips
-                Row(
-                  children: [
-                    FilterChip(
-                      label: const Text('All'),
-                      selected: filterActive == null,
-                      onSelected: (_) => _onFilterChange(null),
-                      selectedColor: ColorsApp.btnColor.withOpacity(0.2),
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Active'),
-                      selected: filterActive == true,
-                      onSelected: (_) => _onFilterChange(true),
-                      selectedColor: Colors.green.shade100,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterChip(
-                      label: const Text('Inactive'),
-                      selected: filterActive == false,
-                      onSelected: (_) => _onFilterChange(false),
-                      selectedColor: Colors.red.shade100,
-                    ),
-                  ],
+  Widget _buildPageHeader() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: Nav.pop,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF7F3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE8DED6)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: ColorsApp.btnColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.business, color: ColorsApp.btnColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'All Companies',
+                  style: GoogleFonts.openSans(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                Text(
+                  'Manage platform companies.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                  ),
                 ),
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-          // Companies List
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadCompanies,
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error != null
-                  ? _buildErrorView()
-                  : companies.isEmpty
-                  ? _buildEmptyView()
-                  : _buildCompaniesList(),
+  Widget _buildFilterPanel() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by name or email...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        _onSearch('');
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: ColorsApp.bgColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
+            onSubmitted: _onSearch,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              FilterChip(
+                label: const Text('All'),
+                selected: filterActive == null,
+                onSelected: (_) => _onFilterChange(null),
+                selectedColor: ColorsApp.btnColor.withOpacity(0.2),
+              ),
+              const SizedBox(width: 8),
+              FilterChip(
+                label: const Text('Active'),
+                selected: filterActive == true,
+                onSelected: (_) => _onFilterChange(true),
+                selectedColor: Colors.green.shade100,
+              ),
+              const SizedBox(width: 8),
+              FilterChip(
+                label: const Text('Inactive'),
+                selected: filterActive == false,
+                onSelected: (_) => _onFilterChange(false),
+                selectedColor: Colors.red.shade100,
+              ),
+            ],
           ),
         ],
       ),

@@ -12,6 +12,25 @@ import 'package:wworker/GeneralWidgets/UI/etag_cache.dart';
 class MaterialService {
   final Dio _dio = Dio(BaseOptions(baseUrl: Urls.baseUrl));
 
+  void _debugPrintJson(String label, dynamic data) {
+    assert(() {
+      String text;
+      try {
+        text = jsonEncode(data);
+      } catch (_) {
+        text = data.toString();
+      }
+
+      const chunkSize = 900;
+      debugPrint("📄 [$label] =>");
+      for (var i = 0; i < text.length; i += chunkSize) {
+        final end = (i + chunkSize < text.length) ? i + chunkSize : text.length;
+        debugPrint(text.substring(i, end));
+      }
+      return true;
+    }());
+  }
+
   MaterialService() {
     _dio.interceptors.add(
       InterceptorsWrapper(
@@ -73,6 +92,7 @@ class MaterialService {
         queryParameters: queryParams,
         headers: {"Authorization": "Bearer $token"},
       );
+      _debugPrintJson("GET PRODUCT MATERIALS RESPONSE", data);
 
       return (data is Map<String, dynamic>)
           ? data
@@ -125,6 +145,7 @@ class MaterialService {
         queryParameters: queryParams,
         headers: {"Authorization": "Bearer $token"},
       );
+      _debugPrintJson("GET GROUPED PRODUCT MATERIALS RESPONSE", data);
 
       return (data is Map<String, dynamic>)
           ? data
@@ -286,6 +307,7 @@ class MaterialService {
         );
 
         final data = response.data;
+        _debugPrintJson("CALCULATE MATERIAL COST RESPONSE", data);
         if (data["success"] == true && data["data"] != null) {
           return MaterialCostModel.fromJson(data["data"]);
         }
@@ -322,6 +344,7 @@ class MaterialService {
         );
 
         final data = retry.data;
+        _debugPrintJson("CALCULATE MATERIAL COST FALLBACK RESPONSE", data);
         if (data["success"] == true && data["data"] != null) {
           return MaterialCostModel.fromJson(data["data"]);
         }

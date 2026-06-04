@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.dart';
 import 'package:wworker/Constant/colors.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 
 class AllProductsView extends ConsumerStatefulWidget {
   const AllProductsView({super.key});
@@ -82,34 +83,99 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
-      appBar: AppBar(
-        backgroundColor: ColorsApp.btnColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'All Products',
-          style: GoogleFonts.openSans(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: Column(
+                children: [
+                  _buildPageHeader(),
+                  const SizedBox(height: 10),
+                  _buildFiltersHeader(),
+                ],
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadProducts,
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                    ? _buildErrorView()
+                    : products.isEmpty
+                    ? _buildEmptyView()
+                    : _buildProductsList(),
+              ),
+            ),
+          ],
         ),
       ),
-      body: Column(
-        children: [
-          // Filters Header
-          _buildFiltersHeader(),
+    );
+  }
 
-          // Products List
+  Widget _buildPageHeader() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: Nav.pop,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF7F3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE8DED6)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: ColorsApp.btnColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.inventory_2_outlined, color: ColorsApp.btnColor),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadProducts,
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error != null
-                  ? _buildErrorView()
-                  : products.isEmpty
-                  ? _buildEmptyView()
-                  : _buildProductsList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'All Products',
+                  style: GoogleFonts.openSans(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                Text(
+                  'Review all platform products.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -119,8 +185,12 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
 
   Widget _buildFiltersHeader() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
       child: Column(
         children: [
           // Search Bar
@@ -134,7 +204,10 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
                       icon: const Icon(Icons.clear),
                       onPressed: () {
                         _searchController.clear();
-                        setState(() => searchQuery = null);
+                        setState(() {
+                          searchQuery = null;
+                          currentPage = 1;
+                        });
                         _loadProducts();
                       },
                     )
@@ -147,7 +220,10 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
               ),
             ),
             onSubmitted: (value) {
-              setState(() => searchQuery = value.isNotEmpty ? value : null);
+              setState(() {
+                searchQuery = value.isNotEmpty ? value : null;
+                currentPage = 1;
+              });
               _loadProducts();
             },
           ),
@@ -296,15 +372,19 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
   }
 
   Widget _buildProductsList() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: products.length + 1,
-      itemBuilder: (context, index) {
-        if (index == products.length) {
-          return _buildPaginationInfo();
-        }
-        return _buildProductCard(products[index]);
-      },
+    return Column(
+      children: [
+        _buildPaginationInfo(),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            itemCount: products.length,
+            itemBuilder: (context, index) {
+              return _buildProductCard(products[index]);
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -495,25 +575,48 @@ class _AllProductsViewState extends ConsumerState<AllProductsView> {
   Widget _buildPaginationInfo() {
     if (pagination == null) return const SizedBox();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
+    final hasPrevious = pagination!.page > 1;
+    final hasNext = pagination!.page < pagination!.pages;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
         children: [
-          Text(
-            'Page ${pagination!.page} of ${pagination!.pages}',
-            style: GoogleFonts.openSans(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: ColorsApp.textColor,
+          Expanded(
+            child: Text(
+              'Page ${pagination!.page} of ${pagination!.pages} • Total: ${pagination!.total} products',
+              style: GoogleFonts.openSans(
+                fontSize: 13,
+                color: Colors.grey.shade600,
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Total: ${pagination!.total} products',
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+          IconButton(
+            tooltip: 'Previous page',
+            onPressed: hasPrevious
+                ? () {
+                    setState(() => currentPage -= 1);
+                    _loadProducts();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_left),
+            color: ColorsApp.btnColor,
+          ),
+          IconButton(
+            tooltip: 'Next page',
+            onPressed: hasNext
+                ? () {
+                    setState(() => currentPage += 1);
+                    _loadProducts();
+                  }
+                : null,
+            icon: const Icon(Icons.chevron_right),
+            color: ColorsApp.btnColor,
           ),
         ],
       ),

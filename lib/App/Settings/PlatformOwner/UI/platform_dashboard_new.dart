@@ -76,8 +76,8 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     });
 
     try {
-      final result = await _service.getDashboardStats();
-      final companiesResult = await _service.getAllCompanies(limit: 50);
+      final result = await _service.getDashboardStats(recentLimit: 5);
+      final companiesResult = await _service.getAllCompanies(limit: 1);
 
       if (result['success'] == true) {
         final loadedCompanies = companiesResult['success'] == true
@@ -150,102 +150,114 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Modern App Bar
-          _buildSliverAppBar(),
-
-          // Content
-          SliverToBoxAdapter(
-            child: RefreshIndicator(
-              onRefresh: _loadDashboardData,
-              child: isLoading
-                  ? SizedBox(
-                      height: MediaQuery.of(context).size.height - 200,
-                      child: const Center(child: CircularProgressIndicator()),
-                    )
-                  : error != null
-                  ? SizedBox(
-                      height: MediaQuery.of(context).size.height - 200,
-                      child: _buildErrorView(),
-                    )
-                  : _buildDashboardContent(),
-            ),
-          ),
-        ],
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: _loadDashboardData,
+          child: isLoading
+              ? SizedBox(
+                  height: MediaQuery.of(context).size.height - 120,
+                  child: const Center(child: CircularProgressIndicator()),
+                )
+              : error != null
+              ? SizedBox(
+                  height: MediaQuery.of(context).size.height - 120,
+                  child: _buildErrorView(),
+                )
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(
+                    parent: BouncingScrollPhysics(),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                  child: _buildDashboardContent(),
+                ),
+        ),
       ),
     );
   }
 
-  Widget _buildSliverAppBar() {
-    return SliverAppBar(
-      expandedHeight: 160,
-      floating: false,
-      pinned: true,
-      backgroundColor: ColorsApp.btnColor,
-      foregroundColor: Colors.white,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [ColorsApp.btnColor, ColorsApp.btnColor.withOpacity(0.8)],
-            ),
+  Widget _buildHeaderCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.admin_panel_settings,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Platform Dashboard',
-                              style: GoogleFonts.openSans(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Manage your platform',
-                              style: GoogleFonts.openSans(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+        ],
+      ),
+      child: Row(
+        children: [
+          InkWell(
+            onTap: Nav.pop,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF7F3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE8DED6)),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new_rounded,
+                size: 20,
+                color: Color(0xFF211D1A),
               ),
             ),
           ),
-        ),
+          const SizedBox(width: 10),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: ColorsApp.btnColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Icon(
+              Icons.admin_panel_settings_outlined,
+              color: ColorsApp.btnColor,
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Platform Dashboard',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    fontSize: 19,
+                    height: 1.16,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF211D1A),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Manage approvals, companies, and catalog data.',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    height: 1.3,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -290,38 +302,22 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       opacity: _fadeAnimation,
       child: SlideTransition(
         position: _slideAnimation,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Stats Overview Cards
-              _buildStatsOverview(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderCard(),
+            const SizedBox(height: 14),
 
-              const SizedBox(height: 0),
+            _buildStatsOverview(),
 
-              // Quick Actions Grid
-              _buildQuickActionsGrid(),
+            const SizedBox(height: 14),
 
-              const SizedBox(height: 16),
+            _buildQuickActionsGrid(),
 
-              _buildMaterialUpdateSection(),
+            const SizedBox(height: 14),
 
-              // Recent Companies
-              if (activity != null && activity!.recentCompanies.isNotEmpty) ...[
-                _buildSectionHeader(
-                  'Recent Companies',
-                  activity!.recentCompanies.length,
-                  icon: Icons.business,
-                  onSeeAll: () => Nav.push(const AllCompaniesPage()),
-                ),
-                const SizedBox(height: 2),
-                _buildRecentCompaniesList(),
-              ],
-
-              const SizedBox(height: 12),
-            ],
-          ),
+            _buildMaterialUpdateSection(),
+          ],
         ),
       ),
     );
@@ -365,6 +361,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   Icons.business_center,
                   const Color(0xFF667EEA),
                   0,
+                  onTap: () => Nav.push(const AllCompaniesPage()),
                 ),
                 _buildAnimatedStatCard(
                   'Products',
@@ -373,6 +370,7 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   Icons.inventory_2_outlined,
                   const Color(0xFFF59E0B),
                   100,
+                  onTap: () => Nav.push(const AllProductsView()),
                 ),
                 _buildAnimatedStatCard(
                   'Orders',
@@ -404,8 +402,9 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
     String subtitle,
     IconData icon,
     Color color,
-    int delay,
-  ) {
+    int delay, {
+    VoidCallback? onTap,
+  }) {
     return TweenAnimationBuilder<double>(
       duration: Duration(milliseconds: 600 + delay),
       tween: Tween(begin: 0.0, end: 1.0),
@@ -413,66 +412,75 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
       builder: (context, animValue, child) {
         return Transform.scale(
           scale: animValue,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: color.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(icon, size: 24, color: color),
-                    ),
-                    Icon(
-                      Icons.trending_up,
-                      color: Colors.grey.shade300,
-                      size: 20,
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  value,
-                  style: GoogleFonts.openSans(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: ColorsApp.textColor,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(icon, size: 24, color: color),
+                        ),
+                        Icon(
+                          onTap == null
+                              ? Icons.trending_up
+                              : Icons.arrow_forward_ios_rounded,
+                          color: Colors.grey.shade300,
+                          size: onTap == null ? 20 : 16,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      value,
+                      style: GoogleFonts.openSans(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: ColorsApp.textColor,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: GoogleFonts.openSans(
+                        fontSize: 13,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.openSans(
+                        fontSize: 11,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  label,
-                  style: GoogleFonts.openSans(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.openSans(
-                    fontSize: 11,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         );
@@ -508,18 +516,6 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
               childAspectRatio: aspectRatio,
               children: [
                 _buildActionCard(
-                  'All Products',
-                  Icons.grid_view,
-                  const Color(0xFF667EEA),
-                  () => Nav.push(const AllProductsView()),
-                ),
-                _buildActionCard(
-                  'Companies',
-                  Icons.business,
-                  const Color(0xFF10B981),
-                  () => Nav.push(const AllCompaniesPage()),
-                ),
-                _buildActionCard(
                   'Analytics',
                   Icons.analytics,
                   const Color(0xFF8B5CF6),
@@ -530,12 +526,6 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
                   Icons.science,
                   const Color(0xFFEC4899),
                   () => Nav.push(const PendingMaterialsPage()),
-                ),
-                _buildActionCard(
-                  'Material Update',
-                  Icons.tune,
-                  const Color(0xFF0EA5E9),
-                  () => Nav.push(const MaterialUpdatesPage()),
                 ),
                 _buildActionCard(
                   'Create Material',
@@ -702,211 +692,6 @@ class _PlatformDashboardNewState extends ConsumerState<PlatformDashboardNew>
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildSectionHeader(
-    String title,
-    int count, {
-    required IconData icon,
-    VoidCallback? onSeeAll,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: ColorsApp.btnColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon, color: ColorsApp.btnColor, size: 20),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              title,
-              style: GoogleFonts.openSans(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: ColorsApp.textColor,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: ColorsApp.btnColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                count.toString(),
-                style: GoogleFonts.openSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: ColorsApp.btnColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        if (onSeeAll != null)
-          TextButton(
-            onPressed: onSeeAll,
-            child: Row(
-              children: [
-                Text(
-                  'See All',
-                  style: GoogleFonts.openSans(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: ColorsApp.btnColor,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 12,
-                  color: ColorsApp.btnColor,
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildRecentCompaniesList() {
-    final companies = activity!.recentCompanies.take(3).toList();
-
-    return Column(
-      children: companies
-          .asMap()
-          .entries
-          .map((entry) => _buildCompanyCard(entry.value, entry.key))
-          .toList(),
-    );
-  }
-
-  Widget _buildCompanyCard(CompanyInfo company, int index) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 400 + (index * 100)),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(opacity: value, child: child),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    ColorsApp.btnColor.withOpacity(0.8),
-                    ColorsApp.btnColor,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.business, color: Colors.white, size: 24),
-            ),
-            const SizedBox(width: 16),
-
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    company.name,
-                    style: GoogleFonts.openSans(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: ColorsApp.textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      if (company.stats != null) ...[
-                        _buildMiniStat(
-                          company.stats!.products,
-                          Icons.inventory_2,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniStat(
-                          company.stats!.orders,
-                          Icons.shopping_cart,
-                        ),
-                        const SizedBox(width: 8),
-                        _buildMiniStat(company.stats!.users, Icons.people),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: company.isActive
-                    ? Colors.green.shade50
-                    : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                company.isActive ? 'Active' : 'Inactive',
-                style: GoogleFonts.openSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: company.isActive
-                      ? Colors.green.shade700
-                      : Colors.red.shade700,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMiniStat(int value, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 14, color: Colors.grey.shade500),
-        const SizedBox(width: 4),
-        Text(
-          value.toString(),
-          style: GoogleFonts.openSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade700,
-          ),
-        ),
-      ],
     );
   }
 }

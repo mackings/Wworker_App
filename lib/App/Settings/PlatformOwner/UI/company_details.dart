@@ -26,8 +26,11 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
 
   CompanyUsageDetails? companyDetails;
   bool isLoading = true;
+  bool isLoadingMoreRecentOrders = false;
   String? error;
   bool usingEmbeddedFallback = false;
+  int recentOrdersPage = 1;
+  static const int _recentOrdersLimit = 10;
 
   @override
   void initState() {
@@ -38,12 +41,17 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
   Future<void> _loadCompanyDetails() async {
     setState(() {
       isLoading = true;
+      recentOrdersPage = 1;
       error = null;
       usingEmbeddedFallback = false;
     });
 
     try {
-      final result = await _service.getCompanyUsage(widget.companyId);
+      final result = await _service.getCompanyUsage(
+        widget.companyId,
+        recentOrdersPage: recentOrdersPage,
+        recentOrdersLimit: _recentOrdersLimit,
+      );
 
       if (result['success'] == true) {
         setState(() {
@@ -77,6 +85,60 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
         error = 'An error occurred: $e';
         isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadMoreRecentOrders() async {
+    final currentDetails = companyDetails;
+    if (currentDetails == null || isLoadingMoreRecentOrders) return;
+
+    final pagination = currentDetails.recentOrdersPagination;
+    final hasNext = pagination == null
+        ? currentDetails.recentOrders.length >= _recentOrdersLimit
+        : pagination.page < pagination.pages;
+    if (!hasNext) return;
+
+    setState(() => isLoadingMoreRecentOrders = true);
+
+    try {
+      final nextPage = recentOrdersPage + 1;
+      final result = await _service.getCompanyUsage(
+        widget.companyId,
+        recentOrdersPage: nextPage,
+        recentOrdersLimit: _recentOrdersLimit,
+      );
+
+      if (!mounted) return;
+
+      if (result['success'] == true) {
+        final nextDetails = CompanyUsageDetails.fromJson(result['data']);
+        setState(() {
+          recentOrdersPage = nextPage;
+          companyDetails = CompanyUsageDetails(
+            company: currentDetails.company,
+            stats: currentDetails.stats,
+            recentOrders: [
+              ...currentDetails.recentOrders,
+              ...nextDetails.recentOrders,
+            ],
+            recentOrdersPagination: nextDetails.recentOrdersPagination,
+          );
+          isLoadingMoreRecentOrders = false;
+        });
+      } else {
+        setState(() => isLoadingMoreRecentOrders = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to load more orders'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoadingMoreRecentOrders = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load more orders: $e')));
     }
   }
 
@@ -159,6 +221,7 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
             _buildSectionTitle('Recent Orders'),
             const SizedBox(height: 12),
             _buildRecentOrders(companyDetails!.recentOrders),
+            _buildRecentOrdersPagination(companyDetails!),
           ],
         ],
       ),
@@ -743,6 +806,35 @@ class _CompanyDetailsPageState extends ConsumerState<CompanyDetailsPage> {
   Widget _buildRecentOrders(List<RecentOrder> orders) {
     return Column(
       children: orders.map((order) => _buildOrderCard(order)).toList(),
+    );
+  }
+
+  Widget _buildRecentOrdersPagination(CompanyUsageDetails details) {
+    final pagination = details.recentOrdersPagination;
+    final hasNext = pagination == null
+        ? details.recentOrders.length >= _recentOrdersLimit
+        : pagination.page < pagination.pages;
+    if (!hasNext) return const SizedBox();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 12),
+      child: SizedBox(
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: isLoadingMoreRecentOrders ? null : _loadMoreRecentOrders,
+          child: isLoadingMoreRecentOrders
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(
+                  pagination == null
+                      ? 'Load more orders'
+                      : 'Load more orders (${pagination.page} of ${pagination.pages})',
+                ),
+        ),
+      ),
     );
   }
 

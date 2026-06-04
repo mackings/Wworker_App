@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Api/platform_owner_service.dart';
 import 'package:wworker/App/Settings/PlatformOwner/Model/platform_owner_model.dart';
 import 'package:wworker/Constant/colors.dart';
+import 'package:wworker/GeneralWidgets/Nav.dart';
 import 'package:wworker/GeneralWidgets/UI/customBtn.dart';
 
 class PendingMaterialsPage extends ConsumerStatefulWidget {
@@ -27,6 +28,8 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   int currentPage = 1;
   String? filterCategory;
   String? searchQuery;
+  bool _isBulkProcessing = false;
+  final Set<String> _selectedMaterialIds = <String>{};
 
   List<String> _categoryOptions = [];
   final NumberFormat _moneyFmt = NumberFormat('#,##0.##');
@@ -69,6 +72,9 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
 
         setState(() {
           materials = loaded;
+          _selectedMaterialIds.removeWhere(
+            (id) => !loaded.any((material) => material.id == id),
+          );
           _categoryOptions = nextCategories;
           pagination = MaterialPaginationInfo.fromJson(
             result['pagination'] ?? {},
@@ -127,7 +133,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       helperText: 'Provide a clear reason for rejection.',
       optional: false,
       confirmLabel: 'Reject',
-      confirmColor: ColorsApp.btnColor.withOpacity(0.9),
+      confirmColor: ColorsApp.btnColor.withValues(alpha: 0.9),
     );
     if (!mounted) return;
     if (reason == null || reason.isEmpty) {
@@ -157,6 +163,143 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         ),
       );
     }
+  }
+
+  Future<void> _approveSelectedMaterials() async {
+    final selectedMaterials = materials
+        .where((material) => _selectedMaterialIds.contains(material.id))
+        .toList();
+    if (selectedMaterials.isEmpty || _isBulkProcessing) return;
+
+    final notes = await _showNotesSheet(
+      title: 'Approve ${selectedMaterials.length} Materials',
+      helperText: 'Add optional notes for the selected companies.',
+      optional: true,
+      confirmLabel: 'Approve Selected',
+      confirmColor: ColorsApp.btnColor,
+    );
+    if (notes == null) return;
+
+    setState(() => _isBulkProcessing = true);
+    final result = await _service.approveMaterialsBulk(
+      selectedMaterials.map((material) => material.id).toList(),
+      notes: notes,
+    );
+
+    if (!mounted) return;
+    setState(() => _isBulkProcessing = false);
+
+    if (result['success'] == true) {
+      _selectedMaterialIds.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_bulkResultMessage(result, countKey: 'approvedCount')),
+          backgroundColor: Colors.green,
+        ),
+      );
+      _loadMaterials();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to approve materials'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _rejectSelectedMaterials() async {
+    final selectedMaterials = materials
+        .where((material) => _selectedMaterialIds.contains(material.id))
+        .toList();
+    if (selectedMaterials.isEmpty || _isBulkProcessing) return;
+
+    final reason = await _showNotesSheet(
+      title: 'Reject ${selectedMaterials.length} Materials',
+      helperText:
+          'Provide a clear reason for rejecting the selected materials.',
+      optional: false,
+      confirmLabel: 'Reject Selected',
+      confirmColor: ColorsApp.btnColor.withValues(alpha: 0.9),
+    );
+    if (!mounted) return;
+    if (reason == null || reason.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rejection reason is required')),
+      );
+      return;
+    }
+
+    setState(() => _isBulkProcessing = true);
+    final result = await _service.rejectMaterialsBulk(
+      selectedMaterials.map((material) => material.id).toList(),
+      reason: reason,
+    );
+
+    if (!mounted) return;
+    setState(() => _isBulkProcessing = false);
+
+    if (result['success'] == true) {
+      _selectedMaterialIds.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_bulkResultMessage(result, countKey: 'rejectedCount')),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      _loadMaterials();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result['message'] ?? 'Failed to reject materials'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _bulkResultMessage(
+    Map<String, dynamic> result, {
+    required String countKey,
+  }) {
+    final data = result['data'] as Map<String, dynamic>? ?? {};
+    final count = data[countKey];
+    final skippedMaterials = data['skippedMaterials'];
+    final invalidIds = data['invalidIds'];
+    final notFoundIds = data['notFoundIds'];
+    final details = <String>[
+      if (count != null) '$count completed',
+      if (skippedMaterials is List && skippedMaterials.isNotEmpty)
+        '${skippedMaterials.length} skipped',
+      if (invalidIds is List && invalidIds.isNotEmpty)
+        '${invalidIds.length} invalid',
+      if (notFoundIds is List && notFoundIds.isNotEmpty)
+        '${notFoundIds.length} not found',
+    ].join('. ');
+
+    final message = result['message']?.toString() ?? 'Bulk action completed';
+    return details.isEmpty ? message : '$message. $details';
+  }
+
+  void _toggleMaterialSelection(PendingMaterial material, bool? selected) {
+    setState(() {
+      if (selected == true) {
+        _selectedMaterialIds.add(material.id);
+      } else {
+        _selectedMaterialIds.remove(material.id);
+      }
+    });
+  }
+
+  void _toggleVisibleSelection(bool selected) {
+    final visibleIds = materials.map((material) => material.id);
+    setState(() {
+      if (selected) {
+        _selectedMaterialIds.addAll(visibleIds);
+      } else {
+        _selectedMaterialIds.removeAll(visibleIds);
+      }
+    });
   }
 
   Future<String?> _showNotesSheet({
@@ -301,36 +444,105 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ColorsApp.bgColor,
-      appBar: AppBar(
-        backgroundColor: ColorsApp.btnColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Text(
-          'Pending Materials',
-          style: GoogleFonts.openSans(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+              child: Column(
+                children: [
+                  _buildPageHeader(),
+                  const SizedBox(height: 10),
+                  _buildFiltersHeader(),
+                ],
+              ),
+            ),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _loadMaterials,
+                child: isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
+                    ? _buildErrorView()
+                    : materials.isEmpty
+                    ? _buildEmptyView()
+                    : Column(
+                        children: [
+                          _buildPaginationInfo(),
+                          _buildBulkActionBar(),
+                          Expanded(child: _buildMaterialsList()),
+                        ],
+                      ),
+              ),
+            ),
+          ],
         ),
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildPageHeader() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
         children: [
-          _buildFiltersHeader(),
+          InkWell(
+            onTap: Nav.pop,
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAF7F3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE8DED6)),
+              ),
+              child: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: ColorsApp.btnColor.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.science_outlined, color: ColorsApp.btnColor),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _loadMaterials,
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error != null
-                  ? _buildErrorView()
-                  : materials.isEmpty
-                  ? _buildEmptyView()
-                  : Column(
-                      children: [
-                        _buildPaginationInfo(),
-                        Expanded(child: _buildMaterialsList()),
-                      ],
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pending Materials',
+                  style: GoogleFonts.openSans(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+                Text(
+                  'Approve or reject submitted materials.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -340,91 +552,60 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
 
   Widget _buildFiltersHeader() {
     return Container(
-      color: ColorsApp.bgColor,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE8DED6)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Materials',
-            style: GoogleFonts.openSans(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: ColorsApp.textColor,
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search by company name...',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          searchQuery = null;
+                          currentPage = 1;
+                        });
+                        _loadMaterials();
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: ColorsApp.bgColor,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Approve or reject materials submitted by companies.',
-            style: GoogleFonts.openSans(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            onChanged: (_) => setState(() {}),
+            onSubmitted: (value) {
+              setState(() {
+                searchQuery = value.isNotEmpty ? value : null;
+                currentPage = 1;
+              });
+              _loadMaterials();
+            },
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search by company name...',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                searchQuery = null;
-                                currentPage = 1;
-                              });
-                              _loadMaterials();
-                            },
-                          )
-                        : null,
-                    filled: true,
-                    fillColor: ColorsApp.bgColor,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                  onChanged: (_) => setState(() {}),
-                  onSubmitted: (value) {
-                    setState(() {
-                      searchQuery = value.isNotEmpty ? value : null;
-                      currentPage = 1;
-                    });
-                    _loadMaterials();
-                  },
-                ),
-                const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip('All', null),
-                      const SizedBox(width: 8),
-                      ..._categoryOptions.map(
-                        (cat) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: _buildFilterChip(cat, cat),
-                        ),
-                      ),
-                    ],
+                _buildFilterChip('All', null),
+                const SizedBox(width: 8),
+                ..._categoryOptions.map(
+                  (cat) => Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: _buildFilterChip(cat, cat),
                   ),
                 ),
               ],
@@ -454,7 +635,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         });
         _loadMaterials();
       },
-      selectedColor: ColorsApp.btnColor.withOpacity(0.16),
+      selectedColor: ColorsApp.btnColor.withValues(alpha: 0.16),
       checkmarkColor: ColorsApp.btnColor,
       backgroundColor: Colors.grey.shade100,
     );
@@ -559,7 +740,30 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildMaterialImage(material),
+          Stack(
+            children: [
+              _buildMaterialImage(material),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Checkbox(
+                    value: _selectedMaterialIds.contains(material.id),
+                    onChanged: _isBulkProcessing
+                        ? null
+                        : (selected) =>
+                              _toggleMaterialSelection(material, selected),
+                    activeColor: ColorsApp.btnColor,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+            ],
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
             child: Column(
@@ -573,7 +777,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
+                        color: Colors.orange.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -593,7 +797,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -614,7 +818,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.purple.withOpacity(0.1),
+                          color: Colors.purple.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
@@ -847,13 +1051,13 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: color.withOpacity(0.7)),
+          Icon(icon, size: 14, color: color.withValues(alpha: 0.7)),
           const SizedBox(width: 6),
           Text(
             label,
@@ -874,7 +1078,7 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Colors.green.withOpacity(0.12),
+            color: Colors.green.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
@@ -964,6 +1168,128 @@ class _PendingMaterialsPageState extends ConsumerState<PendingMaterialsPage> {
             icon: const Icon(Icons.chevron_right),
             color: ColorsApp.btnColor,
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBulkActionBar() {
+    final visibleIds = materials.map((material) => material.id).toSet();
+    final selectedVisibleCount = visibleIds
+        .where(_selectedMaterialIds.contains)
+        .length;
+    final allVisibleSelected =
+        visibleIds.isNotEmpty && selectedVisibleCount == visibleIds.length;
+    final selectedCount = _selectedMaterialIds.length;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Checkbox(
+                value: allVisibleSelected,
+                onChanged: visibleIds.isEmpty || _isBulkProcessing
+                    ? null
+                    : (selected) => _toggleVisibleSelection(selected == true),
+                activeColor: ColorsApp.btnColor,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  selectedCount == 0
+                      ? 'Select visible materials'
+                      : '$selectedCount selected',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+              ),
+              if (selectedCount > 0)
+                TextButton(
+                  onPressed: _isBulkProcessing
+                      ? null
+                      : () => setState(_selectedMaterialIds.clear),
+                  child: Text(
+                    'Clear',
+                    style: GoogleFonts.openSans(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (selectedCount > 0) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isBulkProcessing
+                        ? null
+                        : _approveSelectedMaterials,
+                    icon: _isBulkProcessing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.done_all, size: 18),
+                    label: Text(
+                      _isBulkProcessing ? 'Processing...' : 'Approve',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: ColorsApp.btnColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isBulkProcessing
+                        ? null
+                        : _rejectSelectedMaterials,
+                    icon: const Icon(Icons.block, size: 18),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: ColorsApp.btnColor,
+                      side: BorderSide(color: ColorsApp.btnColor),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

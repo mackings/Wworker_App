@@ -492,6 +492,8 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
   String _selectedUpdatedFilter = _allFilter;
   bool _pricedOnly = false;
   bool _unpricedOnly = false;
+  bool _isBulkDeleting = false;
+  final Set<String> _selectedMaterialIds = <String>{};
   int _currentPage = 1;
   int _totalPages = 1;
   int _totalItems = 0;
@@ -561,6 +563,9 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
     };
     final nextMaterials = merged.values.toList()
       ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final nextMaterialIds = nextMaterials
+        .map((material) => material.id)
+        .toSet();
     final categoryMap = <String, String>{_allFilter.toLowerCase(): _allFilter};
     for (final material in nextMaterials) {
       final category = material.category.trim();
@@ -596,6 +601,7 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
 
     setState(() {
       _materials = nextMaterials;
+      _selectedMaterialIds.removeWhere((id) => !nextMaterialIds.contains(id));
       _categories = categories;
       _subCategories = subCategories;
       _selectedCategory = selectedCategory;
@@ -771,12 +777,211 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
         result['message']?.toString() ?? 'Material deleted successfully',
       );
       if (!mounted) return;
+      _selectedMaterialIds.remove(material.id);
       _loadMaterials();
       return;
     }
 
     await ApiModalSheet.showError(
       result['message']?.toString() ?? 'Failed to delete material',
+    );
+  }
+
+  Future<void> _deleteSelectedMaterials() async {
+    final selectedMaterials = _materials
+        .where((material) => _selectedMaterialIds.contains(material.id))
+        .toList();
+    if (selectedMaterials.isEmpty || _isBulkDeleting) return;
+
+    final confirmed = await _showBulkDeleteMaterialSheet(selectedMaterials);
+    if (confirmed != true) return;
+
+    setState(() => _isBulkDeleting = true);
+    final result = await _service.deletePlatformMaterialsBulk(
+      selectedMaterials.map((material) => material.id).toList(),
+    );
+
+    if (!mounted) return;
+
+    setState(() => _isBulkDeleting = false);
+
+    if (result['success'] == true) {
+      final data = result['data'] as Map<String, dynamic>? ?? {};
+      final deletedCount = data['deletedCount']?.toString();
+      final notFoundIds = data['notFoundIds'];
+      final invalidIds = data['invalidIds'];
+      final details = <String>[
+        if (deletedCount != null) '$deletedCount deleted',
+        if (notFoundIds is List && notFoundIds.isNotEmpty)
+          '${notFoundIds.length} not found',
+        if (invalidIds is List && invalidIds.isNotEmpty)
+          '${invalidIds.length} invalid',
+      ].join('. ');
+
+      _selectedMaterialIds.clear();
+      await ApiModalSheet.showSuccess(
+        details.isEmpty
+            ? result['message']?.toString() ?? 'Materials deleted successfully'
+            : '${result['message'] ?? 'Materials deleted successfully'}. $details',
+      );
+      if (!mounted) return;
+      _loadMaterials();
+      return;
+    }
+
+    await ApiModalSheet.showError(
+      result['message']?.toString() ?? 'Failed to delete materials',
+    );
+  }
+
+  void _toggleMaterialSelection(DatabaseMaterial material, bool? selected) {
+    setState(() {
+      if (selected == true) {
+        _selectedMaterialIds.add(material.id);
+      } else {
+        _selectedMaterialIds.remove(material.id);
+      }
+    });
+  }
+
+  void _toggleVisibleSelection(bool selected) {
+    final visibleIds = _filteredMaterials.map((material) => material.id);
+    setState(() {
+      if (selected) {
+        _selectedMaterialIds.addAll(visibleIds);
+      } else {
+        _selectedMaterialIds.removeAll(visibleIds);
+      }
+    });
+  }
+
+  Future<bool?> _showBulkDeleteMaterialSheet(List<DatabaseMaterial> materials) {
+    final previewNames = materials.take(4).map((material) => material.name);
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+        return Container(
+          padding: EdgeInsets.fromLTRB(20, 16, 20, bottomInset + 20),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 44,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.delete_sweep_outlined,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Delete ${materials.length} materials?',
+                        style: GoogleFonts.openSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: ColorsApp.textColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'This will permanently delete the selected global materials.',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    color: Colors.grey.shade700,
+                    height: 1.45,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    [
+                      ...previewNames,
+                      if (materials.length > 4) '+${materials.length - 4} more',
+                    ].join('\n'),
+                    style: GoogleFonts.openSans(
+                      fontSize: 12,
+                      color: Colors.grey.shade700,
+                      height: 1.45,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: ColorsApp.btnColor,
+                          side: BorderSide(color: Colors.grey.shade300),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: GoogleFonts.openSans(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: CustomButton(
+                        text: 'Delete Selected',
+                        onPressed: () => Navigator.pop(context, true),
+                        backgroundColor: Colors.redAccent,
+                        height: 48,
+                        padding: 12,
+                        textSize: 13,
+                        borderRadius: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -979,6 +1184,10 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
             ),
             const SizedBox(height: 16),
             _buildFilterBar(),
+            if (widget.companyName == _globalScopeName) ...[
+              const SizedBox(height: 12),
+              _buildBulkActionBar(),
+            ],
             const SizedBox(height: 16),
             if (_isLoading)
               const Padding(
@@ -1040,6 +1249,17 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
                               ],
                             ),
                           ),
+                          if (widget.companyName == _globalScopeName) ...[
+                            const SizedBox(width: 8),
+                            Checkbox(
+                              value: _selectedMaterialIds.contains(material.id),
+                              onChanged: (selected) =>
+                                  _toggleMaterialSelection(material, selected),
+                              activeColor: ColorsApp.btnColor,
+                              materialTapTargetSize:
+                                  MaterialTapTargetSize.shrinkWrap,
+                            ),
+                          ],
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -1143,6 +1363,84 @@ class _CompanyMaterialUpdatePageState extends State<CompanyMaterialUpdatePage> {
       child: Text(
         label,
         style: GoogleFonts.openSans(fontSize: 11, color: Colors.grey.shade700),
+      ),
+    );
+  }
+
+  Widget _buildBulkActionBar() {
+    final visibleIds = _filteredMaterials
+        .map((material) => material.id)
+        .toSet();
+    final selectedVisibleCount = visibleIds
+        .where(_selectedMaterialIds.contains)
+        .length;
+    final allVisibleSelected =
+        visibleIds.isNotEmpty && selectedVisibleCount == visibleIds.length;
+    final selectedCount = _selectedMaterialIds.length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Checkbox(
+                value: allVisibleSelected,
+                onChanged: visibleIds.isEmpty || _isBulkDeleting
+                    ? null
+                    : (selected) => _toggleVisibleSelection(selected == true),
+                activeColor: ColorsApp.btnColor,
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  selectedCount == 0
+                      ? 'Select visible materials'
+                      : '$selectedCount selected',
+                  style: GoogleFonts.openSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: ColorsApp.textColor,
+                  ),
+                ),
+              ),
+              if (selectedCount > 0)
+                TextButton(
+                  onPressed: _isBulkDeleting
+                      ? null
+                      : () => setState(_selectedMaterialIds.clear),
+                  child: Text(
+                    'Clear',
+                    style: GoogleFonts.openSans(
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (selectedCount > 0) ...[
+            const SizedBox(height: 10),
+            CustomButton(
+              text: _isBulkDeleting
+                  ? 'Deleting...'
+                  : 'Delete $selectedCount Selected',
+              onPressed: _isBulkDeleting ? null : _deleteSelectedMaterials,
+              loading: _isBulkDeleting,
+              backgroundColor: Colors.redAccent,
+              height: 46,
+              padding: 12,
+              textSize: 14,
+              borderRadius: 12,
+              icon: Icons.delete_sweep_outlined,
+            ),
+          ],
+        ],
       ),
     );
   }

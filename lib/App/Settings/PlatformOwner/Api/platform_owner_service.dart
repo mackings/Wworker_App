@@ -98,7 +98,7 @@ class PlatformOwnerService {
   }
 
   /// Get Dashboard Statistics
-  Future<Map<String, dynamic>> getDashboardStats() async {
+  Future<Map<String, dynamic>> getDashboardStats({int recentLimit = 5}) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -109,6 +109,7 @@ class PlatformOwnerService {
 
       final response = await _dio.get(
         '/api/platform/dashboard/stats',
+        queryParameters: {'recentLimit': recentLimit},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -132,7 +133,7 @@ class PlatformOwnerService {
   /// Get All Companies
   Future<Map<String, dynamic>> getAllCompanies({
     int page = 1,
-    int limit = 50,
+    int limit = 20,
     String? search,
     bool? isActive,
   }) async {
@@ -181,7 +182,11 @@ class PlatformOwnerService {
   }
 
   /// Get Company Usage Details
-  Future<Map<String, dynamic>> getCompanyUsage(String companyId) async {
+  Future<Map<String, dynamic>> getCompanyUsage(
+    String companyId, {
+    int recentOrdersPage = 1,
+    int recentOrdersLimit = 10,
+  }) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -192,6 +197,10 @@ class PlatformOwnerService {
 
       final response = await _dio.get(
         '/api/platform/companies/$companyId/usage',
+        queryParameters: {
+          'recentOrdersPage': recentOrdersPage,
+          'recentOrdersLimit': recentOrdersLimit,
+        },
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -435,7 +444,7 @@ class PlatformOwnerService {
   }
 
   /// Get Platform Overview (Analytics)
-  Future<Map<String, dynamic>> getPlatformOverview() async {
+  Future<Map<String, dynamic>> getPlatformOverview({int topLimit = 10}) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -446,6 +455,7 @@ class PlatformOwnerService {
 
       final response = await _dio.get(
         '/api/platform/stats/overview',
+        queryParameters: {'topLimit': topLimit},
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -566,7 +576,15 @@ class PlatformOwnerService {
   }
 
   /// Get Company Profile
-  Future<Map<String, dynamic>> getCompanyProfile(String companyId) async {
+  Future<Map<String, dynamic>> getCompanyProfile(
+    String companyId, {
+    int staffPage = 1,
+    int staffLimit = 20,
+    int recentProductsPage = 1,
+    int recentProductsLimit = 10,
+    int recentOrdersPage = 1,
+    int recentOrdersLimit = 10,
+  }) async {
     try {
       final token = await _getToken();
       if (token == null) {
@@ -577,6 +595,14 @@ class PlatformOwnerService {
 
       final response = await _dio.get(
         '/api/platform/companies/$companyId/profile',
+        queryParameters: {
+          'staffPage': staffPage,
+          'staffLimit': staffLimit,
+          'recentProductsPage': recentProductsPage,
+          'recentProductsLimit': recentProductsLimit,
+          'recentOrdersPage': recentOrdersPage,
+          'recentOrdersLimit': recentOrdersLimit,
+        },
         options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
@@ -687,6 +713,63 @@ class PlatformOwnerService {
     }
   }
 
+  /// Approve multiple pending materials.
+  Future<Map<String, dynamic>> approveMaterialsBulk(
+    List<String> materialIds, {
+    String? notes,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Authentication required'};
+      }
+
+      final ids = materialIds
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (ids.isEmpty) {
+        return {'success': false, 'message': 'Select at least one material'};
+      }
+
+      final body = <String, dynamic>{
+        'materialIds': ids,
+        if (notes != null && notes.trim().isNotEmpty) 'notes': notes.trim(),
+      };
+
+      debugPrint("📤 [APPROVE MATERIALS BULK] COUNT: ${ids.length}");
+
+      final response = await _dio.patch(
+        '/api/platform/materials/approve',
+        data: body,
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [APPROVE MATERIALS BULK SUCCESS]");
+      return {
+        'success': response.data['success'] == true,
+        'message':
+            response.data['message'] ?? 'Materials approved successfully',
+        'data': response.data['data'],
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [APPROVE MATERIALS BULK ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Failed to approve materials',
+        'errors': e.response?.data['errors'],
+        'data': e.response?.data['data'],
+      };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
   /// Reject Material
   Future<Map<String, dynamic>> rejectMaterial(
     String materialId, {
@@ -719,6 +802,61 @@ class PlatformOwnerService {
       return {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to reject material',
+      };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Reject multiple pending materials.
+  Future<Map<String, dynamic>> rejectMaterialsBulk(
+    List<String> materialIds, {
+    required String reason,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Authentication required'};
+      }
+
+      final ids = materialIds
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (ids.isEmpty) {
+        return {'success': false, 'message': 'Select at least one material'};
+      }
+      if (reason.trim().isEmpty) {
+        return {'success': false, 'message': 'Rejection reason is required'};
+      }
+
+      debugPrint("📤 [REJECT MATERIALS BULK] COUNT: ${ids.length}");
+
+      final response = await _dio.patch(
+        '/api/platform/materials/reject',
+        data: {'materialIds': ids, 'reason': reason.trim()},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      debugPrint("✅ [REJECT MATERIALS BULK SUCCESS]");
+      return {
+        'success': response.data['success'] == true,
+        'message':
+            response.data['message'] ?? 'Materials rejected successfully',
+        'data': response.data['data'],
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [REJECT MATERIALS BULK ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Failed to reject materials',
+        'errors': e.response?.data['errors'],
+        'data': e.response?.data['data'],
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
@@ -993,6 +1131,55 @@ class PlatformOwnerService {
         'success': false,
         'message': e.response?.data['message'] ?? 'Failed to delete material',
         'errors': e.response?.data['errors'],
+      };
+    } catch (e) {
+      debugPrint("⚠️ [UNEXPECTED ERROR] => $e");
+      return {'success': false, 'message': 'An unexpected error occurred'};
+    }
+  }
+
+  /// Delete multiple global platform materials.
+  Future<Map<String, dynamic>> deletePlatformMaterialsBulk(
+    List<String> materialIds,
+  ) async {
+    try {
+      final token = await _getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Authentication required'};
+      }
+
+      final ids = materialIds
+          .map((id) => id.trim())
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (ids.isEmpty) {
+        return {'success': false, 'message': 'Select at least one material'};
+      }
+
+      debugPrint("📤 [DELETE PLATFORM MATERIALS BULK] COUNT: ${ids.length}");
+
+      final response = await _dio.delete(
+        '/api/platform/materials',
+        data: {'confirm': true, 'materialIds': ids},
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      return {
+        'success': response.data['success'] == true,
+        'message': response.data['message'] ?? 'Materials deleted successfully',
+        'data': response.data['data'],
+      };
+    } on DioException catch (e) {
+      debugPrint(
+        "⚠️ [DELETE PLATFORM MATERIALS BULK ERROR] => ${e.response?.data ?? e.message}",
+      );
+      return {
+        'success': false,
+        'message': e.response?.data['message'] ?? 'Failed to delete materials',
+        'errors': e.response?.data['errors'],
+        'data': e.response?.data['data'],
       };
     } catch (e) {
       debugPrint("⚠️ [UNEXPECTED ERROR] => $e");

@@ -572,6 +572,14 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     return 'N${_thousands.format(value.round())}';
   }
 
+  String _formatCurrency(double value) {
+    final hasDecimals = (value - value.roundToDouble()).abs() >= 0.005;
+    final formatted = hasDecimals
+        ? NumberFormat('#,##0.##').format(value)
+        : _thousands.format(value.round());
+    return '₦$formatted';
+  }
+
   bool _isUnpricedQuantityMaterial(MaterialModel? material) {
     if (!_usesQuantityBasedInput(material)) return false;
     final value = material?.pricePerUnit ?? material?.catalogPrice;
@@ -1317,6 +1325,15 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
   }
 
+  void _showAddValidationMessage(String message, {Color? backgroundColor}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: backgroundColor ?? Colors.redAccent,
+      ),
+    );
+  }
+
   void _handleAddItem() {
     final material = _selectedMaterial;
     final requiresProjectSize = _requiresProjectSize(material);
@@ -1328,23 +1345,46 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final needsManualPrice = _costCalculation?.calculation.needsPricing == true;
     final usesManualPrice = manualUnitPrice != null && manualUnitPrice > 0;
 
-    // Validate all required fields
-    if (material == null ||
-        materialTypeController.text.trim().isEmpty ||
-        (requiresProjectSize && widthController.text.isEmpty) ||
-        (requiresProjectSize && lengthController.text.isEmpty) ||
-        (requiresProjectSize && unit == null) ||
-        (_usesQuantityBasedInput(material) && quantity <= 0) ||
-        (requiresThickness &&
-            (thicknessValue == null || thicknessValue.isEmpty)) ||
-        _costCalculation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            "Please fill in all fields and calculate costs before adding.",
-          ),
-          backgroundColor: Colors.redAccent,
-        ),
+    if (material == null) {
+      _showAddValidationMessage("Select a material before adding.");
+      return;
+    }
+
+    if (materialTypeController.text.trim().isEmpty) {
+      _showAddValidationMessage("Select a material variant before adding.");
+      return;
+    }
+
+    if (requiresProjectSize && lengthController.text.trim().isEmpty) {
+      _showAddValidationMessage("Enter the project length for this material.");
+      return;
+    }
+
+    if (requiresProjectSize && widthController.text.trim().isEmpty) {
+      _showAddValidationMessage("Enter the project width for this material.");
+      return;
+    }
+
+    if (requiresProjectSize && unit == null) {
+      _showAddValidationMessage("Select the project size unit.");
+      return;
+    }
+
+    if (usesQuantityBasedInput && quantity <= 0) {
+      _showAddValidationMessage("Enter a quantity greater than zero.");
+      return;
+    }
+
+    if (requiresThickness &&
+        (thicknessValue == null || thicknessValue.isEmpty)) {
+      _showAddValidationMessage("Enter the material thickness.");
+      return;
+    }
+
+    if (_costCalculation == null) {
+      _showAddValidationMessage(
+        "Cost has not been calculated yet. Check the size values and wait for calculation.",
+        backgroundColor: Colors.orange,
       );
       return;
     }
@@ -2237,12 +2277,12 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             _buildResultRow("Quantity:", _formatQuantity(quantity)),
             _buildResultRow(
               _unitPriceLabel(_selectedMaterial),
-              "₦${effectiveUnitPrice.toStringAsFixed(2)}",
+              _formatCurrency(effectiveUnitPrice),
             ),
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
               "Project Cost:",
-              "₦${effectiveProjectCost.toStringAsFixed(2)}",
+              _formatCurrency(effectiveProjectCost),
             ),
           ] else ...[
             _buildResultRow(
@@ -2256,16 +2296,16 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
               "Price per sq m:",
-              "₦${displayPricePerSqm.toStringAsFixed(2)}",
+              _formatCurrency(displayPricePerSqm),
             ),
             _buildResultRow(
               "Full Board Price:",
-              "₦${displayFullUnitPrice.toStringAsFixed(2)}",
+              _formatCurrency(displayFullUnitPrice),
             ),
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
               "Project Cost:",
-              "₦${effectiveProjectCost.toStringAsFixed(2)}",
+              _formatCurrency(effectiveProjectCost),
             ),
             _buildResultRow(
               "Billable Units:",

@@ -356,15 +356,20 @@ class CompanyUsageDetails {
   final CompanyInfo company;
   final DetailedProductStats stats;
   final List<RecentOrder> recentOrders;
+  final PaginationInfo? recentOrdersPagination;
 
   CompanyUsageDetails({
     required this.company,
     required this.stats,
     required this.recentOrders,
+    this.recentOrdersPagination,
   });
 
   factory CompanyUsageDetails.fromJson(Map<String, dynamic> json) {
     final recentOrderItems = json['recentOrders'] as List<dynamic>? ?? [];
+    final recentOrdersPaginationJson =
+        json['recentOrdersPagination'] ??
+        (json['pagination'] is Map ? json['pagination']['recentOrders'] : null);
     return CompanyUsageDetails(
       company: CompanyInfo.fromJson(json['company'] ?? {}),
       stats: DetailedProductStats.fromJson(json['stats'] ?? {}),
@@ -372,6 +377,11 @@ class CompanyUsageDetails {
           .whereType<Map>()
           .map((item) => RecentOrder.fromJson(Map<String, dynamic>.from(item)))
           .toList(),
+      recentOrdersPagination: recentOrdersPaginationJson is Map
+          ? PaginationInfo.fromJson(
+              Map<String, dynamic>.from(recentOrdersPaginationJson),
+            )
+          : null,
     );
   }
 
@@ -380,6 +390,7 @@ class CompanyUsageDetails {
       'company': company.toJson(),
       'stats': stats.toJson(),
       'recentOrders': recentOrders.map((o) => o.toJson()).toList(),
+      'recentOrdersPagination': recentOrdersPagination?.toJson(),
     };
   }
 }
