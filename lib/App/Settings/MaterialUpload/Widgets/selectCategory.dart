@@ -452,6 +452,7 @@ class _SelectMaterialCategoryPageState
     request['pricingUnit'] = _submittedPricingUnit;
     if (_pricingUnit == 'sqm') {
       request['sqmPricingBasis'] = _sqmPricingBasis;
+      request['billingMode'] = 'area_prorated';
     }
     if (_requiresThickness) {
       request['thickness'] = double.parse(_thicknessController.text.trim());

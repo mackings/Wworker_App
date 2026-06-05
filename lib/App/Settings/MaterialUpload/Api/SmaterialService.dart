@@ -156,6 +156,7 @@ class MaterialService {
       );
 
       debugPrint("✅ [CREATE MATERIAL SUCCESS] => ${response.data}");
+      await invalidateMaterialsEtagCache();
       return response.data;
     } on DioException catch (e) {
       debugPrint(

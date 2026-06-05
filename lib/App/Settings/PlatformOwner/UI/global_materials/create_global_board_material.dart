@@ -108,6 +108,7 @@ class _CreateGlobalBoardMaterialPageState
           ? double.parse(_pricePerSqmController.text)
           : 0,
       pricingUnit: 'sqm',
+      billingMode: 'area_prorated',
       wasteThreshold: double.parse(_wasteThresholdController.text),
       types: boardTypes
           .map(

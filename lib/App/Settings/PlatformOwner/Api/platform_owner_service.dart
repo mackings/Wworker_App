@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:wworker/App/Database/Model/database_models.dart';
 import 'package:wworker/Constant/urls.dart';
 import 'package:wworker/GeneralWidgets/UI/api_modal_sheet.dart';
+import 'package:wworker/GeneralWidgets/UI/etag_cache.dart';
 
 class PlatformOwnerService {
   final Dio _dio = Dio(
@@ -877,6 +878,7 @@ class PlatformOwnerService {
     double? pricePerSqm,
     double? pricePerUnit,
     String? pricingUnit,
+    String? billingMode,
     List<Map<String, dynamic>>? types,
     List<Map<String, dynamic>>? commonThicknesses,
     List<Map<String, dynamic>>? foamVariants,
@@ -922,6 +924,9 @@ class PlatformOwnerService {
       if (pricingUnit != null) {
         formPayload['pricingUnit'] = pricingUnit;
       }
+      if (billingMode != null && billingMode.trim().isNotEmpty) {
+        formPayload['billingMode'] = billingMode.trim();
+      }
       if (wasteThreshold != null) {
         formPayload['wasteThreshold'] = wasteThreshold;
       }
@@ -958,6 +963,7 @@ class PlatformOwnerService {
       );
 
       debugPrint("✅ [CREATE GLOBAL MATERIAL SUCCESS]");
+      await invalidateMaterialsEtagCache();
       return {
         'success': true,
         'message':

@@ -26,21 +26,27 @@ class AddMaterialCard extends StatefulWidget {
   State<AddMaterialCard> createState() => _AddMaterialCardState();
 }
 
-class _MaterialCardCacheData {
-  final List<MaterialModel> materials;
-  final List<Map<String, dynamic>> groupedCategories;
-  final Map<String, Map<String, dynamic>> dimensionRulesByCategory;
+class _MaterialSearchSuggestion {
+  final int categoryIndex;
+  final int subCategoryIndex;
+  final String category;
+  final String subCategory;
+  final String label;
+  final String meta;
+  final Map<String, dynamic> variant;
 
-  const _MaterialCardCacheData({
-    required this.materials,
-    required this.groupedCategories,
-    required this.dimensionRulesByCategory,
+  const _MaterialSearchSuggestion({
+    required this.categoryIndex,
+    required this.subCategoryIndex,
+    required this.category,
+    required this.subCategory,
+    required this.label,
+    required this.meta,
+    required this.variant,
   });
 }
 
 class _AddMaterialCardState extends State<AddMaterialCard> {
-  static _MaterialCardCacheData? _memoryCache;
-
   final MaterialService _materialService = MaterialService();
   final NumberFormat _thousands = NumberFormat.decimalPattern();
 
@@ -82,6 +88,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   );
   final TextEditingController manualUnitPriceController =
       TextEditingController();
+  final TextEditingController materialSearchController =
+      TextEditingController();
+  String _materialSearchQuery = '';
 
   @override
   void initState() {
@@ -97,26 +106,11 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     thicknessController.dispose();
     quantityController.dispose();
     manualUnitPriceController.dispose();
+    materialSearchController.dispose();
     super.dispose();
   }
 
   Future<void> _loadMaterials() async {
-    final cached = _memoryCache;
-    if (cached != null) {
-      setState(() {
-        _materials = List<MaterialModel>.from(cached.materials);
-        _groupedCategories = cached.groupedCategories
-            .map((e) => Map<String, dynamic>.from(e))
-            .toList();
-        _dimensionRulesByCategory
-          ..clear()
-          ..addAll(cached.dimensionRulesByCategory);
-        _isLoadingMaterials = false;
-      });
-      _selectDefaultMaterialIfNeeded();
-      return;
-    }
-
     setState(() => _isLoadingMaterials = true);
     final results = await Future.wait([
       _materialService.getAllMaterials(limit: 500),
@@ -157,12 +151,6 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         dimensionRulesByCategory[category.toLowerCase()] = rule;
       }
     }
-
-    _memoryCache = _MaterialCardCacheData(
-      materials: materials,
-      groupedCategories: groupedData,
-      dimensionRulesByCategory: dimensionRulesByCategory,
-    );
 
     if (!mounted) return;
     setState(() {
@@ -248,6 +236,56 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   String _cleanVariantSizeLabel(String raw) {
     return raw.replaceAll('"', '').replaceAll(r'\"', '').trim();
+  }
+
+  String _cleanGeneratedVariantName({
+    required String category,
+    required String subCategory,
+    required String raw,
+  }) {
+    var value = _cleanVariantSizeLabel(raw).replaceAll('_', ' ').trim();
+    if (value.isEmpty) return '';
+
+    final categoryText = _cleanGroupLabel(category).replaceAll('_', ' ').trim();
+    final subText = _cleanGroupLabel(subCategory).replaceAll('_', ' ').trim();
+    final prefix = [
+      categoryText,
+      subText,
+    ].where((part) => part.isNotEmpty).join(' ').toLowerCase();
+
+    if (prefix.isNotEmpty && value.toLowerCase().startsWith(prefix)) {
+      value = value.substring(prefix.length).trim();
+    }
+
+    final lower = value.toLowerCase();
+    if (lower.startsWith('sqm ')) {
+      value = value.substring(4).trim();
+    } else if (lower == 'sqm') {
+      value = '';
+    }
+
+    return value;
+  }
+
+  String _variantSelectorLabel({
+    required String category,
+    required String subCategory,
+    required Map<String, dynamic> variant,
+  }) {
+    final size = _cleanVariantSizeLabel((variant['size'] ?? '').toString());
+    if (size.isNotEmpty) return size;
+
+    final generatedName = _cleanGeneratedVariantName(
+      category: category,
+      subCategory: subCategory,
+      raw: (variant['name'] ?? '').toString(),
+    );
+    if (generatedName.isNotEmpty) return generatedName;
+
+    final thickness = variant['thickness']?.toString().trim() ?? '';
+    if (thickness.isNotEmpty) return thickness;
+
+    return 'Default';
   }
 
   List<double>? _parseSizeTriplet(String raw) {
@@ -380,6 +418,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       unit: (variant['unit'] ?? '').toString(),
       color: (variant['color'] ?? '').toString(),
       pricingUnit: (variant['pricingUnit'] ?? '').toString(),
+      billingMode: variant['billingMode']?.toString(),
       catalogKey: variant['catalogKey']?.toString(),
       dimensionRule: dimensionRule.isEmpty ? null : dimensionRule,
       pricePerUnit: pricePerUnit,
@@ -660,7 +699,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final billableUnits = _costCalculation?.calculation.billableUnits ?? 0;
-    if (billableUnits > 0) return billableUnits;
+    if (billableUnits > 0) return billableUnits.ceil();
 
     final minimumUnits = _costCalculation?.calculation.minimumUnits ?? 0;
     if (minimumUnits > 0) return minimumUnits;
@@ -882,6 +921,338 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
   }
 
+  List<Map<String, dynamic>> _filteredGroupedCategories() {
+    final query = _materialSearchQuery.trim().toLowerCase();
+
+    bool matches(String value) => value.toLowerCase().contains(query);
+
+    return _groupedCategories
+        .asMap()
+        .entries
+        .map((categoryEntry) {
+          final categoryObj = categoryEntry.value;
+          final categoryName = _cleanGroupLabel(
+            (categoryObj['category'] ?? '').toString(),
+          );
+          final subCatsRaw = categoryObj['subCategories'];
+          final subCats = subCatsRaw is List
+              ? subCatsRaw
+                    .whereType<Map>()
+                    .map((e) => Map<String, dynamic>.from(e))
+                    .toList()
+              : <Map<String, dynamic>>[];
+
+          final filteredSubCats = <Map<String, dynamic>>[];
+          for (final subEntry in subCats.asMap().entries) {
+            final subObj = subEntry.value;
+            final rawSubName = _cleanGroupLabel(
+              (subObj['subCategory'] ?? '').toString(),
+            );
+            final subName = rawSubName.isEmpty ? categoryName : rawSubName;
+            final variantsRaw = subObj['variants'];
+            final variants = variantsRaw is List
+                ? variantsRaw
+                      .whereType<Map>()
+                      .map((e) => Map<String, dynamic>.from(e))
+                      .toList()
+                : <Map<String, dynamic>>[];
+
+            final filteredVariants =
+                query.isEmpty || matches(categoryName) || matches(subName)
+                ? variants
+                : variants.where((variant) {
+                    final label = _variantSelectorLabel(
+                      category: categoryName,
+                      subCategory: subName,
+                      variant: variant,
+                    );
+                    final name = (variant['name'] ?? '').toString();
+                    final size = (variant['size'] ?? '').toString();
+                    return matches(label) || matches(name) || matches(size);
+                  }).toList();
+
+            if (query.isEmpty ||
+                matches(categoryName) ||
+                matches(subName) ||
+                filteredVariants.isNotEmpty) {
+              filteredSubCats.add({
+                'index': subEntry.key,
+                'subCategory': subObj,
+                'variants': filteredVariants,
+              });
+            }
+          }
+
+          if (query.isNotEmpty &&
+              !matches(categoryName) &&
+              filteredSubCats.isEmpty) {
+            return <String, dynamic>{};
+          }
+
+          return {
+            'index': categoryEntry.key,
+            'category': categoryObj,
+            'subCategories': filteredSubCats,
+          };
+        })
+        .where((entry) => entry.isNotEmpty)
+        .toList();
+  }
+
+  bool _matchesMaterialSearch(String haystack, String query) {
+    final terms = query
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((term) => term.trim().isNotEmpty)
+        .toList();
+    if (terms.isEmpty) return true;
+
+    final normalized = haystack.toLowerCase().replaceAll('_', ' ');
+    return terms.every((term) => normalized.contains(term));
+  }
+
+  List<_MaterialSearchSuggestion> _materialSearchSuggestions() {
+    final query = _materialSearchQuery.trim();
+    if (query.isEmpty) return const [];
+
+    final suggestions = <_MaterialSearchSuggestion>[];
+    for (final categoryEntry in _groupedCategories.asMap().entries) {
+      final categoryObj = categoryEntry.value;
+      final categoryName = _cleanGroupLabel(
+        (categoryObj['category'] ?? '').toString(),
+      );
+      final subCatsRaw = categoryObj['subCategories'];
+      final subCats = subCatsRaw is List
+          ? subCatsRaw
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList()
+          : <Map<String, dynamic>>[];
+
+      for (final subEntry in subCats.asMap().entries) {
+        final subObj = subEntry.value;
+        final rawSubName = _cleanGroupLabel(
+          (subObj['subCategory'] ?? '').toString(),
+        );
+        final subName = rawSubName.isEmpty ? categoryName : rawSubName;
+        final variantsRaw = subObj['variants'];
+        final variants = variantsRaw is List
+            ? variantsRaw
+                  .whereType<Map>()
+                  .map((e) => Map<String, dynamic>.from(e))
+                  .toList()
+            : <Map<String, dynamic>>[];
+
+        for (final variant in variants) {
+          final label = _variantSelectorLabel(
+            category: categoryName,
+            subCategory: subName,
+            variant: variant,
+          );
+          final searchable = [
+            categoryName,
+            subName,
+            label,
+            variant['name'],
+            variant['size'],
+            variant['unit'],
+            variant['pricingUnit'],
+            variant['standardUnit'],
+            variant['thicknessUnit'],
+            variant['thickness'],
+            variant['billingMode'],
+          ].whereType<Object>().map((value) => value.toString()).join(' ');
+
+          if (!_matchesMaterialSearch(searchable, query)) continue;
+
+          final unit =
+              [variant['pricingUnit'], variant['unit'], variant['standardUnit']]
+                  .whereType<Object>()
+                  .map((value) => value.toString().trim())
+                  .firstWhere((value) => value.isNotEmpty, orElse: () => '');
+          final metaParts = [
+            categoryName,
+            if (subName != categoryName) subName,
+            if (unit.isNotEmpty) unit,
+          ];
+
+          suggestions.add(
+            _MaterialSearchSuggestion(
+              categoryIndex: categoryEntry.key,
+              subCategoryIndex: subEntry.key,
+              category: categoryName,
+              subCategory: subName,
+              label: label,
+              meta: metaParts.join(' • '),
+              variant: variant,
+            ),
+          );
+        }
+      }
+    }
+
+    return suggestions.take(16).toList();
+  }
+
+  List<Map<String, dynamic>> _dedupedVariantsForDisplay({
+    required String category,
+    required String subCategory,
+    required List<Map<String, dynamic>> variants,
+  }) {
+    final seen = <String>{};
+    final deduped = <Map<String, dynamic>>[];
+
+    for (final variant in variants) {
+      final label = _variantSelectorLabel(
+        category: category,
+        subCategory: subCategory,
+        variant: variant,
+      );
+      final key = label.trim().toLowerCase();
+      if (key.isEmpty || seen.contains(key)) continue;
+      seen.add(key);
+      deduped.add(variant);
+    }
+
+    return deduped;
+  }
+
+  Widget _buildMaterialSearchField() {
+    return TextField(
+      controller: materialSearchController,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        isDense: true,
+        prefixIcon: const Icon(Icons.search_rounded, size: 18),
+        suffixIcon: _materialSearchQuery.isEmpty
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close_rounded, size: 18),
+                tooltip: 'Clear search',
+                onPressed: () {
+                  materialSearchController.clear();
+                  setState(() => _materialSearchQuery = '');
+                },
+              ),
+        hintText: 'Search materials',
+        hintStyle: GoogleFonts.openSans(
+          color: const Color(0xFF9E9E9E),
+          fontSize: 12,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 11,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF8B4513), width: 1.4),
+        ),
+      ),
+      onChanged: (value) => setState(() => _materialSearchQuery = value),
+    );
+  }
+
+  Widget _buildMaterialSearchSuggestions() {
+    final suggestions = _materialSearchSuggestions();
+    if (_materialSearchQuery.trim().isEmpty) return const SizedBox.shrink();
+
+    if (suggestions.isEmpty) {
+      return Text(
+        "No materials match your search",
+        style: GoogleFonts.openSans(color: const Color(0xFF7B7B7B)),
+      );
+    }
+
+    return Column(
+      children: suggestions.map((suggestion) {
+        final selected =
+            suggestion.categoryIndex == _selectedCategoryIndex &&
+            suggestion.subCategoryIndex == _selectedSubCategoryIndex &&
+            ((suggestion.variant['id'] ?? suggestion.variant['_id'] ?? '')
+                    .toString() ==
+                _selectedVariantId);
+
+        return InkWell(
+          onTap: () {
+            setState(() {
+              _selectGroupedVariant(
+                category: suggestion.category,
+                subCategory: suggestion.subCategory,
+                variant: suggestion.variant,
+                categoryIndex: suggestion.categoryIndex,
+                subCategoryIndex: suggestion.subCategoryIndex,
+              );
+              materialSearchController.clear();
+              _materialSearchQuery = '';
+            });
+            FocusScope.of(context).unfocus();
+          },
+          child: Container(
+            width: double.infinity,
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFFFFF3E8) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFF8B4513)
+                    : const Color(0xFFE8DED6),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  selected ? Icons.check_circle_rounded : Icons.layers_outlined,
+                  color: selected
+                      ? const Color(0xFF8B4513)
+                      : const Color(0xFF756A61),
+                  size: 18,
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        suggestion.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.openSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF302E2E),
+                        ),
+                      ),
+                      if (suggestion.meta.isNotEmpty)
+                        Text(
+                          suggestion.meta,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.openSans(
+                            fontSize: 11,
+                            color: const Color(0xFF756A61),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   Widget _buildGroupedSelector() {
     if (_groupedCategories.isEmpty) return const SizedBox.shrink();
     if (_selectedCategoryIndex >= _groupedCategories.length) {
@@ -889,45 +1260,75 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       _selectedSubCategoryIndex = 0;
     }
 
-    final categoryObj = _groupedCategories[_selectedCategoryIndex];
+    final filteredCategories = _filteredGroupedCategories();
+    final selectedCategoryEntry = filteredCategories.firstWhere(
+      (entry) => entry['index'] == _selectedCategoryIndex,
+      orElse: () => filteredCategories.isNotEmpty
+          ? filteredCategories.first
+          : <String, dynamic>{},
+    );
+
+    if (selectedCategoryEntry.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMaterialSearchField(),
+          const SizedBox(height: 8),
+          _buildMaterialSearchSuggestions(),
+        ],
+      );
+    }
+
+    final categoryObj = Map<String, dynamic>.from(
+      selectedCategoryEntry['category'] as Map,
+    );
+    final selectedCategorySourceIndex = selectedCategoryEntry['index'] as int;
     final categoryName = _cleanGroupLabel(
       (categoryObj['category'] ?? '').toString(),
     );
-    final subCatsRaw = categoryObj['subCategories'];
-    final subCats = subCatsRaw is List
-        ? subCatsRaw
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList()
-        : <Map<String, dynamic>>[];
+    final subCatEntries =
+        (selectedCategoryEntry['subCategories'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        <Map<String, dynamic>>[];
 
-    if (_selectedSubCategoryIndex >= subCats.length) {
-      _selectedSubCategoryIndex = 0;
-    }
+    final selectedSubEntry = subCatEntries.firstWhere(
+      (entry) => entry['index'] == _selectedSubCategoryIndex,
+      orElse: () =>
+          subCatEntries.isNotEmpty ? subCatEntries.first : <String, dynamic>{},
+    );
 
-    final subObj = subCats.isNotEmpty
-        ? subCats[_selectedSubCategoryIndex]
+    final subObj = selectedSubEntry.isNotEmpty
+        ? Map<String, dynamic>.from(selectedSubEntry['subCategory'] as Map)
         : null;
+    final selectedSubSourceIndex = selectedSubEntry.isNotEmpty
+        ? selectedSubEntry['index'] as int
+        : 0;
     final rawSubName = _cleanGroupLabel(
       (subObj?['subCategory'] ?? '').toString(),
     );
     final subName = rawSubName.isEmpty ? categoryName : rawSubName;
-    final variantsRaw = subObj?['variants'];
-    final variants = variantsRaw is List
-        ? variantsRaw
-              .whereType<Map>()
-              .map((e) => Map<String, dynamic>.from(e))
-              .toList()
-        : <Map<String, dynamic>>[];
+    final variants =
+        (selectedSubEntry['variants'] as List?)
+            ?.whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList() ??
+        <Map<String, dynamic>>[];
+    final displayVariants = _dedupedVariantsForDisplay(
+      category: categoryName,
+      subCategory: subName,
+      variants: variants,
+    );
     final shouldHideVariantSizes =
-        variants.isNotEmpty &&
-        variants.every((v) {
+        displayVariants.isNotEmpty &&
+        displayVariants.every((v) {
           final sizeRaw = (v['size'] ?? '').toString().trim();
           return _isDimensionSizeLabel(sizeRaw);
         });
 
-    if (shouldHideVariantSizes && variants.isNotEmpty) {
-      final firstVariant = variants.first;
+    if (shouldHideVariantSizes && displayVariants.isNotEmpty) {
+      final firstVariant = displayVariants.first;
       final firstId = (firstVariant['id'] ?? firstVariant['_id'] ?? '')
           .toString();
       if (firstId.isNotEmpty && firstId != _selectedVariantId) {
@@ -947,78 +1348,40 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     }
 
     final bool allSubLabelsSameAsCategory =
-        subCats.isNotEmpty &&
-        subCats.every((sc) {
-          final s = _cleanGroupLabel((sc['subCategory'] ?? '').toString());
+        subCatEntries.isNotEmpty &&
+        subCatEntries.every((entry) {
+          final sub = entry['subCategory'];
+          final s = _cleanGroupLabel(
+            (sub is Map ? sub['subCategory'] : '').toString(),
+          );
           return s.isEmpty || s == categoryName;
         });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: _groupedCategories.asMap().entries.map((entry) {
-              final idx = entry.key;
-              final name = _cleanGroupLabel(
-                (entry.value['category'] ?? '').toString(),
-              );
-              final selected = idx == _selectedCategoryIndex;
-              return Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: ChoiceChip(
-                  label: Text(name),
-                  visualDensity: VisualDensity.compact,
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  selected: selected,
-                  selectedColor: const Color(0xFFFFF3E8),
-                  backgroundColor: Colors.white,
-                  side: BorderSide(
-                    color: selected
-                        ? const Color(0xFF8B4513)
-                        : const Color(0xFFE8DED6),
-                  ),
-                  labelStyle: GoogleFonts.openSans(
-                    color: selected
-                        ? const Color(0xFF8B4513)
-                        : const Color(0xFF756A61),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  onSelected: (_) {
-                    setState(() {
-                      _selectedCategoryIndex = idx;
-                      _selectedSubCategoryIndex = 0;
-                      _selectedVariantId = null;
-                      _resetProjectSizeInputs();
-                    });
-                    _selectFirstVariantForCurrentSelection();
-                  },
-                ),
-              );
-            }).toList(),
-          ),
-        ),
+        _buildMaterialSearchField(),
         const SizedBox(height: 8),
-        if (subCats.isNotEmpty && !allSubLabelsSameAsCategory)
+        if (_materialSearchQuery.trim().isNotEmpty) ...[
+          _buildMaterialSearchSuggestions(),
+        ] else ...[
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: subCats.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final raw = _cleanGroupLabel(
-                  (entry.value['subCategory'] ?? '').toString(),
+              children: filteredCategories.map((entry) {
+                final idx = entry['index'] as int;
+                final category = Map<String, dynamic>.from(
+                  entry['category'] as Map,
                 );
-                final name = raw.isEmpty ? categoryName : raw;
-                final selected = idx == _selectedSubCategoryIndex;
+                final name = _cleanGroupLabel(
+                  (category['category'] ?? '').toString(),
+                );
+                final selected = idx == selectedCategorySourceIndex;
                 return Padding(
                   padding: const EdgeInsets.only(right: 6),
                   child: ChoiceChip(
                     label: Text(name),
+                    showCheckmark: false,
                     visualDensity: VisualDensity.compact,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     selected: selected,
@@ -1041,7 +1404,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                     ),
                     onSelected: (_) {
                       setState(() {
-                        _selectedSubCategoryIndex = idx;
+                        _selectedCategoryIndex = idx;
+                        _selectedSubCategoryIndex = 0;
                         _selectedVariantId = null;
                         _resetProjectSizeInputs();
                       });
@@ -1052,73 +1416,127 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               }).toList(),
             ),
           ),
-        const SizedBox(height: 8),
-        if (variants.isEmpty)
-          Text(
-            "No variants found for $categoryName / $subName",
-            style: GoogleFonts.openSans(color: const Color(0xFF7B7B7B)),
-          )
-        else if (shouldHideVariantSizes)
-          const SizedBox.shrink()
-        else
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: variants.map((v) {
-              final id = (v['id'] ?? v['_id'] ?? '').toString();
-              final sizeRaw = (v['size'] ?? '').toString().trim();
-              final size = _cleanVariantSizeLabel(sizeRaw);
-              final selected = id.isNotEmpty && id == _selectedVariantId;
-
-              // Selection card should not repeat unit/price; those are shown elsewhere.
-              final label = size.isNotEmpty
-                  ? size
-                  : (v['name'] ?? '').toString();
-
-              return InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectGroupedVariant(
-                      category: categoryName,
-                      subCategory: subName,
-                      variant: v,
-                      categoryIndex: _selectedCategoryIndex,
-                      subCategoryIndex: _selectedSubCategoryIndex,
-                    );
-                  });
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: selected
-                          ? const Color(0xFF8B4513)
-                          : const Color(0xFFE8DED6),
-                    ),
-                    color: selected ? const Color(0xFFFFF3E8) : Colors.white,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: GoogleFonts.openSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF302E2E),
-                        ),
+          const SizedBox(height: 8),
+          if (subCatEntries.isNotEmpty && !allSubLabelsSameAsCategory)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: subCatEntries.map((entry) {
+                  final idx = entry['index'] as int;
+                  final sub = Map<String, dynamic>.from(
+                    entry['subCategory'] as Map,
+                  );
+                  final raw = _cleanGroupLabel(
+                    (sub['subCategory'] ?? '').toString(),
+                  );
+                  final name = raw.isEmpty ? categoryName : raw;
+                  final selected = idx == selectedSubSourceIndex;
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ChoiceChip(
+                      label: Text(name),
+                      showCheckmark: false,
+                      visualDensity: VisualDensity.compact,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      selected: selected,
+                      selectedColor: const Color(0xFFFFF3E8),
+                      backgroundColor: Colors.white,
+                      side: BorderSide(
+                        color: selected
+                            ? const Color(0xFF8B4513)
+                            : const Color(0xFFE8DED6),
                       ),
-                    ],
+                      labelStyle: GoogleFonts.openSans(
+                        color: selected
+                            ? const Color(0xFF8B4513)
+                            : const Color(0xFF756A61),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      onSelected: (_) {
+                        setState(() {
+                          _selectedSubCategoryIndex = idx;
+                          _selectedVariantId = null;
+                          _resetProjectSizeInputs();
+                        });
+                        _selectFirstVariantForCurrentSelection();
+                      },
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          const SizedBox(height: 8),
+          if (displayVariants.isEmpty)
+            Text(
+              "No variants found for $categoryName / $subName",
+              style: GoogleFonts.openSans(color: const Color(0xFF7B7B7B)),
+            )
+          else if (shouldHideVariantSizes)
+            const SizedBox.shrink()
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: displayVariants.map((v) {
+                final id = (v['id'] ?? v['_id'] ?? '').toString();
+                final selected = id.isNotEmpty && id == _selectedVariantId;
+
+                // Selection card should not repeat unit/price; those are shown elsewhere.
+                final label = _variantSelectorLabel(
+                  category: categoryName,
+                  subCategory: subName,
+                  variant: v,
+                );
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectGroupedVariant(
+                        category: categoryName,
+                        subCategory: subName,
+                        variant: v,
+                        categoryIndex: selectedCategorySourceIndex,
+                        subCategoryIndex: selectedSubSourceIndex,
+                      );
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFF8B4513)
+                            : const Color(0xFFE8DED6),
+                      ),
+                      color: selected ? const Color(0xFFFFF3E8) : Colors.white,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: GoogleFonts.openSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF302E2E),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }).toList(),
-          ),
+                );
+              }).toList(),
+            ),
+        ],
       ],
     );
   }
@@ -1421,6 +1839,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         : null;
     final calculationPayload = {
       "mode": _costCalculation!.calculation.mode,
+      "billingMode":
+          _costCalculation!.material.billingMode ?? material.billingMode,
       "minimumUnits": _costCalculation!.calculation.minimumUnits,
       "billableUnits": _costCalculation!.calculation.billableUnits,
       "quantity": _costCalculation!.calculation.quantity,
@@ -1440,6 +1860,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "name": material.name,
       "category": material.category,
       "subCategory": material.subCategory,
+      "billingMode":
+          _costCalculation!.material.billingMode ?? material.billingMode,
       "Product": material.name,
       "Materialname": materialTypeController.text.trim(),
       "Width": requiresProjectSize ? widthController.text : "",
@@ -2223,6 +2645,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               ? manualUnitPrice * standardArea
               : manualUnitPrice)
         : _costCalculation!.pricing.totalBoardPrice;
+    final billableUnits = _costCalculation!.calculation.billableUnits;
+    final billableUnitsText = billableUnits == billableUnits.roundToDouble()
+        ? billableUnits.toInt().toString()
+        : billableUnits.toStringAsFixed(4);
     return Container(
       margin: const EdgeInsets.only(top: 4),
       padding: const EdgeInsets.all(12),
@@ -2307,10 +2733,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               "Project Cost:",
               _formatCurrency(effectiveProjectCost),
             ),
-            _buildResultRow(
-              "Billable Units:",
-              "${_costCalculation!.calculation.billableUnits} unit(s)",
-            ),
+            _buildResultRow("Billable Units:", "$billableUnitsText unit(s)"),
             const Divider(color: Color(0xFFCCA183)),
             _buildResultRow(
               "Total Area Used:",

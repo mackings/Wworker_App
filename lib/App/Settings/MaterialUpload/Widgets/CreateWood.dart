@@ -104,6 +104,7 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
       'pricingUnit': 'sqm',
+      'billingMode': 'area_prorated',
       'wasteThreshold': double.parse(_wasteThresholdController.text),
       if (_pricePerSqmController.text.isNotEmpty)
         'pricePerSqm': double.parse(_pricePerSqmController.text),
@@ -512,7 +513,10 @@ class _CreateWoodMaterialPageState extends State<CreateWoodMaterialPage> {
                       underline: const SizedBox(),
                       items: const [
                         DropdownMenuItem(value: 'mm', child: Text('mm')),
-                        DropdownMenuItem(value: 'inches', child: Text('inches')),
+                        DropdownMenuItem(
+                          value: 'inches',
+                          child: Text('inches'),
+                        ),
                       ],
                       onChanged: (value) =>
                           setState(() => _thicknessUnit = value!),

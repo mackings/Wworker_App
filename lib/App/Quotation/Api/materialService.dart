@@ -224,6 +224,7 @@ class MaterialService {
         ),
       );
 
+      await invalidateMaterialsEtagCache();
       return response.data;
     } on DioException catch (e) {
       debugPrint(

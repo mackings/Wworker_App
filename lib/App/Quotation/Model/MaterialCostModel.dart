@@ -54,6 +54,7 @@ class MaterialInfo {
   final String? category;
   final String? type;
   final String? variant;
+  final String? billingMode;
 
   MaterialInfo({
     required this.id,
@@ -61,6 +62,7 @@ class MaterialInfo {
     this.category,
     this.type,
     this.variant,
+    this.billingMode,
   });
 
   factory MaterialInfo.fromJson(Map<String, dynamic> json) {
@@ -70,6 +72,7 @@ class MaterialInfo {
       category: json['category'],
       type: json['type'],
       variant: json['variant'],
+      billingMode: json['billingMode']?.toString(),
     );
   }
 }
@@ -123,7 +126,7 @@ class StandardInfo {
 class CalculationInfo {
   final String mode;
   final int minimumUnits;
-  final int billableUnits;
+  final double billableUnits;
   final double quantity;
   final bool needsPricing;
   final double wasteThreshold;
@@ -147,9 +150,9 @@ class CalculationInfo {
     return CalculationInfo(
       mode: json['mode']?.toString() ?? 'sheet_based',
       minimumUnits: _toInt(json['minimumUnits']),
-      billableUnits: _toInt(
+      billableUnits: _toDouble(
         json['billableUnits'],
-        fallback: _toInt(json['minimumUnits']),
+        fallback: _toDouble(json['minimumUnits']),
       ),
       quantity: _toDouble(json['quantity'], fallback: 1),
       needsPricing: json['needsPricing'] == true,
@@ -165,12 +168,14 @@ class PricingInfo {
   final double pricePerUnit;
   final double pricePerSqm;
   final double pricePerFullUnit;
+  final double computedPricePerFullUnit;
   final double totalMaterialCost;
 
   PricingInfo({
     required this.pricePerUnit,
     required this.pricePerSqm,
     required this.pricePerFullUnit,
+    required this.computedPricePerFullUnit,
     required this.totalMaterialCost,
   });
 
@@ -179,6 +184,7 @@ class PricingInfo {
       pricePerUnit: _toDouble(json['pricePerUnit']),
       pricePerSqm: _toDouble(json['pricePerSqm']),
       pricePerFullUnit: _toDouble(json['pricePerFullUnit']),
+      computedPricePerFullUnit: _toDouble(json['computedPricePerFullUnit']),
       totalMaterialCost: _toDouble(json['totalMaterialCost']),
     );
   }

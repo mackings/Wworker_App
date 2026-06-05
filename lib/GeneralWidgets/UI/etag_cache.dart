@@ -44,6 +44,25 @@ class EtagCache {
     final payload = jsonEncode({'etag': etag, 'json': json});
     await prefs.setString(_keyForUrl(url), payload);
   }
+
+  static Future<void> removeWhere(bool Function(String url) test) async {
+    final prefs = await SharedPreferences.getInstance();
+    final keys = prefs
+        .getKeys()
+        .where((key) => key.startsWith(_prefix))
+        .toList();
+
+    for (final key in keys) {
+      final url = key.substring(_prefix.length);
+      if (test(url)) {
+        await prefs.remove(key);
+      }
+    }
+  }
+}
+
+Future<void> invalidateMaterialsEtagCache() {
+  return EtagCache.removeWhere((url) => url.contains('/api/product/materials'));
 }
 
 String buildDioCacheUrl(

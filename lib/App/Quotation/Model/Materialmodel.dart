@@ -12,6 +12,7 @@ class MaterialModel {
   final double? pricePerSqm;
   final double? pricePerUnit;
   final String? pricingUnit;
+  final String? billingMode;
   final String? catalogKey;
   final Map<String, dynamic>? dimensionRule;
   final List<MaterialType> types;
@@ -48,6 +49,7 @@ class MaterialModel {
     this.pricePerSqm,
     this.pricePerUnit,
     this.pricingUnit,
+    this.billingMode,
     this.catalogKey,
     this.dimensionRule,
     this.types = const [],
@@ -86,6 +88,7 @@ class MaterialModel {
       pricePerSqm: _asDouble(json['pricePerSqm']),
       pricePerUnit: _asDouble(json['pricePerUnit']),
       pricingUnit: json['pricingUnit'],
+      billingMode: json['billingMode']?.toString(),
       catalogKey: json['catalogKey']?.toString(),
       dimensionRule: json['dimensionRule'] is Map
           ? Map<String, dynamic>.from(json['dimensionRule'] as Map)
@@ -152,6 +155,7 @@ class MaterialModel {
       if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
       if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
       if (pricingUnit != null) 'pricingUnit': pricingUnit,
+      if (billingMode != null) 'billingMode': billingMode,
       if (catalogKey != null) 'catalogKey': catalogKey,
       if (dimensionRule != null) 'dimensionRule': dimensionRule,
       'types': types.map((t) => t.toJson()).toList(),

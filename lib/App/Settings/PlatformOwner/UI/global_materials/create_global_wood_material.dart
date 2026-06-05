@@ -102,6 +102,7 @@ class _CreateGlobalWoodMaterialPageState
           ? double.parse(_pricePerSqmController.text)
           : 0,
       pricingUnit: 'sqm',
+      billingMode: 'area_prorated',
       wasteThreshold: double.parse(_wasteThresholdController.text),
       types: woodTypes
           .map(

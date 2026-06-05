@@ -717,6 +717,7 @@ class _BOMSummaryState extends ConsumerState<BOMSummary> {
         "type": item["Product"] ?? item["Materialname"] ?? "",
         if (item["category"] != null) "category": item["category"],
         if (item["subCategory"] != null) "subCategory": item["subCategory"],
+        if (item["billingMode"] != null) "billingMode": item["billingMode"],
         "width": _toDouble(item["Width"]),
         "length": _toDouble(item["Length"]),
         "thickness": _toDouble(item["Thickness"]),

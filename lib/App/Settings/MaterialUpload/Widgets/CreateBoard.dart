@@ -105,6 +105,7 @@ class _CreateBoardMaterialPageState extends State<CreateBoardMaterialPage> {
       'standardLength': double.parse(_standardLengthController.text),
       'standardUnit': _standardUnit,
       'pricingUnit': 'sqm',
+      'billingMode': 'area_prorated',
       'wasteThreshold': double.parse(_wasteThresholdController.text),
       if (_pricePerSqmController.text.isNotEmpty)
         'pricePerSqm': double.parse(_pricePerSqmController.text),
