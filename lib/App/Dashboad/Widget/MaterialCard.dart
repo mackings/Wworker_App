@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:wworker/App/Quotation/Api/materialService.dart';
@@ -59,6 +60,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final Map<String, Map<String, dynamic>> _dimensionRulesByCategory = {};
   int _selectedCategoryIndex = 0;
   int _selectedSubCategoryIndex = 0;
+  String? _selectedUnitKey;
   String? _selectedVariantId;
   bool _isLoadingMaterials = true;
   MaterialModel? _selectedMaterial;
@@ -288,38 +290,37 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     return 'Default';
   }
 
-  List<double>? _parseSizeTriplet(String raw) {
-    // Examples: 1"x10"x144", 1 x 10 x 144, 0.5" x 48" x 96"
-    final s = raw.trim();
-    if (s.isEmpty) return null;
-    final matches = RegExp(r'(\d+(?:\.\d+)?|\d+\s*/\s*\d+)')
-        .allMatches(s)
-        .map((m) => m.group(0) ?? '')
-        .where((v) => v.trim().isNotEmpty)
-        .toList();
-    if (matches.length < 2) return null;
-
-    double? parseOne(String token) {
-      final t = token.replaceAll(' ', '');
-      final frac = RegExp(r'^(\\d+)/(\\d+)$').firstMatch(t);
-      if (frac != null) {
-        final num = double.tryParse(frac.group(1) ?? '');
-        final den = double.tryParse(frac.group(2) ?? '');
-        if (num != null && den != null && den != 0) return num / den;
-      }
-      return double.tryParse(t);
+  String _variantUnitLabel(Map<String, dynamic> variant) {
+    final values = [
+      variant['unit'],
+      variant['pricingUnit'],
+      variant['standardUnit'],
+    ];
+    for (final value in values) {
+      final label = _cleanGroupLabel(value?.toString() ?? '');
+      if (label.isNotEmpty) return label;
     }
-
-    final nums = matches.map(parseOne).whereType<double>().toList();
-    if (nums.length < 2) return null;
-    // Prefer 3 numbers if present: thickness x width x length
-    if (nums.length >= 3) return nums.take(3).toList();
-    return nums.take(2).toList();
+    return 'Unit';
   }
 
-  bool _isDimensionSizeLabel(String raw) {
-    final triplet = _parseSizeTriplet(raw);
-    return triplet != null && triplet.length >= 3;
+  String _variantUnitKey(Map<String, dynamic> variant) {
+    return _variantUnitLabel(variant).toLowerCase();
+  }
+
+  String _sizeColorSelectorLabel(Map<String, dynamic> variant) {
+    final size = _cleanVariantSizeLabel((variant['size'] ?? '').toString());
+    final thickness = variant['thickness']?.toString().trim() ?? '';
+    final color = _cleanGroupLabel((variant['color'] ?? '').toString());
+    final dimension = size.isNotEmpty
+        ? size
+        : (thickness.isNotEmpty ? thickness : '');
+
+    if (dimension.isNotEmpty && color.isNotEmpty) {
+      return '${dimension}_$color';
+    }
+    if (dimension.isNotEmpty) return dimension;
+    if (color.isNotEmpty) return color;
+    return 'Default';
   }
 
   void _setAutoMaterialName({
@@ -464,93 +465,28 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         _categoryRuleFor(_selectedMaterial?.category);
   }
 
+  String _selectedMaterialUnit(MaterialModel? material) {
+    final unit = material?.unit?.trim();
+    if (unit != null && unit.isNotEmpty) return unit.toLowerCase();
+    return material?.pricingUnit?.trim().toLowerCase() ?? '';
+  }
+
+  bool _isSqmMaterial(MaterialModel? material) {
+    final unit = _selectedMaterialUnit(material).replaceAll(' ', '');
+    return unit == 'sqm' || unit == 'm2' || unit == 'm²';
+  }
+
+  bool _quantityRequiresWholeNumber(MaterialModel? material) {
+    const integerUnits = {'piece', 'bag', 'pair', 'pack', 'set', 'roll'};
+    return integerUnits.contains(_selectedMaterialUnit(material));
+  }
+
   bool _requiresProjectSize(MaterialModel? material) {
-    if (material == null) return true;
-
-    final rule = _effectiveDimensionRule();
-    final projectInput = rule?['projectInput'] is Map
-        ? Map<String, dynamic>.from(rule!['projectInput'] as Map)
-        : <String, dynamic>{};
-    final stockDimensions = rule?['stockDimensions'] is Map
-        ? Map<String, dynamic>.from(rule!['stockDimensions'] as Map)
-        : <String, dynamic>{};
-
-    final showWidth = projectInput.containsKey('showWidth')
-        ? _isTruthy(projectInput['showWidth'])
-        : null;
-    final showLength = projectInput.containsKey('showLength')
-        ? _isTruthy(projectInput['showLength'])
-        : null;
-    final requireWidth = projectInput.containsKey('requireWidth')
-        ? _isTruthy(projectInput['requireWidth'])
-        : null;
-    final requireLength = projectInput.containsKey('requireLength')
-        ? _isTruthy(projectInput['requireLength'])
-        : null;
-
-    if (showWidth == false && showLength == false) return false;
-    if (showWidth == true ||
-        showLength == true ||
-        requireWidth == true ||
-        requireLength == true) {
-      return true;
-    }
-
-    final schema = rule?['schema']?.toString().toLowerCase();
-    if (schema == 'unit_based' || schema == 'quantity_based') return false;
-    if (schema == 'area_based' || schema == 'sheet_based') return true;
-
-    if (_isTruthy(projectInput['requiresDimensions']) ||
-        _isTruthy(projectInput['requiresProjectSize']) ||
-        _isTruthy(rule?['requiresDimensions']) ||
-        _isTruthy(rule?['requiresProjectSize'])) {
-      return true;
-    }
-
-    if (_isTruthy(projectInput['quantityOnly']) ||
-        _isTruthy(projectInput['useQuantityOnly']) ||
-        _isTruthy(rule?['quantityOnly']) ||
-        _isTruthy(rule?['useQuantityOnly'])) {
-      return false;
-    }
-
-    final mode = [
-      projectInput['mode'],
-      projectInput['calculationMode'],
-      rule?['mode'],
-      rule?['calculationMode'],
-    ].map((e) => e?.toString().toLowerCase() ?? '').join(' ');
-
-    if (mode.contains('quantity')) return false;
-    if (mode.contains('sheet') || mode.contains('dimension')) return true;
-
-    final category = (material.category ?? '').trim().toUpperCase();
-    if (category == 'BOARD' || category == 'WOOD') {
-      return true;
-    }
-
-    final hasSqmPricing = (material.pricePerSqm ?? 0) > 0;
-    final hasDimensionCharacteristics =
-        (material.standardWidth ?? 0) > 0 ||
-        (material.standardLength ?? 0) > 0 ||
-        _asDouble(stockDimensions['width']) != null ||
-        _asDouble(stockDimensions['length']) != null ||
-        material.sizeVariants.isNotEmpty ||
-        material.foamVariants.isNotEmpty ||
-        material.commonThicknesses.isNotEmpty ||
-        material.foamThicknesses.isNotEmpty ||
-        material.thickness != null ||
-        _isTruthy(projectInput['defaultToProjectSize']) ||
-        _isTruthy(rule?['defaultToProjectSize']);
-
-    if (hasSqmPricing) return true;
-    if (hasDimensionCharacteristics) return true;
-
-    return false;
+    return material != null && _isSqmMaterial(material);
   }
 
   bool _requiresThickness(MaterialModel? material) {
-    if (material == null) return false;
+    if (material == null || !_isSqmMaterial(material)) return false;
     if (material.foamVariants.isNotEmpty ||
         material.foamThicknesses.isNotEmpty ||
         material.commonThicknesses.isNotEmpty ||
@@ -585,15 +521,22 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   String _quantityInputLabel(MaterialModel? material) {
-    final raw = (material?.pricingUnit ?? material?.unit ?? 'unit')
-        .trim()
-        .toLowerCase();
+    final raw = _selectedMaterialUnit(material);
     if (raw.isEmpty) return 'Quantity needed';
     if (raw == 'piece') return 'Pieces needed';
+    if (raw == 'bag') return 'Bags needed';
+    if (raw == 'pair') return 'Pairs needed';
     if (raw == 'sheet') return 'Sheets needed';
     if (raw == 'roll') return 'Rolls needed';
     if (raw == 'yard') return 'Yards needed';
     if (raw == 'pack') return 'Packs needed';
+    if (raw == 'set') return 'Sets needed';
+    if (raw == 'liter') return 'Liters needed';
+    if (raw == 'gallon') return 'Gallons needed';
+    if (raw == 'kilogram') return 'Kilograms needed';
+    if (raw == 'pound weight' || raw == 'pound') {
+      return 'Pound weight needed';
+    }
     return '${raw[0].toUpperCase()}${raw.substring(1)} needed';
   }
 
@@ -664,7 +607,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   double _parseQuantityInput() {
     final parsed = double.tryParse(quantityController.text.trim());
-    if (parsed == null || parsed <= 0) return 1;
+    if (parsed == null || parsed <= 0) return 0;
     return parsed;
   }
 
@@ -888,6 +831,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     _selectedCategoryIndex = categoryIndex;
     _selectedSubCategoryIndex = subCategoryIndex;
+    _selectedUnitKey = _variantUnitKey(variant);
     _selectedVariantId = (variant['id'] ?? variant['_id'] ?? '').toString();
 
     _onMaterialSelected(resolved);
@@ -1095,19 +1039,13 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   }
 
   List<Map<String, dynamic>> _dedupedVariantsForDisplay({
-    required String category,
-    required String subCategory,
     required List<Map<String, dynamic>> variants,
   }) {
     final seen = <String>{};
     final deduped = <Map<String, dynamic>>[];
 
     for (final variant in variants) {
-      final label = _variantSelectorLabel(
-        category: category,
-        subCategory: subCategory,
-        variant: variant,
-      );
+      final label = _sizeColorSelectorLabel(variant);
       final key = label.trim().toLowerCase();
       if (key.isEmpty || seen.contains(key)) continue;
       seen.add(key);
@@ -1315,47 +1253,18 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             .map((e) => Map<String, dynamic>.from(e))
             .toList() ??
         <Map<String, dynamic>>[];
-    final displayVariants = _dedupedVariantsForDisplay(
-      category: categoryName,
-      subCategory: subName,
-      variants: variants,
-    );
-    final shouldHideVariantSizes =
-        displayVariants.isNotEmpty &&
-        displayVariants.every((v) {
-          final sizeRaw = (v['size'] ?? '').toString().trim();
-          return _isDimensionSizeLabel(sizeRaw);
-        });
-
-    if (shouldHideVariantSizes && displayVariants.isNotEmpty) {
-      final firstVariant = displayVariants.first;
-      final firstId = (firstVariant['id'] ?? firstVariant['_id'] ?? '')
-          .toString();
-      if (firstId.isNotEmpty && firstId != _selectedVariantId) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          setState(() {
-            _selectGroupedVariant(
-              category: categoryName,
-              subCategory: subName,
-              variant: firstVariant,
-              categoryIndex: _selectedCategoryIndex,
-              subCategoryIndex: _selectedSubCategoryIndex,
-            );
-          });
-        });
-      }
+    final units = <String, Map<String, dynamic>>{};
+    for (final variant in variants) {
+      units.putIfAbsent(_variantUnitKey(variant), () => variant);
     }
-
-    final bool allSubLabelsSameAsCategory =
-        subCatEntries.isNotEmpty &&
-        subCatEntries.every((entry) {
-          final sub = entry['subCategory'];
-          final s = _cleanGroupLabel(
-            (sub is Map ? sub['subCategory'] : '').toString(),
-          );
-          return s.isEmpty || s == categoryName;
-        });
+    final selectedUnitKey =
+        _selectedUnitKey != null && units.containsKey(_selectedUnitKey)
+        ? _selectedUnitKey!
+        : (units.isNotEmpty ? units.keys.first : '');
+    final unitVariants = variants
+        .where((variant) => _variantUnitKey(variant) == selectedUnitKey)
+        .toList();
+    final displayVariants = _dedupedVariantsForDisplay(variants: unitVariants);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1406,6 +1315,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                       setState(() {
                         _selectedCategoryIndex = idx;
                         _selectedSubCategoryIndex = 0;
+                        _selectedUnitKey = null;
                         _selectedVariantId = null;
                         _resetProjectSizeInputs();
                       });
@@ -1417,7 +1327,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             ),
           ),
           const SizedBox(height: 8),
-          if (subCatEntries.isNotEmpty && !allSubLabelsSameAsCategory)
+          if (subCatEntries.isNotEmpty)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -1459,6 +1369,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                       onSelected: (_) {
                         setState(() {
                           _selectedSubCategoryIndex = idx;
+                          _selectedUnitKey = null;
                           _selectedVariantId = null;
                           _resetProjectSizeInputs();
                         });
@@ -1475,9 +1386,55 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
               "No variants found for $categoryName / $subName",
               style: GoogleFonts.openSans(color: const Color(0xFF7B7B7B)),
             )
-          else if (shouldHideVariantSizes)
-            const SizedBox.shrink()
-          else
+          else ...[
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: units.entries.map((entry) {
+                final unitKey = entry.key;
+                final variant = entry.value;
+                final selected = unitKey == selectedUnitKey;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedUnitKey = unitKey;
+                      _selectGroupedVariant(
+                        category: categoryName,
+                        subCategory: subName,
+                        variant: variant,
+                        categoryIndex: selectedCategorySourceIndex,
+                        subCategoryIndex: selectedSubSourceIndex,
+                      );
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: selected
+                            ? const Color(0xFF8B4513)
+                            : const Color(0xFFE8DED6),
+                      ),
+                      color: selected ? const Color(0xFFFFF3E8) : Colors.white,
+                    ),
+                    child: Text(
+                      _variantUnitLabel(variant),
+                      style: GoogleFonts.openSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF302E2E),
+                      ),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1485,12 +1442,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 final id = (v['id'] ?? v['_id'] ?? '').toString();
                 final selected = id.isNotEmpty && id == _selectedVariantId;
 
-                // Selection card should not repeat unit/price; those are shown elsewhere.
-                final label = _variantSelectorLabel(
-                  category: categoryName,
-                  subCategory: subName,
-                  variant: v,
-                );
+                final label = _sizeColorSelectorLabel(v);
 
                 return InkWell(
                   onTap: () {
@@ -1536,6 +1488,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 );
               }).toList(),
             ),
+          ],
         ],
       ],
     );
@@ -1790,6 +1743,16 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
     if (usesQuantityBasedInput && quantity <= 0) {
       _showAddValidationMessage("Enter a quantity greater than zero.");
+      return;
+    }
+
+    if (usesQuantityBasedInput &&
+        _quantityRequiresWholeNumber(material) &&
+        quantity != quantity.roundToDouble()) {
+      final unitName = material.unit?.trim().isNotEmpty == true
+          ? material.unit!.trim()
+          : 'Quantity';
+      _showAddValidationMessage("$unitName must be entered as a whole number.");
       return;
     }
 
@@ -2078,6 +2041,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
                 _quantityInputLabel(_selectedMaterial),
                 quantityController,
                 () => _calculateCosts(),
+                allowDecimal: !_quantityRequiresWholeNumber(_selectedMaterial),
               ),
               const SizedBox(height: 10),
             ],
@@ -2481,8 +2445,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   Widget _buildStandaloneInputField(
     String label,
     TextEditingController controller,
-    VoidCallback onChanged,
-  ) {
+    VoidCallback onChanged, {
+    bool allowDecimal = true,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2496,7 +2461,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         const SizedBox(height: 5),
         TextField(
           controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          keyboardType: TextInputType.numberWithOptions(decimal: allowDecimal),
+          inputFormatters: allowDecimal
+              ? [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,4}$'))]
+              : [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             isDense: true,
             contentPadding: const EdgeInsets.symmetric(
