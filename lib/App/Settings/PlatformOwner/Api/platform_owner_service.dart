@@ -1051,6 +1051,7 @@ class PlatformOwnerService {
     double? pricePerSqm,
     double? pricePerUnit,
     String? pricingUnit,
+    String? sqmPricingBasis,
     bool showDialogs = false,
   }) async {
     try {
@@ -1059,26 +1060,37 @@ class PlatformOwnerService {
         return {'success': false, 'message': 'Authentication required'};
       }
 
-      final body = <String, dynamic>{
-        if (pricePerSqm != null) 'pricePerSqm': pricePerSqm,
-        if (pricePerUnit != null) 'pricePerUnit': pricePerUnit,
-        if (pricingUnit != null && pricingUnit.trim().isNotEmpty)
-          'pricingUnit': pricingUnit.trim(),
-      };
+      final isSqmPrice = pricePerSqm != null;
+      final price = pricePerSqm ?? pricePerUnit;
 
-      if (body.isEmpty) {
+      if (price == null) {
         return {
           'success': false,
           'message': 'No material price changes provided',
         };
       }
 
+      final normalizedPricingUnit = isSqmPrice
+          ? 'sqm'
+          : ((pricingUnit == null || pricingUnit.trim().isEmpty)
+                ? 'piece'
+                : pricingUnit.trim().toLowerCase());
+      final body = <String, dynamic>{
+        'price': price,
+        'pricingUnit': normalizedPricingUnit,
+        if (isSqmPrice)
+          'sqmPricingBasis':
+              (sqmPricingBasis == null || sqmPricingBasis.trim().isEmpty)
+              ? 'SQM'
+              : sqmPricingBasis.trim(),
+      };
+
       debugPrint(
         "📤 [UPDATE COMPANY MATERIAL PRICE] ID: $materialId BODY: $body",
       );
 
-      final response = await _dio.put(
-        '/api/database/materials/$materialId',
+      final response = await _dio.patch(
+        '/api/product/materials/$materialId/price',
         data: body,
         options: Options(
           headers: {"Authorization": "Bearer $token"},

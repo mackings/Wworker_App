@@ -279,6 +279,8 @@ class MaterialService {
     String? sizeVariant,
     double? foamThickness,
     String? foamDensity,
+    double? manualPrice,
+    String? manualPriceBasis,
     double quantity = 1,
   }) async {
     try {
@@ -295,6 +297,12 @@ class MaterialService {
         if (sizeVariant != null) "sizeVariant": sizeVariant,
         if (foamThickness != null) "foamThickness": foamThickness,
         if (foamDensity != null) "foamDensity": foamDensity,
+        if (manualPrice != null && manualPrice > 0) "manualPrice": manualPrice,
+        if (manualPrice != null &&
+            manualPrice > 0 &&
+            manualPriceBasis != null &&
+            manualPriceBasis.trim().isNotEmpty)
+          "manualPriceBasis": manualPriceBasis.trim(),
         "quantity": quantity,
       };
 

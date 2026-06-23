@@ -1685,6 +1685,7 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
   late final TextEditingController _pricePerSqmController;
   late final TextEditingController _pricePerUnitController;
   late String _selectedPricingUnit;
+  String _sqmPricingBasis = 'SQM';
   late final List<String> _pricingUnitOptions;
   bool _isSaving = false;
 
@@ -1719,8 +1720,10 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     super.dispose();
   }
 
-  void _formatPricePerSqmInput() =>
-      _formatCurrencyController(_pricePerSqmController);
+  void _formatPricePerSqmInput() {
+    _formatCurrencyController(_pricePerSqmController);
+    if (mounted) setState(() {});
+  }
 
   void _formatPricePerUnitInput() =>
       _formatCurrencyController(_pricePerUnitController);
@@ -1763,6 +1766,15 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     return double.tryParse(clean);
   }
 
+  bool _isSqmPriceCandidate() {
+    final unit = widget.material.pricingUnit.trim().toLowerCase();
+    return unit == 'sqm' ||
+        unit == 'm2' ||
+        unit == 'm²' ||
+        (widget.material.pricePerSqm ?? 0) > 0 ||
+        _pricePerSqmController.text.trim().isNotEmpty;
+  }
+
   List<String> _resolvePricingUnitOptions(DatabaseMaterial material) {
     final options = <String>{};
     final pricingUnit = material.pricingUnit.trim();
@@ -1793,6 +1805,7 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
     final pricePerSqm = _parseNumber(_pricePerSqmController.text);
     final pricePerUnit = _parseNumber(_pricePerUnitController.text);
     final pricingUnit = _selectedPricingUnit.trim();
+    final shouldSaveSqmPrice = pricePerSqm != null;
 
     if (pricePerSqm == null && pricePerUnit == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1805,9 +1818,10 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
 
     final result = await widget.service.updateCompanyMaterialPrice(
       materialId: widget.material.id,
-      pricePerSqm: pricePerSqm,
-      pricePerUnit: pricePerUnit,
+      pricePerSqm: shouldSaveSqmPrice ? pricePerSqm : null,
+      pricePerUnit: shouldSaveSqmPrice ? null : pricePerUnit,
       pricingUnit: pricingUnit,
+      sqmPricingBasis: shouldSaveSqmPrice ? _sqmPricingBasis : null,
       showDialogs: false,
     );
 
@@ -1870,8 +1884,14 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
               ),
             ),
             const SizedBox(height: 18),
+            if (_isSqmPriceCandidate()) ...[
+              _buildSqmPricingBasisSelector(),
+              const SizedBox(height: 14),
+            ],
             _buildField(
-              label: 'Price Per Sqm',
+              label: _sqmPricingBasis == 'Sheet Size'
+                  ? 'Full Sheet Price'
+                  : 'Price Per Sqm',
               controller: _pricePerSqmController,
             ),
             const SizedBox(height: 14),
@@ -1901,6 +1921,18 @@ class _MaterialPriceEditorSheetState extends State<_MaterialPriceEditorSheet> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSqmPricingBasisSelector() {
+    return _buildField(
+      label: 'SQM Price Basis',
+      initialValue: _sqmPricingBasis,
+      options: const ['SQM', 'Sheet Size'],
+      onChanged: (value) {
+        if (value == null) return;
+        setState(() => _sqmPricingBasis = value);
+      },
     );
   }
 

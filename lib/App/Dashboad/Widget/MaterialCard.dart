@@ -93,6 +93,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
   final TextEditingController materialSearchController =
       TextEditingController();
   String _materialSearchQuery = '';
+  String _manualSqmPriceBasis = 'sqm';
 
   @override
   void initState() {
@@ -570,6 +571,9 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
 
   bool _manualPriceUsesAreaRate() {
     if (_usesQuantityBasedInput(_selectedMaterial)) return false;
+    if (_requiresProjectSize(_selectedMaterial)) {
+      return _manualSqmPriceBasis == 'sqm';
+    }
     final material = _selectedMaterial;
     final raw = [
       material?.pricingUnit,
@@ -593,10 +597,19 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     if (_usesQuantityBasedInput(_selectedMaterial)) {
       return _unitPriceLabel(_selectedMaterial);
     }
+    if (_requiresProjectSize(_selectedMaterial) &&
+        _manualSqmPriceBasis == 'full_unit') {
+      return 'Manual full sheet price';
+    }
     if (_manualPriceUsesAreaRate()) {
       return 'Manual price per sq m';
     }
     return 'Manual full unit price';
+  }
+
+  String? _manualPriceBasisForRequest() {
+    if (!_requiresProjectSize(_selectedMaterial)) return null;
+    return _manualSqmPriceBasis;
   }
 
   double? _parseAmountInput(String text) {
@@ -655,12 +668,17 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       return manualUnitPrice * _parseQuantityInput();
     }
 
-    if (_manualPriceUsesAreaRate()) {
-      final areaUsed = _costCalculation?.waste.totalAreaUsed ?? 0;
-      if (areaUsed > 0) return manualUnitPrice * areaUsed;
-
+    if (_requiresProjectSize(_selectedMaterial)) {
       final projectArea = _costCalculation?.dimensions.projectAreaSqm ?? 0;
-      if (projectArea > 0) return manualUnitPrice * projectArea;
+      if (projectArea <= 0) return 0;
+
+      if (_manualSqmPriceBasis == 'sqm') {
+        return manualUnitPrice * projectArea;
+      }
+
+      final standardArea = _costCalculation?.dimensions.standardAreaSqm ?? 0;
+      if (standardArea <= 0) return 0;
+      return (manualUnitPrice / standardArea) * projectArea;
     }
 
     return manualUnitPrice * _manualPriceMultiplier();
@@ -1665,6 +1683,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         materialType: _selectedMaterialType,
         foamThickness: _selectedFoamVariant?.thickness,
         foamDensity: _selectedFoamVariant?.density,
+        manualPrice: _parseAmountInput(manualUnitPriceController.text),
+        manualPriceBasis: _manualPriceBasisForRequest(),
         quantity: quantity,
       );
 
@@ -1791,14 +1811,26 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
         : lineTotal;
     final standardArea = _costCalculation!.dimensions.standardAreaSqm;
     final manualPricePerSqm = usesManualPrice
-        ? (_manualPriceUsesAreaRate()
-              ? manualUnitPrice
-              : (standardArea > 0 ? manualUnitPrice / standardArea : null))
+        ? (_requiresProjectSize(material)
+              ? (_manualSqmPriceBasis == 'sqm'
+                    ? manualUnitPrice
+                    : (standardArea > 0
+                          ? manualUnitPrice / standardArea
+                          : null))
+              : (_manualPriceUsesAreaRate()
+                    ? manualUnitPrice
+                    : (standardArea > 0
+                          ? manualUnitPrice / standardArea
+                          : null)))
         : null;
     final manualFullUnitPrice = usesManualPrice
-        ? (_manualPriceUsesAreaRate() && standardArea > 0
-              ? manualUnitPrice * standardArea
-              : manualUnitPrice)
+        ? (_requiresProjectSize(material)
+              ? (_manualSqmPriceBasis == 'sqm' && standardArea > 0
+                    ? manualUnitPrice * standardArea
+                    : manualUnitPrice)
+              : (_manualPriceUsesAreaRate() && standardArea > 0
+                    ? manualUnitPrice * standardArea
+                    : manualUnitPrice))
         : null;
     final calculationPayload = {
       "mode": _costCalculation!.calculation.mode,
@@ -1815,6 +1847,8 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       "pricePerFullUnit":
           manualFullUnitPrice ?? _costCalculation!.pricing.pricePerFullUnit,
       "totalMaterialCost": lineTotal,
+      if (usesManualPrice && _manualPriceBasisForRequest() != null)
+        "manualPriceBasis": _manualPriceBasisForRequest(),
     };
 
     // Create item with API calculation results
@@ -1854,6 +1888,7 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
       lengthController.clear();
       quantityController.text = '1';
       manualUnitPriceController.clear();
+      _manualSqmPriceBasis = 'sqm';
       _costCalculation = null;
       if (_selectedMaterial != null) {
         _setAutoMaterialName(
@@ -2326,6 +2361,10 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
           _manualPriceInputLabel(),
           manualUnitPriceController,
         ),
+        if (_requiresProjectSize(_selectedMaterial)) ...[
+          const SizedBox(height: 8),
+          _buildManualSqmPriceBasisSelector(),
+        ],
         const SizedBox(height: 6),
         Text(
           isRequired
@@ -2336,6 +2375,86 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
             fontStyle: FontStyle.italic,
             color: const Color(0xFF9E9E9E),
           ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildManualSqmPriceBasisSelector() {
+    Widget option({
+      required String value,
+      required String label,
+      required String helper,
+    }) {
+      final selected = _manualSqmPriceBasis == value;
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            if (_manualSqmPriceBasis == value) return;
+            setState(() => _manualSqmPriceBasis = value);
+            _calculateCosts();
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+            decoration: BoxDecoration(
+              color: selected ? const Color(0xFFFFF3E8) : Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: selected
+                    ? const Color(0xFFA16438)
+                    : const Color(0xFFE0E0E0),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.openSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: selected
+                        ? const Color(0xFFA16438)
+                        : const Color(0xFF302E2E),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  helper,
+                  style: GoogleFonts.openSans(
+                    fontSize: 10,
+                    color: const Color(0xFF7B7B7B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Manual price basis',
+          style: GoogleFonts.openSans(
+            fontSize: 12,
+            color: const Color(0xFF7B7B7B),
+          ),
+        ),
+        const SizedBox(height: 5),
+        Row(
+          children: [
+            option(value: 'sqm', label: 'Per sq m', helper: 'Rate per area'),
+            const SizedBox(width: 8),
+            option(
+              value: 'full_unit',
+              label: 'Full sheet',
+              helper: 'Price for one sheet',
+            ),
+          ],
         ),
       ],
     );
@@ -2604,14 +2723,22 @@ class _AddMaterialCardState extends State<AddMaterialCard> {
     final standardArea = _costCalculation!.dimensions.standardAreaSqm;
     final displayPricePerSqm =
         manualUnitPrice != null && manualUnitPrice > 0 && standardArea > 0
-        ? (_manualPriceUsesAreaRate()
-              ? manualUnitPrice
-              : manualUnitPrice / standardArea)
+        ? (_requiresProjectSize(_selectedMaterial)
+              ? (_manualSqmPriceBasis == 'sqm'
+                    ? manualUnitPrice
+                    : manualUnitPrice / standardArea)
+              : (_manualPriceUsesAreaRate()
+                    ? manualUnitPrice
+                    : manualUnitPrice / standardArea))
         : _costCalculation!.pricing.pricePerSqm;
     final displayFullUnitPrice = manualUnitPrice != null && manualUnitPrice > 0
-        ? (_manualPriceUsesAreaRate() && standardArea > 0
-              ? manualUnitPrice * standardArea
-              : manualUnitPrice)
+        ? (_requiresProjectSize(_selectedMaterial)
+              ? (_manualSqmPriceBasis == 'sqm' && standardArea > 0
+                    ? manualUnitPrice * standardArea
+                    : manualUnitPrice)
+              : (_manualPriceUsesAreaRate() && standardArea > 0
+                    ? manualUnitPrice * standardArea
+                    : manualUnitPrice))
         : _costCalculation!.pricing.totalBoardPrice;
     final billableUnits = _costCalculation!.calculation.billableUnits;
     final billableUnitsText = billableUnits == billableUnits.roundToDouble()
