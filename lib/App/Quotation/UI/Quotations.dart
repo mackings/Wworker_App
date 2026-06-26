@@ -262,6 +262,58 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     );
   }
 
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().replaceAll(',', '').trim());
+  }
+
+  int _toQuantity(dynamic value) {
+    if (value is int) return value < 1 ? 1 : value;
+    if (value is num) return value < 1 ? 1 : value.toInt();
+    final parsed = int.tryParse(value?.toString() ?? '') ?? 1;
+    return parsed < 1 ? 1 : parsed;
+  }
+
+  double _materialLineTotal(Map<String, dynamic> item) {
+    final calculation = item["calculation"];
+    if (calculation is Map) {
+      final total = _toDouble(calculation["totalMaterialCost"]);
+      if (total != null) return total;
+    }
+
+    final storedTotal = _toDouble(item["LineTotal"] ?? item["subtotal"]);
+    if (storedTotal != null) return storedTotal;
+
+    final unitPrice = _toDouble(item["unitPrice"]);
+    if (unitPrice != null) return unitPrice * _toQuantity(item["quantity"]);
+
+    return _toDouble(item["Price"]) ?? 0.0;
+  }
+
+  double _partsCostTotal(
+    List<Map<String, dynamic>> materials,
+    List<Map<String, dynamic>> additionalCosts,
+  ) {
+    final materialTotal = materials.fold<double>(
+      0,
+      (sum, item) => sum + _materialLineTotal(item),
+    );
+    final additionalTotal = additionalCosts.fold<double>(
+      0,
+      (sum, item) => sum + (_toDouble(item["amount"]) ?? 0.0),
+    );
+    return materialTotal + additionalTotal;
+  }
+
+  double _savedCostPrice(Map<String, dynamic> quotation) {
+    return _toDouble(quotation["costPrice"]) ?? 0.0;
+  }
+
+  double _savedSellingPrice(Map<String, dynamic> quotation) {
+    return _toDouble(quotation["sellingPrice"]) ?? 0.0;
+  }
+
   Future<void> _deleteQuotation(String quotationId, int index) async {
     await ref
         .read(quotationSummaryProvider.notifier)
@@ -280,40 +332,22 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
 
   // ✅ Get cost price from quotation (materials + additional costs)
   double _getCostPrice(Map<String, dynamic> quotation) {
-    // If costPrice is already calculated and stored
-    if (quotation.containsKey("costPrice")) {
-      return (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
-    }
+    final savedCost = _savedCostPrice(quotation);
+    if (savedCost > 0) return savedCost;
 
-    // Otherwise calculate it
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
     );
     final additionalCosts = List<Map<String, dynamic>>.from(
       quotation["additionalCosts"] ?? [],
     );
-
-    double materialTotal = materials.fold<double>(
-      0,
-      (sum, item) =>
-          sum + (double.tryParse(item["Price"]?.toString() ?? "0") ?? 0.0),
-    );
-
-    double additionalTotal = additionalCosts.fold<double>(
-      0,
-      (sum, item) =>
-          sum + (double.tryParse(item["amount"]?.toString() ?? "0") ?? 0.0),
-    );
-
-    return materialTotal + additionalTotal;
+    return _partsCostTotal(materials, additionalCosts);
   }
 
   // ✅ Get selling price from quotation (cost price + overhead)
   double _getSellingPrice(Map<String, dynamic> quotation) {
-    // If sellingPrice is already calculated and stored
-    if (quotation.containsKey("sellingPrice")) {
-      return (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
-    }
+    final savedSelling = _savedSellingPrice(quotation);
+    if (savedSelling > 0) return savedSelling;
 
     // Otherwise return cost price (for backward compatibility)
     return _getCostPrice(quotation);
@@ -321,6 +355,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
 
   // ✅ Calculate total with quantity multiplier
   double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    final savedCost = _savedCostPrice(quotation);
+    if (savedCost > 0) return savedCost * quantity;
+
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
     );
@@ -330,18 +367,15 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
 
     double materialTotal = 0.0;
     for (final material in materials) {
-      final price =
-          double.tryParse((material["Price"] ?? "0").toString()) ?? 0.0;
-      final materialQty =
-          int.tryParse((material["quantity"] ?? "1").toString()) ?? 1;
+      final lineTotal = _materialLineTotal(material);
       final disableIncrement = material["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
-      materialTotal += price * materialQty * multiplier;
+      materialTotal += lineTotal * multiplier;
     }
 
     double additionalTotal = 0.0;
     for (final cost in additionalCosts) {
-      final amount = double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      final amount = _toDouble(cost["amount"]) ?? 0.0;
       final disableIncrement = cost["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
       additionalTotal += amount * multiplier;
@@ -355,6 +389,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     Map<String, dynamic> quotation,
     int quantity,
   ) {
+    final savedSelling = _savedSellingPrice(quotation);
+    if (savedSelling > 0) return savedSelling * quantity;
+
     final baseCost = _getCostPrice(quotation);
     final baseSelling = _getSellingPrice(quotation);
     if (baseCost <= 0) return 0.0;
@@ -685,15 +722,11 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     updated["materials"] = materials;
     updated["additionalCosts"] = additionalCosts;
 
-    final baseCost = _getCostPrice({
-      ...quotation,
-      "materials": materials,
-      "additionalCosts": additionalCosts,
-    });
+    final baseCost = _partsCostTotal(materials, additionalCosts);
     updated["costPrice"] = baseCost;
 
-    final existingCost = (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
-    final existingSell = (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
+    final existingCost = _savedCostPrice(quotation);
+    final existingSell = _savedSellingPrice(quotation);
     if (existingCost > 0 && existingSell > 0) {
       final ratio = existingSell / existingCost;
       updated["sellingPrice"] = baseCost * ratio;
@@ -811,18 +844,61 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
     }
     unitController.text = unitValue ?? '';
     double? latestPriceValue;
+    final calculation = initial?["calculation"] is Map
+        ? Map<String, dynamic>.from(initial!["calculation"] as Map)
+        : <String, dynamic>{};
 
-    Future<String?> _resolveMaterialId() async {
+    bool isFoamMaterial() {
+      final text =
+          [
+                initial?["category"],
+                initial?["Product"],
+                initial?["name"],
+                initial?["Materialname"],
+              ]
+              .whereType<Object>()
+              .map((value) => value.toString().toLowerCase())
+              .join(' ');
+      return text.contains('foam');
+    }
+
+    Future<String?> resolveMaterialId() async {
       if (resolvedMaterialId != null) return resolvedMaterialId;
+      final existingMaterialId = initial?["materialId"]?.toString() ?? "";
+      if (existingMaterialId.isNotEmpty) {
+        resolvedMaterialId = existingMaterialId;
+        return resolvedMaterialId;
+      }
       if (availableMaterials.isEmpty) {
         availableMaterials = await materialService.getMaterials();
       }
       final productName = initial?["Product"]?.toString() ?? "";
-      if (productName.isEmpty) return null;
+      final materialName = nameController.text.trim();
+      final candidates = [
+        productName,
+        materialName,
+        initial?["Materialname"]?.toString() ?? "",
+        initial?["name"]?.toString() ?? "",
+      ].where((value) => value.trim().isNotEmpty).toList();
+      if (candidates.isEmpty) return null;
       try {
-        final match = availableMaterials.firstWhere(
-          (m) => m.name.toLowerCase() == productName.toLowerCase(),
-        );
+        final match = availableMaterials.firstWhere((m) {
+          final names = [
+            m.name,
+            m.category,
+            m.subCategory,
+            m.catalogKey,
+          ].whereType<String>().map((value) => value.toLowerCase()).toList();
+          return candidates.any((candidate) {
+            final normalized = candidate.toLowerCase();
+            return names.any(
+              (name) =>
+                  name == normalized ||
+                  name.replaceAll(' ', '_') == normalized ||
+                  normalized.replaceAll('_', ' ').contains(name),
+            );
+          });
+        });
         resolvedMaterialId = match.id;
       } catch (_) {
         resolvedMaterialId = null;
@@ -883,7 +959,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                         return;
                       }
 
-                      final materialId = await _resolveMaterialId();
+                      final materialId = await resolveMaterialId();
                       if (materialId == null || materialId.isEmpty) {
                         setModalState(() => isCalculating = false);
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -902,12 +978,14 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                             requiredWidth: width,
                             requiredLength: length,
                             requiredUnit: unit,
-                            materialType: nameController.text.trim().isEmpty
-                                ? null
-                                : nameController.text.trim(),
-                            foamThickness: double.tryParse(
-                              thicknessController.text.trim(),
-                            ),
+                            materialType:
+                                calculation["materialType"]?.toString() ??
+                                initial?["selectedMaterialType"]?.toString(),
+                            foamThickness: isFoamMaterial()
+                                ? double.tryParse(
+                                    thicknessController.text.trim(),
+                                  )
+                                : null,
                             quantity: quantity,
                           );
 
@@ -1033,6 +1111,7 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                               controller: thicknessController,
                                               keyboardType:
                                                   TextInputType.number,
+                                              enabled: false,
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -1255,6 +1334,9 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                               ? lineTotal / quantity
                                               : lineTotal;
                                           Navigator.pop(context, {
+                                            ...?initial,
+                                            if (resolvedMaterialId != null)
+                                              "materialId": resolvedMaterialId,
                                             "Product":
                                                 initial?["Product"] ?? "",
                                             "Materialname": nameController.text
@@ -1263,9 +1345,10 @@ class _AllQuotationsState extends ConsumerState<AllQuotations> {
                                                 .trim(),
                                             "Length": lengthController.text
                                                 .trim(),
-                                            "Thickness": thicknessController
-                                                .text
-                                                .trim(),
+                                            "Thickness":
+                                                initial?["Thickness"]
+                                                    ?.toString() ??
+                                                thicknessController.text.trim(),
                                             "Unit":
                                                 unitValue ??
                                                 unitController.text.trim(),
@@ -2031,7 +2114,16 @@ class _BomImportItem {
   }
 
   static Map<String, dynamic> _mapMaterial(Map<String, dynamic> item) {
+    final calculation = item["calculation"] is Map
+        ? Map<String, dynamic>.from(item["calculation"] as Map)
+        : <String, dynamic>{};
+    final subtotal =
+        calculation["totalMaterialCost"] ?? item["subtotal"] ?? item["price"];
     return {
+      if (item["materialId"] != null) "materialId": item["materialId"],
+      if (item["name"] != null) "name": item["name"],
+      if (item["materialType"] != null)
+        "selectedMaterialType": item["materialType"],
       "Product": item["type"] ?? item["name"] ?? "Material",
       "Materialname": item["description"] ?? item["name"] ?? "Imported Item",
       "Width": item["width"]?.toString() ?? "",
@@ -2039,8 +2131,16 @@ class _BomImportItem {
       "Thickness": item["thickness"]?.toString() ?? "",
       "Unit": item["unit"] ?? "",
       "Sqm": item["squareMeter"]?.toString() ?? "",
-      "Price": item["price"]?.toString() ?? "",
+      "Price": subtotal?.toString() ?? "",
+      "LineTotal": subtotal?.toString() ?? "",
+      "unitPrice": item["price"]?.toString() ?? "",
       "quantity": item["quantity"]?.toString() ?? "1",
+      if (item["category"] != null) "category": item["category"],
+      if (item["subCategory"] != null) "subCategory": item["subCategory"],
+      if (item["billingMode"] != null) "billingMode": item["billingMode"],
+      if (calculation.isNotEmpty) "calculation": calculation,
+      if (item["disableIncrement"] != null)
+        "disableIncrement": item["disableIncrement"] == true,
     };
   }
 

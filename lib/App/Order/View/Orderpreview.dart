@@ -82,10 +82,22 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    if (widget.quotation.boms.isNotEmpty) {
+      _selectAllItems = true;
+      _selectedItemIds.addAll(
+        widget.quotation.boms.map(
+          (bom) => bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber,
+        ),
+      );
+    }
+  }
+
   /// Calculate end date based on expected duration
   DateTime _calculateEndDate(DateTime start, ExpectedDuration? duration) {
-    final effectiveDuration =
-        duration ?? widget.quotation.expectedDuration;
+    final effectiveDuration = duration ?? widget.quotation.expectedDuration;
 
     if (effectiveDuration == null || effectiveDuration.value == null) {
       // Default to 1 day if no duration specified
@@ -427,48 +439,47 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-            Row(
-              children: [
+        Row(
+          children: [
             const Expanded(
               child: Text(
                 "BOM Items Schedule",
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF302E2E),
-                    ),
-                  ),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF302E2E),
                 ),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _selectAllItems,
-                      activeColor: const Color(0xFFA16438),
-                      onChanged: (value) {
-                        setState(() {
-                          _selectAllItems = value ?? false;
-                          if (_selectAllItems) {
-                            _selectedItemIds
-                              ..clear()
-                              ..addAll(
-                                boms
-                                    .map((e) => e.bomId.isNotEmpty
-                                        ? e.bomId
-                                        : e.bomNumber)
-                                    .toList(),
-                              );
-                          } else {
-                            _selectedItemIds.clear();
-                          }
-                        });
-                      },
-                    ),
+              ),
+            ),
+            Row(
+              children: [
+                Checkbox(
+                  value: _selectAllItems,
+                  activeColor: const Color(0xFFA16438),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectAllItems = value ?? false;
+                      if (_selectAllItems) {
+                        _selectedItemIds
+                          ..clear()
+                          ..addAll(
+                            boms
+                                .map(
+                                  (e) => e.bomId.isNotEmpty
+                                      ? e.bomId
+                                      : e.bomNumber,
+                                )
+                                .toList(),
+                          );
+                      } else {
+                        _selectedItemIds.clear();
+                      }
+                    });
+                  },
+                ),
                 const Text(
                   "All items",
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFF302E2E),
-                  ),
+                  style: TextStyle(fontSize: 12, color: Color(0xFF302E2E)),
                 ),
               ],
             ),
@@ -479,13 +490,12 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
           final key = bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber;
           final startDate = _startDates[key];
           final endDate = _endDates[key];
-          final isSelected =
-              _selectedItemIds.contains(key) && !_selectAllItems;
+          final isSelected = _selectedItemIds.contains(key) && !_selectAllItems;
           final title = bom.name.isNotEmpty
               ? bom.name
               : bom.bomNumber.isNotEmpty
-                  ? bom.bomNumber
-                  : "BOM";
+              ? bom.bomNumber
+              : "BOM";
           final subtitle = bom.product.name.isNotEmpty
               ? bom.product.name
               : bom.description;
@@ -499,9 +509,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                   : const Color(0xFFF5F8F2),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isSelected
-                    ? const Color(0xFFA16438)
-                    : Colors.grey[300]!,
+                color: isSelected ? const Color(0xFFA16438) : Colors.grey[300]!,
               ),
             ),
             child: Column(
@@ -566,8 +574,7 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                         label: "End Date",
                         date: endDate,
                         onTap: () => _selectEndDate(bom),
-                        isAutoCalculated:
-                            startDate != null && endDate != null,
+                        isAutoCalculated: startDate != null && endDate != null,
                       ),
                     ),
                   ],
@@ -717,7 +724,9 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
                 onChanged: (value) {
                   final raw = value.replaceAll(RegExp(r'[^0-9]'), '');
                   final parsed = raw.isEmpty ? 0 : int.parse(raw);
-                  final formatted = NumberFormat.decimalPattern().format(parsed);
+                  final formatted = NumberFormat.decimalPattern().format(
+                    parsed,
+                  );
                   _amountPaidController.value = TextEditingValue(
                     text: formatted,
                     selection: TextSelection.collapsed(
@@ -864,11 +873,17 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
 
     if (_selectAllItems) {
       final starts = widget.quotation.boms
-          .map((bom) => _startDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber])
+          .map(
+            (bom) =>
+                _startDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber],
+          )
           .whereType<DateTime>()
           .toList();
       final ends = widget.quotation.boms
-          .map((bom) => _endDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber])
+          .map(
+            (bom) =>
+                _endDates[bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber],
+          )
           .whereType<DateTime>()
           .toList();
       if (starts.length != widget.quotation.boms.length ||
@@ -912,18 +927,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
       selectedEnd = ends.last;
     }
 
-    // Validate dates
-    if (selectedStart == null || selectedEnd == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please select both start and end dates"),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     if (selectedEnd.isBefore(selectedStart)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -938,8 +941,10 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
     setState(() => isLoading = true);
 
     try {
-      final rawPaid =
-          _amountPaidController.text.replaceAll(RegExp(r'[^0-9]'), '');
+      final rawPaid = _amountPaidController.text.replaceAll(
+        RegExp(r'[^0-9]'),
+        '',
+      );
       final double amountPaid = rawPaid.isEmpty ? 0.0 : double.parse(rawPaid);
       final allBomIds = widget.quotation.boms
           .map((bom) => bom.bomId.isNotEmpty ? bom.bomId : bom.bomNumber)
@@ -979,7 +984,6 @@ class _OrderPreviewPageState extends State<OrderPreviewPage> {
         );
 
         Nav.offAll(const DashboardScreen(initialIndex: 2));
-
       } else {
         if (!mounted) return;
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class ItemsCard extends StatelessWidget {
   final Map<String, dynamic> item;
@@ -199,7 +200,7 @@ class ItemsCard extends StatelessWidget {
         item["Total"] ?? item["LineTotal"] ?? item["Price"] ?? item["amount"];
     final priceText = price == null || price.toString().trim().isEmpty
         ? null
-        : price.toString();
+        : _formatAmount(price);
     final showTopDelete = !showAddButton && onDelete != null;
 
     return Container(
@@ -478,6 +479,23 @@ class ItemsCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatAmount(dynamic value) {
+    if (value is num) {
+      return _formatNumber(value.toDouble());
+    }
+
+    final text = value.toString().trim();
+    final numeric = double.tryParse(text.replaceAll(',', ''));
+    if (numeric == null) return text;
+    return _formatNumber(numeric);
+  }
+
+  String _formatNumber(double value) {
+    final hasDecimals = (value - value.roundToDouble()).abs() >= 0.005;
+    final pattern = hasDecimals ? '#,##0.##' : '#,##0';
+    return NumberFormat(pattern).format(value);
   }
 
   void _showPriceIncrementHelp(BuildContext context) {

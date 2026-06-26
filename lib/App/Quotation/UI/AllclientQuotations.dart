@@ -166,6 +166,9 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
           if (index == 0) return _buildHeader();
 
           final quotation = quotations[index - 1];
+          final firstBom = quotation.boms.isNotEmpty
+              ? quotation.boms.first
+              : null;
           final firstItem = quotation.items.isNotEmpty
               ? quotation.items.first
               : null;
@@ -197,7 +200,20 @@ class _AllClientQuotationsState extends ConsumerState<AllClientQuotations> {
                 'status': quotation.status,
                 'createdAt': quotation.createdAt.toIso8601String(),
                 'quotationNumber': quotation.quotationNumber,
-                'items': firstItem != null
+                'items': firstBom != null
+                    ? [
+                        {
+                          'productName': firstBom.name.isNotEmpty
+                              ? firstBom.name
+                              : firstBom.product.name,
+                          'woodType':
+                              '${firstBom.materials.length} material(s)',
+                          'image': firstBom.product.image.isNotEmpty
+                              ? firstBom.product.image
+                              : Urls.woodImg,
+                        },
+                      ]
+                    : firstItem != null
                     ? [
                         {
                           'productName': quotation.service.product,

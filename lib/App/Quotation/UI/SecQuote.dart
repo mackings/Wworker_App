@@ -12,6 +12,8 @@ import 'package:share_plus/share_plus.dart';
 import 'package:wworker/App/Invoice/View/invoice_preview.dart';
 import 'package:wworker/App/Quotation/Api/BomService.dart';
 import 'package:wworker/App/Quotation/Model/ClientQmodel.dart' as client_q;
+import 'package:wworker/App/Quotation/Providers/MaterialProvider.dart';
+import 'package:wworker/App/Quotation/Providers/QuoteSProvider.dart';
 import 'package:wworker/App/Quotation/UI/AllclientQuotations.dart';
 import 'package:wworker/App/Quotation/Widget/QuoInfo.dart';
 import 'package:wworker/App/Quotation/Widget/QuoTable.dart';
@@ -360,10 +362,61 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
   }
 
   // ✅ Get cost price from quotation
-  double _getCostPrice(Map<String, dynamic> quotation) {
-    if (quotation.containsKey("costPrice")) {
-      return (quotation["costPrice"] as num?)?.toDouble() ?? 0.0;
+  double? _toDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString().replaceAll(',', '').trim());
+  }
+
+  int _toQuantity(dynamic value) {
+    if (value is int) return value < 1 ? 1 : value;
+    if (value is num) return value < 1 ? 1 : value.toInt();
+    final parsed = int.tryParse(value?.toString() ?? '') ?? 1;
+    return parsed < 1 ? 1 : parsed;
+  }
+
+  double _materialLineTotal(Map<String, dynamic> item) {
+    final calculation = item["calculation"];
+    if (calculation is Map) {
+      final total = _toDouble(calculation["totalMaterialCost"]);
+      if (total != null) return total;
     }
+
+    final storedTotal = _toDouble(item["LineTotal"] ?? item["subtotal"]);
+    if (storedTotal != null) return storedTotal;
+
+    final unitPrice = _toDouble(item["unitPrice"]);
+    if (unitPrice != null) return unitPrice * _toQuantity(item["quantity"]);
+
+    return _toDouble(item["Price"]) ?? 0.0;
+  }
+
+  double _partsCostTotal(
+    List<Map<String, dynamic>> materials,
+    List<Map<String, dynamic>> additionalCosts,
+  ) {
+    final materialCost = materials.fold<double>(
+      0,
+      (sum, m) => sum + _materialLineTotal(m),
+    );
+    final additionalCost = additionalCosts.fold<double>(
+      0,
+      (sum, c) => sum + (_toDouble(c["amount"]) ?? 0.0),
+    );
+    return materialCost + additionalCost;
+  }
+
+  double _savedCostPrice(Map<String, dynamic> quotation) {
+    return _toDouble(quotation["costPrice"]) ?? 0.0;
+  }
+
+  double _savedSellingPrice(Map<String, dynamic> quotation) {
+    return _toDouble(quotation["sellingPrice"]) ?? 0.0;
+  }
+
+  double _getCostPrice(Map<String, dynamic> quotation) {
+    final savedCost = _savedCostPrice(quotation);
+    if (savedCost > 0) return savedCost;
 
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
@@ -371,31 +424,22 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     final additionalCosts = List<Map<String, dynamic>>.from(
       quotation["additionalCosts"] ?? [],
     );
-
-    double materialCost = materials.fold<double>(
-      0,
-      (sum, m) => sum + (double.tryParse(m["Price"]?.toString() ?? "0") ?? 0),
-    );
-
-    double additionalCost = additionalCosts.fold<double>(
-      0,
-      (sum, c) => sum + (double.tryParse(c["amount"]?.toString() ?? "0") ?? 0),
-    );
-
-    return materialCost + additionalCost;
+    return _partsCostTotal(materials, additionalCosts);
   }
 
   // ✅ Get selling price from quotation (cost + overhead)
   double _getSellingPrice(Map<String, dynamic> quotation) {
-    if (quotation.containsKey("sellingPrice")) {
-      return (quotation["sellingPrice"] as num?)?.toDouble() ?? 0.0;
-    }
+    final savedSelling = _savedSellingPrice(quotation);
+    if (savedSelling > 0) return savedSelling;
 
     // Fallback to cost price for backward compatibility
     return _getCostPrice(quotation);
   }
 
   double _calculateTotalCost(Map<String, dynamic> quotation, int quantity) {
+    final savedCost = _savedCostPrice(quotation);
+    if (savedCost > 0) return savedCost * quantity;
+
     final materials = List<Map<String, dynamic>>.from(
       quotation["materials"] ?? [],
     );
@@ -406,19 +450,16 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     double materialTotal = 0.0;
     int disabledCount = 0;
     for (final material in materials) {
-      final price =
-          double.tryParse((material["Price"] ?? "0").toString()) ?? 0.0;
-      final materialQty =
-          int.tryParse((material["quantity"] ?? "1").toString()) ?? 1;
+      final lineTotal = _materialLineTotal(material);
       final disableIncrement = material["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
       if (disableIncrement) disabledCount += 1;
-      materialTotal += price * materialQty * multiplier;
+      materialTotal += lineTotal * multiplier;
     }
 
     double additionalTotal = 0.0;
     for (final cost in additionalCosts) {
-      final amount = double.tryParse((cost["amount"] ?? "0").toString()) ?? 0.0;
+      final amount = _toDouble(cost["amount"]) ?? 0.0;
       final disableIncrement = cost["disableIncrement"] == true;
       final multiplier = disableIncrement ? 1 : quantity;
       additionalTotal += amount * multiplier;
@@ -438,12 +479,128 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     Map<String, dynamic> quotation,
     int quantity,
   ) {
+    final savedSelling = _savedSellingPrice(quotation);
+    if (savedSelling > 0) return savedSelling * quantity;
+
     final baseCost = _getCostPrice(quotation);
     final baseSelling = _getSellingPrice(quotation);
     if (baseCost <= 0) return 0.0;
     final totalCost = _calculateTotalCost(quotation, quantity);
     final ratio = baseSelling / baseCost;
     return totalCost * ratio;
+  }
+
+  List<Map<String, dynamic>> _normalizedBomMaterials(
+    List<Map<String, dynamic>> materials,
+    int quotationQuantity,
+  ) {
+    return materials.map((material) {
+      final materialQuantity = _toQuantity(material["quantity"]);
+      final lineTotal = _materialLineTotal(material);
+      final disableIncrement = material["disableIncrement"] == true;
+      final quoteMultiplier = disableIncrement ? 1 : quotationQuantity;
+      final totalQuantity = materialQuantity * quoteMultiplier;
+      final subtotal = lineTotal * quoteMultiplier;
+      final unitPrice = materialQuantity > 0
+          ? lineTotal / materialQuantity
+          : lineTotal;
+
+      return {
+        "name":
+            material["Materialname"] ??
+            material["name"] ??
+            material["Product"] ??
+            "Material",
+        "woodType": material["Product"] ?? material["woodType"],
+        "foamType": material["foamType"],
+        "type": material["type"],
+        "width": _toDouble(material["Width"] ?? material["width"]) ?? 0,
+        "height": _toDouble(material["Height"] ?? material["height"]) ?? 0,
+        "length": _toDouble(material["Length"] ?? material["length"]) ?? 0,
+        "thickness":
+            _toDouble(material["Thickness"] ?? material["thickness"]) ?? 0,
+        "unit": material["Unit"] ?? material["unit"] ?? "unit",
+        "squareMeter":
+            _toDouble(material["Sqm"] ?? material["squareMeter"]) ?? 0,
+        "price": unitPrice,
+        "quantity": totalQuantity,
+        "subtotal": subtotal,
+      };
+    }).toList();
+  }
+
+  List<Map<String, dynamic>> _normalizedAdditionalCosts(
+    List<Map<String, dynamic>> additionalCosts,
+    int quotationQuantity,
+  ) {
+    return additionalCosts.map((cost) {
+      final disableIncrement = cost["disableIncrement"] == true;
+      final multiplier = disableIncrement ? 1 : quotationQuantity;
+      final amount = (_toDouble(cost["amount"]) ?? 0.0) * multiplier;
+
+      return {
+        "name": cost["name"] ?? "Additional cost",
+        "amount": amount,
+        "description": cost["description"] ?? "",
+      };
+    }).toList();
+  }
+
+  Map<String, dynamic> _buildBomPayload(
+    Map<String, dynamic> quotation,
+    int quantity,
+  ) {
+    final product = Map<String, dynamic>.from(quotation["product"] ?? {});
+    final materials = List<Map<String, dynamic>>.from(
+      quotation["materials"] ?? [],
+    );
+    final additionalCosts = List<Map<String, dynamic>>.from(
+      quotation["additionalCosts"] ?? [],
+    );
+    final normalizedMaterials = _normalizedBomMaterials(materials, quantity);
+    final normalizedAdditionalCosts = _normalizedAdditionalCosts(
+      additionalCosts,
+      quantity,
+    );
+    final totalCost = _calculateTotalCost(quotation, quantity);
+    final sellingPrice = _calculateTotalSellingPrice(quotation, quantity);
+    final costPrice = _getCostPrice(quotation) * quantity;
+    final quotationId = quotation["id"]?.toString() ?? '';
+
+    return {
+      if (quotationId.isNotEmpty) "bomId": quotationId,
+      "bomNumber": quotation["bomNumber"]?.toString() ?? quotationId,
+      "name": product["name"]?.toString() ?? "BOM",
+      "description": product["description"]?.toString() ?? "",
+      "productId": product["productId"] ?? product["id"] ?? product["_id"],
+      "product": {
+        "productId": product["productId"] ?? product["id"] ?? product["_id"],
+        "name": product["name"] ?? "Product",
+        "description": product["description"] ?? "",
+        "image": product["image"] ?? "",
+      },
+      "materials": normalizedMaterials,
+      "additionalCosts": normalizedAdditionalCosts,
+      "materialsCost": totalCost,
+      "additionalCostsTotal": normalizedAdditionalCosts.fold<double>(
+        0,
+        (sum, cost) => sum + (_toDouble(cost["amount"]) ?? 0.0),
+      ),
+      "totalCost": totalCost,
+      "pricing": {
+        "pricingMethod": quotation["pricingMethod"] ?? "",
+        "markupPercentage": _toDouble(quotation["markupPercentage"]) ?? 0.0,
+        "materialsTotal": totalCost,
+        "additionalTotal": 0,
+        "overheadCost": _toDouble(quotation["overheadCost"]) ?? 0.0,
+        "costPrice": costPrice,
+        "sellingPrice": sellingPrice,
+      },
+      "expectedDuration": {
+        "value": int.tryParse(quotation["expectedDuration"]?.toString() ?? ""),
+        "unit": quotation["expectedPeriod"]?.toString() ?? "Day",
+      },
+    };
   }
 
   @override
@@ -680,58 +837,38 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     setState(() => isLoading = true);
 
     final bomService = BOMService();
+    final boms = widget.selectedQuotations.map((quotation) {
+      final quotationId = quotation["id"] as String;
+      final quantity = widget.quotationQuantities[quotationId] ?? 1;
+      return _buildBomPayload(quotation, quantity);
+    }).toList();
 
-    // Flatten materials for backend with selling prices
-    final items = widget.selectedQuotations
-        .map((quotation) {
-          final quotationId = quotation["id"] as String;
-          final quantity = widget.quotationQuantities[quotationId] ?? 1;
-          final materials = List<Map<String, dynamic>>.from(
-            quotation["materials"] ?? [],
-          );
-          final product = quotation["product"] ?? {};
-          final productImage = product["image"] ?? "";
+    final items = widget.selectedQuotations.map((quotation) {
+      final quotationId = quotation["id"] as String;
+      final quantity = widget.quotationQuantities[quotationId] ?? 1;
+      final product = Map<String, dynamic>.from(quotation["product"] ?? {});
+      final totalCost = _calculateTotalCost(quotation, quantity);
+      final totalSellingPrice = _calculateTotalSellingPrice(
+        quotation,
+        quantity,
+      );
 
-          // Get selling price for this quotation
-          final sellingPricePerUnit = _getSellingPrice(quotation);
-          final costPricePerUnit = _getCostPrice(quotation);
-
-          return materials.map((m) {
-            final materialQty =
-                int.tryParse(m["quantity"]?.toString() ?? "1") ?? 1;
-            final unitPrice =
-                double.tryParse(m["Price"]?.toString() ?? "0") ?? 0;
-            final disableIncrement = m["disableIncrement"] == true;
-            final totalQuantity =
-                materialQty * (disableIncrement ? 1 : quantity);
-
-            // Calculate proportional selling price for this material
-            final materialCostShare = costPricePerUnit > 0
-                ? unitPrice / costPricePerUnit
-                : 0;
-            final materialSellingPrice =
-                sellingPricePerUnit * materialCostShare * totalQuantity;
-
-            return {
-              "woodType": m["Product"] ?? "",
-              "foamType": null,
-              "width": double.tryParse(m["Width"]?.toString() ?? "0") ?? 0,
-              "height": double.tryParse(m["Height"]?.toString() ?? "0") ?? 0,
-              "length": double.tryParse(m["Length"]?.toString() ?? "0") ?? 0,
-              "thickness":
-                  double.tryParse(m["Thickness"]?.toString() ?? "0") ?? 0,
-              "unit": m["Unit"] ?? "cm",
-              "squareMeter": double.tryParse(m["Sqm"]?.toString() ?? "0") ?? 0,
-              "quantity": totalQuantity,
-              "costPrice": unitPrice * totalQuantity,
-              "sellingPrice": materialSellingPrice,
-              "description": m["Materialname"] ?? "",
-              "image": productImage,
-            };
-          }).toList();
-        })
-        .expand((e) => e)
-        .toList();
+      return {
+        "woodType": product["name"] ?? "BOM",
+        "foamType": null,
+        "width": 0,
+        "height": 0,
+        "length": 0,
+        "thickness": 0,
+        "unit": "unit",
+        "squareMeter": 0,
+        "quantity": quantity,
+        "costPrice": totalCost,
+        "sellingPrice": totalSellingPrice,
+        "description": product["description"] ?? "",
+        "image": product["image"] ?? "",
+      };
+    }).toList();
 
     // ✅ Calculate total cost price and overhead from all quotations
     double totalCostPrice = 0;
@@ -766,9 +903,16 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
         : {};
     final productId =
         firstProduct["productId"] ?? firstProduct["id"] ?? firstProduct["_id"];
+    final serviceProduct = widget.selectedQuotations
+        .map((quotation) {
+          final product = Map<String, dynamic>.from(quotation["product"] ?? {});
+          return product["name"]?.toString().trim() ?? "";
+        })
+        .where((name) => name.isNotEmpty)
+        .join(", ");
 
     final service = {
-      "product": "Materials Service",
+      "product": serviceProduct.isNotEmpty ? serviceProduct : "BOM",
       "quantity": 1,
       "discount": 0,
       "totalPrice": totalSum,
@@ -787,6 +931,7 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
       service: service,
       discount: 0.0,
       additionalData: {
+        "boms": boms,
         "expectedDuration": expectedDurationValue ?? 24,
         "expectedPeriod": expectedPeriod ?? "Day",
         "costPrice": totalCostPrice,
@@ -799,6 +944,8 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     setState(() => isLoading = false);
 
     if (response["success"] == true) {
+      await ref.read(materialProvider.notifier).clearAll();
+      await ref.read(quotationSummaryProvider.notifier).clearAll();
       final createdQuotation = _createdQuotationFromResponse(response);
       await _showInvoiceSuggestion(createdQuotation);
     } else {
