@@ -201,6 +201,24 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
     await prefs.setString(key, jsonEncode(quotations));
   }
 
+  Future<void> deleteQuotationsByIds(Iterable<String> ids) async {
+    final idSet = ids.where((id) => id.trim().isNotEmpty).toSet();
+    if (idSet.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString("userId") ?? "default_user";
+    final key = _getListKey(userId);
+
+    final data = prefs.getString(key);
+    if (data == null) return;
+
+    final quotations = List<Map<String, dynamic>>.from(jsonDecode(data))
+      ..removeWhere((quotation) => idSet.contains(quotation["id"]));
+
+    await prefs.setString(key, jsonEncode(quotations));
+    state = {...state, "quotationCount": quotations.length};
+  }
+
   Future<bool> updateQuotationById(
     String id,
     Map<String, dynamic> updatedQuotation,
@@ -216,11 +234,7 @@ class QuotationSummaryNotifier extends StateNotifier<Map<String, dynamic>> {
     final index = quotations.indexWhere((q) => q["id"] == id);
     if (index == -1) return false;
 
-    quotations[index] = {
-      ...quotations[index],
-      ...updatedQuotation,
-      "id": id,
-    };
+    quotations[index] = {...quotations[index], ...updatedQuotation, "id": id};
 
     await prefs.setString(key, jsonEncode(quotations));
     return true;

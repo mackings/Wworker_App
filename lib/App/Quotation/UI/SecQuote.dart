@@ -944,8 +944,14 @@ class _SecQuoteState extends ConsumerState<SecQuote> {
     setState(() => isLoading = false);
 
     if (response["success"] == true) {
+      final usedQuotationIds = widget.selectedQuotations
+          .map((quotation) => quotation["id"]?.toString() ?? "")
+          .where((id) => id.isNotEmpty);
+
       await ref.read(materialProvider.notifier).clearAll();
-      await ref.read(quotationSummaryProvider.notifier).clearAll();
+      final quotationNotifier = ref.read(quotationSummaryProvider.notifier);
+      await quotationNotifier.deleteQuotationsByIds(usedQuotationIds);
+      await quotationNotifier.clearAll();
       final createdQuotation = _createdQuotationFromResponse(response);
       await _showInvoiceSuggestion(createdQuotation);
     } else {
